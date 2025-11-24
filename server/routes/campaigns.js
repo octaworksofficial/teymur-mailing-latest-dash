@@ -1,14 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { Pool } = require('pg');
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
-
-pool.on('connect', () => {
-  console.log('✅ PostgreSQL veritabanına bağlandı (Campaigns)');
-});
+const { pool } = require('../db');
 
 function normalizeTemplateSequence(sequence) {
   if (!sequence) {

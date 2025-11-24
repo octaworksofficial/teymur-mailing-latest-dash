@@ -1,6 +1,6 @@
 const cron = require('node-cron');
 const axios = require('axios');
-const pool = require('../db');
+const { pool } = require('../db');
 const logStream = require('./logStream');
 const { addTrackingToEmail, personalizeEmail } = require('../utils/emailTracking');
 
