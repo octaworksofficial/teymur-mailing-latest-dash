@@ -1,7 +1,7 @@
 module.exports = {
   'GET /api/currentUser': {
     data: {
-      name: 'Serati Ma',
+      name: 'Teymur Admin',
       avatar:
         'https://gw.alipayobjects.com/zos/rmsportal/BiazfanxmamNRoxxVxka.png',
       userid: '00000001',

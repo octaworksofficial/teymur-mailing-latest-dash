@@ -67,22 +67,7 @@ const useStyles = createStyles(({ token }) => {
 const ActionIcons = () => {
   const { styles } = useStyles();
 
-  return (
-    <>
-      <AlipayCircleOutlined
-        key="AlipayCircleOutlined"
-        className={styles.action}
-      />
-      <TaobaoCircleOutlined
-        key="TaobaoCircleOutlined"
-        className={styles.action}
-      />
-      <WeiboCircleOutlined
-        key="WeiboCircleOutlined"
-        className={styles.action}
-      />
-    </>
-  );
+  return null; // Social login iconlarını kaldırdık
 };
 
 const Lang = () => {
@@ -183,21 +168,11 @@ const Login: React.FC = () => {
             maxWidth: '75vw',
           }}
           logo={<img alt="logo" src="/logo.svg" />}
-          title="Ant Design"
-          subTitle={intl.formatMessage({
-            id: 'pages.layouts.userLayout.title',
-          })}
+          title="OCTA Works Mailing"
+          subTitle="Güçlü email kampanya yönetim platformu"
           initialValues={{
             autoLogin: true,
           }}
-          actions={[
-            <FormattedMessage
-              key="loginWith"
-              id="pages.login.loginWith"
-              defaultMessage="其他登录方式"
-            />,
-            <ActionIcons key="icons" />,
-          ]}
           onFinish={async (values) => {
             await handleSubmit(values as API.LoginParams);
           }}

@@ -1,0 +1,17 @@
+export default {
+  'menu.login': 'Giriş',
+  'menu.register': 'Kayıt Ol',
+  'menu.register-result': 'Kayıt Sonucu',
+  'menu.dashboard': 'Gösterge Paneli',
+  'menu.contacts': 'Kişiler',
+  'menu.templates': 'Email Şablonları',
+  'menu.campaigns': 'Email Programlama',
+  'menu.campaigns.list': 'Program Listesi',
+  'menu.campaigns.create': 'Yeni Program',
+  'menu.scheduler-logs': 'Scheduler Logları',
+  'menu.company-info': 'Kurumsal Bilgiler',
+  'menu.account': 'Hesap',
+  'menu.account.center': 'Hesap Merkezi',
+  'menu.account.settings': 'Hesap Ayarları',
+  'menu.account.logout': 'Çıkış Yap',
+};

@@ -8,25 +8,25 @@ const Footer: React.FC = () => {
       style={{
         background: 'none',
       }}
-      copyright="Powered by Ant Desgin"
+      copyright="2025 OCTA Works"
       links={[
         {
-          key: 'Ant Design Pro',
-          title: 'Ant Design Pro',
-          href: 'https://pro.ant.design',
-          blankTarget: true,
+          key: 'help',
+          title: 'Yardım',
+          href: '#',
+          blankTarget: false,
         },
         {
-          key: 'github',
-          title: <GithubOutlined />,
-          href: 'https://github.com/ant-design/ant-design-pro',
-          blankTarget: true,
+          key: 'privacy',
+          title: 'Gizlilik',
+          href: '#',
+          blankTarget: false,
         },
         {
-          key: 'Ant Design',
-          title: 'Ant Design',
-          href: 'https://ant.design',
-          blankTarget: true,
+          key: 'terms',
+          title: 'Kullanım Şartları',
+          href: '#',
+          blankTarget: false,
         },
       ]}
     />

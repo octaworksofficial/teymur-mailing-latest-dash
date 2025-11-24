@@ -1,0 +1,743 @@
+.campaign-create-form {
+  // Genel responsive ayarlar - Geniş ekranlarda daha fazla alan
+  max-width: 1800px;
+  width: 100%;
+  overflow-x: hidden;
+  padding: 0 !important;
+  margin: 0 auto !important;
+  
+  :global {
+    // Tüm container'ları kontrol et
+    .ant-card,
+    .ant-pro-page-container,
+    .ant-pro-grid-content {
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+    
+    // Mobilde padding'leri minimize et
+    @media screen and (max-width: 768px) {
+      // Ana card body padding'i azalt
+      .campaign-create-form > .ant-card-body {
+        padding: 8px !important;
+      }
+      
+      // İç card'ların padding'ini azalt
+      .ant-card {
+        .ant-card-body {
+          padding: 8px !important;
+        }
+        
+        .ant-card-head {
+          padding: 8px 12px !important;
+        }
+      }
+      
+      // ProTable card'ı
+      .ant-pro-table > .ant-card-body {
+        padding: 4px !important;
+      }
+      
+      // Form padding'i azalt
+      .ant-form {
+        padding: 0 !important;
+      }
+      
+      // Steps form container
+      .ant-pro-steps-form-container {
+        padding: 0 !important;
+      }
+      
+      html {
+        font-size: calc(12px + 0.5vw) !important;
+      }
+      
+      * {
+        box-sizing: border-box !important;
+      }
+    }
+    
+    @media screen and (max-width: 576px) {
+      // Daha da küçük padding
+      .campaign-create-form > .ant-card-body {
+        padding: 4px !important;
+      }
+      
+      .ant-card {
+        .ant-card-body {
+          padding: 4px !important;
+        }
+        
+        .ant-card-head {
+          padding: 4px 8px !important;
+        }
+      }
+      
+      html {
+        font-size: calc(10px + 0.5vw) !important;
+      }
+    }
+    
+    // Tüm olası buton container'larını hedefle
+    .ant-pro-steps-form .ant-pro-steps-form-container,
+    .ant-pro-form-submitter,
+    .ant-space-horizontal {
+      display: flex !important;
+      justify-content: flex-end !important;
+      width: 100% !important;
+    }
+    
+    // StepsForm'un kendi action bar'ı
+    .ant-pro-steps-form-step-container > div:last-child {
+      display: flex !important;
+      justify-content: flex-end !important;
+      width: 100% !important;
+    }
+    
+    // Form actions wrapper
+    div[class*="submitter"] {
+      display: flex !important;
+      justify-content: flex-end !important;
+      width: 100% !important;
+    }
+    
+    // Tüm elementlerin max-width'ini sınırla
+    * {
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+  }
+  
+  // Tablet ve mobil responsive (992px ve altı)
+  @media screen and (max-width: 992px) {
+    :global {
+      // Overflow'ları kontrol et
+      body,
+      .ant-layout,
+      .ant-pro-page-container {
+        overflow-x: hidden !important;
+      }
+      
+      // Page container padding'i azalt
+      .ant-pro-page-container-children-content {
+        padding: 8px !important;
+      }
+      
+      // Row gutter'ı küçült
+      .ant-row {
+        margin-left: -8px !important;
+        margin-right: -8px !important;
+        row-gap: 16px !important;
+      }
+      
+      .ant-col {
+        padding-left: 8px !important;
+        padding-right: 8px !important;
+      }
+      
+      // Nested scroll'u engelle - tablo kendi yüksekliğinde olsun
+      .ant-pro-table {
+        .ant-table-body {
+          overflow-y: visible !important;
+          max-height: none !important;
+        }
+        
+        .ant-table-wrapper {
+          overflow: visible !important;
+        }
+      }
+      
+      // Card yüksekliklerini otomatik yap
+      .ant-card {
+        height: auto !important;
+        max-height: none !important;
+      }
+      
+      // ProTable'ı tam genişlik yap ve scroll ekle
+      .ant-pro-table {
+        width: 100% !important;
+        overflow-x: auto !important;
+        
+        .ant-table-wrapper {
+          overflow-x: auto !important;
+          -webkit-overflow-scrolling: touch !important;
+        }
+        
+        .ant-table {
+          min-width: 100% !important;
+        }
+      }
+      
+      // Form search alanını tek kolon yap
+      .ant-pro-table-search {
+        .ant-col {
+          max-width: 100% !important;
+          flex: 0 0 100% !important;
+        }
+      }
+    }
+  }
+  
+  // Mobil responsive (768px ve altı) - EN ÖNEMLI
+  @media screen and (max-width: 768px) {
+    padding: 0 !important;
+    margin: 0 !important;
+    
+    // Tüm sayfayı scale et
+    transform: scale(0.85);
+    transform-origin: top left;
+    width: 117.65%; // 100% / 0.85
+    
+    :global {
+      // GLOBAL OVERFLOW FIX VE PADDING AZALT
+      body,
+      html,
+      #root,
+      .ant-layout,
+      .ant-pro-page-container,
+      .ant-pro-grid-content,
+      .ant-card {
+        overflow-x: hidden !important;
+        max-width: 100vw !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+      }
+      
+      // Page container children padding'i minimal yap
+      .ant-pro-page-container-children-content {
+        padding: 4px !important;
+        margin: 0 !important;
+      }
+      
+      // Ana card padding'ini sıfırla
+      .campaign-create-form {
+        padding: 0 !important;
+        margin: 0 !important;
+        
+        > .ant-card {
+          margin: 0 !important;
+          
+          > .ant-card-body {
+            padding: 8px 4px !important;
+          }
+        }
+      }
+      
+      // Tüm kolonları tam genişlik yap - ÇOK ÖNEMLİ
+      .ant-col,
+      .ant-col-14,
+      .ant-col-10,
+      .ant-col-lg-14,
+      .ant-col-lg-10,
+      .ant-col-xs-24,
+      .ant-col-sm-24,
+      .ant-col-md-24 {
+        max-width: 100% !important;
+        flex: 0 0 100% !important;
+        width: 100% !important;
+        padding-left: 4px !important;
+        padding-right: 4px !important;
+        margin: 0 !important;
+      }
+      
+      // Row gutter'ı sıfırla
+      .ant-row {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        row-gap: 12px !important;
+        max-width: 100% !important;
+        overflow: hidden !important;
+      }
+      
+      // Card'ları responsive yap
+      .ant-card {
+        margin-bottom: 8px !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        max-width: 100% !important;
+        
+        .ant-card-body {
+          padding: 4px !important;
+          max-width: 100% !important;
+          overflow-x: hidden !important;
+        }
+        
+        .ant-card-head {
+          padding: 4px 6px !important;
+          min-height: auto !important;
+          
+          .ant-card-head-title {
+            font-size: 12px !important;
+            padding: 2px 0 !important;
+          }
+          
+          .ant-card-extra {
+            font-size: 11px !important;
+          }
+        }
+      }
+      
+      .ant-card-small > .ant-card-body {
+        padding: 4px !important;
+      }
+      
+      // Alert component margin'leri azalt
+      .ant-alert {
+        margin-bottom: 8px !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        padding: 6px 8px !important;
+      }
+      
+      // Divider margin'i azalt
+      .ant-divider {
+        margin: 12px 0 !important;
+      }
+      
+      // Contact card içeriğini küçült
+      .ant-card-hoverable {
+        .ant-card-body {
+          font-size: 11px !important;
+          
+          strong {
+            font-size: 11px !important;
+          }
+          
+          small {
+            font-size: 9px !important;
+          }
+        }
+      }
+      
+      // Seçim alert'i dikey yap
+      .ant-space-horizontal {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 8px !important;
+        
+        .ant-btn {
+          width: 100% !important;
+          margin: 0 !important;
+        }
+      }
+      
+      // Butonları küçült ve tam genişlik yap
+      .ant-btn {
+        font-size: 11px !important;
+        padding: 4px 8px !important;
+        height: auto !important;
+        min-height: 28px !important;
+        border-radius: 2px !important;
+        
+        // Icon'ları küçült
+        .anticon {
+          font-size: 11px !important;
+        }
+      }
+      
+      // Buton içindeki text'leri sarma
+      .ant-btn > span {
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+      }
+      
+      // ProTable'ı mobil optimize et
+      .ant-pro-table {
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow-x: hidden !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        
+        // Nested scroll'u engelle - tablo tam yükseklikte göster
+        .ant-table-body {
+          overflow-y: visible !important;
+          max-height: none !important;
+        }
+        
+        // Toolbar'ı gizle veya küçült
+        .ant-pro-table-list-toolbar {
+          padding: 4px 2px !important;
+        }
+        
+        // Table container
+        .ant-table-wrapper {
+          width: 100% !important;
+          max-width: 100% !important;
+          overflow-x: auto !important;
+          -webkit-overflow-scrolling: touch !important;
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+        
+        .ant-table {
+          width: 100% !important;
+          min-width: auto !important;
+          font-size: 10px !important;
+          table-layout: fixed !important; // Kolon genişliklerini kontrol et
+          
+          .ant-table-thead > tr > th {
+            padding: 4px 2px !important;
+            font-size: 10px !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+          }
+          
+          .ant-table-tbody > tr > td {
+            padding: 4px 2px !important;
+            font-size: 10px !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            white-space: nowrap !important;
+          }
+          
+          // Checkbox'ları küçült
+          .ant-checkbox-wrapper {
+            zoom: 0.8;
+          }
+          
+          // ID kolonunu çok küçült
+          .ant-table-cell {
+            &:first-child {
+              max-width: 40px !important;
+              padding: 2px !important;
+            }
+          }
+        }
+        
+        // Search form'u küçült
+        .ant-pro-table-search {
+          padding: 8px 4px !important;
+          
+          .ant-form-item {
+            margin-bottom: 8px !important;
+            width: 100% !important; // Form item tam genişlik
+            
+            .ant-form-item-label {
+              font-size: 12px !important;
+            }
+            
+            .ant-form-item-control {
+              min-width: 0 !important;
+              width: 100% !important;
+            }
+          }
+          
+          .ant-input,
+          .ant-select {
+            font-size: 13px !important;
+            min-width: 0 !important; // Min-width'i kaldır
+            width: 100% !important; // Tam genişlik
+          }
+          
+          .ant-select-selector {
+            min-width: 0 !important;
+            width: 100% !important;
+          }
+        }
+      }
+      
+      // Steps'i küçült
+      .ant-steps {
+        font-size: 12px !important;
+        
+        .ant-steps-item {
+          .ant-steps-item-icon {
+            width: 28px !important;
+            height: 28px !important;
+            line-height: 28px !important;
+            font-size: 12px !important;
+          }
+          
+          .ant-steps-item-title {
+            font-size: 12px !important;
+            line-height: 1.4 !important;
+          }
+          
+          .ant-steps-item-description {
+            font-size: 10px !important;
+          }
+        }
+      }
+      
+      // Pagination'ı responsive yap
+      .ant-pagination {
+        font-size: 10px !important;
+        display: flex !important;
+        justify-content: center !important;
+        flex-wrap: wrap !important;
+        
+        .ant-pagination-options {
+          display: none !important;
+        }
+        
+        .ant-pagination-item,
+        .ant-pagination-prev,
+        .ant-pagination-next {
+          min-width: 24px !important;
+          height: 24px !important;
+          line-height: 22px !important;
+          font-size: 10px !important;
+          margin: 1px !important;
+          padding: 0 2px !important;
+        }
+        
+        .ant-pagination-jump-prev,
+        .ant-pagination-jump-next {
+          min-width: 24px !important;
+          height: 24px !important;
+          line-height: 22px !important;
+        }
+        
+        // Pagination text'leri küçült
+        .ant-pagination-total-text {
+          font-size: 10px !important;
+        }
+      }
+      
+      // Divider'ı küçült
+      .ant-divider {
+        margin: 12px 0 !important;
+        font-size: 13px !important;
+      }
+      
+      // Badge ve Tag'leri küçült
+      .ant-badge {
+        font-size: 9px !important;
+        zoom: 0.8;
+      }
+      
+      .ant-tag {
+        font-size: 9px !important;
+        padding: 0 3px !important;
+        line-height: 16px !important;
+        margin: 1px !important;
+        border-radius: 2px !important;
+      }
+      
+      // Form item'ları dikey yap
+      .ant-form-item {
+        flex-direction: column !important;
+        margin-bottom: 12px !important;
+        
+        .ant-form-item-label {
+          text-align: left !important;
+          padding-bottom: 4px !important;
+          
+          > label {
+            font-size: 13px !important;
+          }
+        }
+        
+        .ant-form-item-control {
+          width: 100% !important;
+        }
+      }
+      
+      // Contact card'ları daha kompakt
+      .ant-space-vertical {
+        gap: 6px !important;
+        
+        .ant-card-hoverable {
+          margin-bottom: 0 !important;
+        }
+      }
+      
+      // Input ve Select'leri düzenle
+      .ant-input,
+      .ant-select,
+      .ant-picker,
+      .ant-input-number {
+        font-size: 12px !important;
+        min-height: 30px !important;
+        height: 30px !important;
+        min-width: 0 !important; // Min-width'i kaldır
+        width: 100% !important; // Tam genişlik
+        padding: 2px 6px !important;
+      }
+      
+      // Select ve Picker için özel ayarlar
+      .ant-select-selector,
+      .ant-picker-input {
+        min-width: 0 !important;
+        width: 100% !important;
+        min-height: 30px !important;
+        height: 30px !important;
+        padding: 2px 6px !important;
+      }
+      
+      .ant-select-selection-item,
+      .ant-select-selection-placeholder {
+        line-height: 26px !important;
+        font-size: 12px !important;
+      }
+      
+      // Input wrapper'ları
+      .ant-input-wrapper,
+      .ant-input-group-wrapper,
+      .ant-select,
+      .ant-picker {
+        min-width: 0 !important;
+        width: 100% !important;
+      }
+      
+      // Form item control
+      .ant-form-item-control-input {
+        min-width: 0 !important;
+        width: 100% !important;
+      }
+      
+      // ProForm field'ları
+      .ant-pro-form-field,
+      .ant-pro-form-field-control {
+        min-width: 0 !important;
+        width: 100% !important;
+      }
+      
+      // Space'leri küçült
+      .ant-space {
+        gap: 6px !important;
+        width: 100% !important; // Space'leri tam genişlik yap
+        
+        // Space item'larını tam genişlik yap
+        > .ant-space-item {
+          width: 100% !important;
+        }
+      }
+    }
+  }
+  
+  // Çok küçük ekranlar (576px ve altı) - EKS İYİLEŞTİRME
+  @media screen and (max-width: 576px) {
+    // Daha fazla scale et
+    transform: scale(0.75);
+    transform-origin: top left;
+    width: 133.33%; // 100% / 0.75
+    
+    :global {
+      // Page container padding minimize
+      .ant-pro-page-container-children-content {
+        padding: 2px !important;
+        margin: 0 !important;
+      }
+      
+      // Card'ları minimum yap
+      .ant-card {
+        margin-bottom: 4px !important;
+        
+        .ant-card-body {
+          padding: 2px !important;
+        }
+      }
+      
+      .ant-card-head {
+        padding: 4px 6px !important;
+        
+        .ant-card-head-title {
+          font-size: 13px !important;
+        }
+      }
+      
+      // Alert ve Divider için daha az margin
+      .ant-alert {
+        margin-bottom: 4px !important;
+        padding: 4px 6px !important;
+      }
+      
+      .ant-divider {
+        margin: 8px 0 !important;
+      }
+      
+      // Tablo daha da küçük
+      .ant-table {
+        font-size: 10px !important;
+        
+        .ant-table-thead > tr > th {
+          padding: 4px 2px !important;
+          font-size: 10px !important;
+        }
+        
+        .ant-table-tbody > tr > td {
+          padding: 4px 2px !important;
+          font-size: 10px !important;
+        }
+      }
+      
+      // Nested scroll'u engelle - tablo tam yükseklikte göster
+      .ant-pro-table {
+        .ant-table-body {
+          overflow-y: visible !important;
+          max-height: none !important;
+        }
+        
+        .ant-table-wrapper {
+          overflow: visible !important;
+        }
+      }
+      
+      // Modal'ı tam ekran yap
+      .ant-modal {
+        max-width: calc(100vw - 8px) !important;
+        margin: 4px auto !important;
+        
+        .ant-modal-content {
+          border-radius: 4px !important;
+        }
+      }
+      
+      // Descriptions'ı tek kolon yap
+      .ant-descriptions {
+        .ant-descriptions-item {
+          padding-bottom: 6px !important;
+        }
+        
+        .ant-descriptions-item-label,
+        .ant-descriptions-item-content {
+          font-size: 12px !important;
+        }
+      }
+      
+      // Butonları daha küçük
+      .ant-btn {
+        font-size: 11px !important;
+        padding: 4px 8px !important;
+        min-height: 28px !important;
+      }
+      
+      // Badge count'ları küçült
+      .ant-badge-count {
+        font-size: 10px !important;
+        min-width: 16px !important;
+        height: 16px !important;
+        line-height: 16px !important;
+      }
+      
+      // Input'ları tam genişlik yap
+      .ant-input,
+      .ant-select,
+      .ant-picker,
+      .ant-input-number {
+        font-size: 13px !important;
+        min-width: 0 !important;
+        width: 100% !important;
+      }
+      
+      .ant-select-selector,
+      .ant-picker-input,
+      .ant-input-wrapper,
+      .ant-input-group-wrapper {
+        min-width: 0 !important;
+        width: 100% !important;
+      }
+      
+      // Form item'ları tam genişlik
+      .ant-form-item-control-input,
+      .ant-form-item-control-input-content {
+        min-width: 0 !important;
+        width: 100% !important;
+      }
+    }
+  }
+}

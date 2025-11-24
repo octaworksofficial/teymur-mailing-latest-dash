@@ -109,12 +109,12 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({
           {
             key: 'center',
             icon: <UserOutlined />,
-            label: '个人中心',
+            label: 'Hesap Merkezi',
           },
           {
             key: 'settings',
             icon: <SettingOutlined />,
-            label: '个人设置',
+            label: 'Hesap Ayarları',
           },
           {
             type: 'divider' as const,
@@ -124,7 +124,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({
     {
       key: 'logout',
       icon: <LogoutOutlined />,
-      label: '退出登录',
+      label: 'Çıkış Yap',
     },
   ];
 

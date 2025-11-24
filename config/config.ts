@@ -18,6 +18,16 @@ const PUBLIC_PATH: string = '/';
 
 export default defineConfig({
   /**
+   * @name Meta tags for mobile responsiveness
+   */
+  metas: [
+    {
+      name: 'viewport',
+      content: 'width=device-width, initial-scale=0.8, maximum-scale=1.0, user-scalable=yes',
+    },
+  ],
+  
+  /**
    * @name 开启 hash 模式
    * @description 让 build 之后的产物包含 hash 后缀。通常用于增量发布和避免浏览器加载缓存。
    * @doc https://umijs.org/docs/api/config#hash
@@ -83,7 +93,7 @@ export default defineConfig({
    * @name layout 插件
    * @doc https://umijs.org/docs/max/layout-menu
    */
-  title: 'Ant Design Pro',
+  title: 'OCTA Works Mailing',
   layout: {
     locale: true,
     ...defaultSettings,
@@ -102,11 +112,11 @@ export default defineConfig({
    * @doc https://umijs.org/docs/max/i18n
    */
   locale: {
-    // default zh-CN
-    default: 'zh-CN',
+    // default tr-TR (Turkish)
+    default: 'tr-TR',
     antd: true,
     // default true, when it is true, will use `navigator.language` overwrite default
-    baseNavigator: true,
+    baseNavigator: false,
   },
   /**
    * @name antd 插件
