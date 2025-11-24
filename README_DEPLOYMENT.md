@@ -43,38 +43,28 @@ SMTP_PASS=your-app-password
 Railway PostgreSQL addon ekleyin ve migrations'ları çalıştırın:
 
 ```bash
-# Railway terminal'inde
-cd server
-node -e "
-const fs = require('fs');
-const { Pool } = require('pg');
+# Railway terminal'inde PostgreSQL bağlantısını test edin
+railway connect postgresql
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL
-});
+# Veya Railway dashboard'da PostgreSQL'e bağlanıp şu SQL'leri çalıştırın:
+```
 
-const migrations = [
-  'migrations/create-email-campaigns-table.sql',
-  'migrations/create-email-templates-table.sql', 
-  'migrations/add-contact-fields.sql',
-  'migrations/add-contact-stats-fields.sql',
-  'migrations/create_email_tracking.sql',
-  'migrations/insert_basic_templates.sql'
-];
+**Migration Scripts (Railway PostgreSQL Query Editor'da çalıştırın):**
 
-async function runMigrations() {
-  for(const migration of migrations) {
-    if(fs.existsSync(migration)) {
-      const sql = fs.readFileSync(migration, 'utf8');
-      await pool.query(sql);
-      console.log('✅', migration);
-    }
-  }
-  process.exit(0);
-}
+1. **Contacts tablosu oluştur:**
+```sql
+-- server/migrations/create-email-campaigns-table.sql içeriği
+-- server/migrations/create-email-templates-table.sql içeriği  
+-- server/migrations/add-contact-fields.sql içeriği
+-- server/migrations/add-contact-stats-fields.sql içeriği
+-- server/migrations/create_email_tracking.sql içeriği
+-- server/migrations/insert_basic_templates.sql içeriği
+```
 
-runMigrations().catch(console.error);
-"
+2. **Alternatif - Otomatik Migration:**
+Railway console'da:
+```bash
+cd /app/server && node -e "require('./db').testConnection()"
 ```
 
 ### 4. Build ve Deploy Ayarları
