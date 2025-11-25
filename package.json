@@ -30,6 +30,7 @@
     "server:dev": "nodemon server/index.js",
     "production": "npm run build && node server/production.js",
     "build:railway": "rm -rf node_modules/.cache && npm install --production=false && npm run build",
+    "build:clean": "rm -rf dist node_modules/.cache && npm run build",
     "start:prod": "concurrently \"npm run server\" \"npm run production\"",
     "test": "jest",
     "test:coverage": "npm run jest -- --coverage",
