@@ -2,6 +2,7 @@ import {
   ArrowDownOutlined,
   CloseOutlined,
   DeleteOutlined,
+  InfoCircleOutlined,
   PlusOutlined,
 } from '@ant-design/icons';
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
@@ -31,6 +32,7 @@ import {
   Space,
   Table,
   Tag,
+  Typography,
 } from 'antd';
 import moment from 'moment';
 import React, { useEffect, useRef, useState } from 'react';
@@ -45,6 +47,8 @@ import type { TemplateInSequence } from '@/types/campaign';
 import type { Contact, ContactResponse } from '@/types/contact';
 import type { EmailTemplate } from '@/types/template';
 import './Create.less';
+
+const { Text } = Typography;
 
 const CampaignCreateNew: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -1442,6 +1446,78 @@ const CampaignCreateNew: React.FC = () => {
               label="Açıklama"
               placeholder="Şablon açıklaması..."
             />
+
+            {/* Değişken Kullanım Rehberi */}
+            <Alert
+              message={
+                <Space
+                  direction="vertical"
+                  size="small"
+                  style={{ width: '100%' }}
+                >
+                  <Text strong>
+                    <InfoCircleOutlined /> Kişiselleştirme Değişkenleri
+                  </Text>
+                  <Text type="secondary" style={{ fontSize: '12px' }}>
+                    Email konusu ve içeriğinde kişiye özel bilgiler
+                    kullanabilirsiniz. Değişkenler hem {'{field}'} hem de{' '}
+                    {'{{field}}'} formatında kullanılabilir.
+                  </Text>
+                  <div style={{ marginTop: 8 }}>
+                    <Text type="secondary" style={{ fontSize: '11px' }}>
+                      <strong>Standart Alanlar:</strong>
+                      <br />
+                      {'{{first_name}}'}, {'{{last_name}}'}, {'{{full_name}}'},{' '}
+                      {'{{email}}'}, {'{{phone}}'}, {'{{mobile_phone}}'}
+                      <br />
+                      {'{{company}}'}, {'{{company_title}}'}, {'{{position}}'},{' '}
+                      {'{{customer_representative}}'}
+                      <br />
+                      {'{{country}}'}, {'{{state}}'}, {'{{district}}'},{' '}
+                      {'{{address_1}}'}, {'{{address_2}}'}
+                      <br />
+                      {'{{importance_level}}'}, {'{{notes}}'}, {'{{status}}'},{' '}
+                      {'{{source}}'}
+                    </Text>
+                  </div>
+                  <div style={{ marginTop: 8 }}>
+                    <Text type="secondary" style={{ fontSize: '11px' }}>
+                      <strong>Excel'den Gelen Özel Alanlar:</strong>
+                      <br />
+                      Excel'deki sütun başlıklarını aynen kullanabilirsiniz.
+                      Örnek: {'{{Şehir}}'}, {'{{Bütçe}}'}, {'{{Sektör}}'}
+                      <br />
+                      <Text type="warning">
+                        Not: Sütun adları büyük/küçük harf duyarlıdır,
+                        Excel'deki başlıkla birebir aynı olmalıdır.
+                      </Text>
+                    </Text>
+                  </div>
+                  <div
+                    style={{
+                      marginTop: 8,
+                      padding: '8px',
+                      background: '#f5f5f5',
+                      borderRadius: 4,
+                    }}
+                  >
+                    <Text type="secondary" style={{ fontSize: '11px' }}>
+                      <strong>Örnek Kullanım:</strong>
+                      <br />
+                      Konu: "Merhaba {'{{first_name}}'}, yeni fırsatlar sizi
+                      bekliyor!"
+                      <br />
+                      İçerik: "Sayın {'{{full_name}}'}, {'{{company}}'} için
+                      özel teklifimiz..."
+                    </Text>
+                  </div>
+                </Space>
+              }
+              type="info"
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
+
             <ProFormSelect
               name="category"
               label="Kategori"
@@ -1462,6 +1538,7 @@ const CampaignCreateNew: React.FC = () => {
               label="Email Konusu"
               rules={[{ required: true, message: 'Lütfen email konusu girin' }]}
               placeholder="Örn: Hoş Geldiniz {{first_name}}!"
+              tooltip="Kişiselleştirme için {{first_name}}, {{company}} gibi değişkenler kullanabilirsiniz"
             />
             <ProFormTextArea
               name="preheader"
@@ -1474,12 +1551,14 @@ const CampaignCreateNew: React.FC = () => {
               rules={[{ required: true, message: 'Lütfen HTML içerik girin' }]}
               fieldProps={{ rows: 8 }}
               placeholder="<html>...</html>"
+              tooltip="HTML içerikte de {{first_name}}, {{company}} gibi değişkenler kullanabilirsiniz"
             />
             <ProFormTextArea
               name="body_text"
               label="Plain Text İçerik"
               fieldProps={{ rows: 4 }}
               placeholder="HTML desteklemeyen emailler için alternatif metin..."
+              tooltip="Plain text içerikte de kişiselleştirme değişkenleri kullanabilirsiniz"
             />
             <ProFormText
               name="from_name"
