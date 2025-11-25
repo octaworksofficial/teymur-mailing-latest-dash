@@ -2,10 +2,26 @@ const express = require('express');
 const path = require('path');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const fs = require('fs');
 require('dotenv').config();
 
 // Timezone'u Türkiye olarak ayarla
 process.env.TZ = 'Europe/Istanbul';
+
+console.log('🚀 Starting Teymur Mailing System...');
+console.log('📍 Environment:', process.env.NODE_ENV || 'development');
+console.log('🌍 Working Directory:', process.cwd());
+
+// Check if dist folder exists
+const distPath = path.join(__dirname, '../dist');
+if (!fs.existsSync(distPath)) {
+  console.error('❌ ERROR: dist/ folder not found!');
+  console.error('📁 Expected path:', distPath);
+  console.error('💡 Run "npm run build" first');
+  process.exit(1);
+} else {
+  console.log('✅ dist/ folder found:', distPath);
+}
 
 // API Routes
 const contactsRouter = require('./routes/contacts');
@@ -20,9 +36,7 @@ const { startEmailScheduler } = require('./services/emailScheduler');
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-console.log('🚀 Starting Teymur Mailing System...');
-console.log('📍 Environment:', process.env.NODE_ENV || 'development');
-console.log('🌍 Port:', PORT);
+console.log('� Port:', PORT);
 
 // Middleware
 app.use(cors({
@@ -115,11 +129,18 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`📱 Frontend: http://localhost:${PORT}`);
   console.log(`🔌 API: http://localhost:${PORT}/api`);
   console.log(`❤️  Health Check: http://localhost:${PORT}/health`);
+  console.log('✅ Server is ready to accept connections');
   
-  // Start email scheduler in production
+  // Start email scheduler in production (optional - won't block startup)
   if (process.env.NODE_ENV === 'production') {
     console.log('📧 Starting email scheduler...');
-    startEmailScheduler();
+    try {
+      startEmailScheduler();
+      console.log('✅ Email scheduler started successfully');
+    } catch (err) {
+      console.error('⚠️  Email scheduler failed to start:', err.message);
+      console.error('Server will continue running without scheduler');
+    }
   }
 });
 
