@@ -10,8 +10,8 @@ WORKDIR /app
 # Copy package files first for better caching
 COPY package*.json ./
 
-# Install dependencies without cache
-RUN npm ci --omit=dev false --no-cache --verbose
+# Install dependencies using package-lock.json
+RUN npm ci --include=dev
 
 # Copy source code
 COPY . .
