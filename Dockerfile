@@ -18,6 +18,9 @@ COPY package*.json ./
 # Install dependencies with legacy peer deps for compatibility
 RUN npm ci --include=dev --legacy-peer-deps
 
+# Install Mako native binary explicitly (optional dependency)
+RUN npm install @umijs/mako-linux-x64-gnu --no-save || true
+
 # Copy source code
 COPY . .
 
