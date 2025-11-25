@@ -1,19 +1,41 @@
-import { PlusOutlined, DeleteOutlined, CopyOutlined, EyeOutlined } from '@ant-design/icons';
+import {
+  CopyOutlined,
+  DeleteOutlined,
+  EyeOutlined,
+  InfoCircleOutlined,
+  PlusOutlined,
+} from '@ant-design/icons';
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
-import { ProTable, ModalForm, ProFormText, ProFormTextArea, ProFormSelect, ProFormSwitch } from '@ant-design/pro-components';
-import { Button, message, Modal, Tag, Space, Tooltip } from 'antd';
+import {
+  ModalForm,
+  ProFormSelect,
+  ProFormText,
+  ProFormTextArea,
+  ProTable,
+} from '@ant-design/pro-components';
+import {
+  Alert,
+  Button,
+  Modal,
+  message,
+  Space,
+  Tag,
+  Tooltip,
+  Typography,
+} from 'antd';
 import React, { useRef, useState } from 'react';
 import {
-  getTemplates,
-  createTemplate,
-  updateTemplate,
-  deleteTemplate,
   bulkDeleteTemplates,
+  createTemplate,
+  deleteTemplate,
   duplicateTemplate,
+  getTemplates,
+  updateTemplate,
 } from '@/services/templates';
 import type { EmailTemplate } from '@/types/template';
 
 const { confirm } = Modal;
+const { Text } = Typography;
 
 const Templates: React.FC = () => {
   const [createModalOpen, setCreateModalOpen] = useState<boolean>(false);
@@ -43,7 +65,10 @@ const Templates: React.FC = () => {
           setSelectedRowKeys([]);
           actionRef.current?.reload();
         } catch (error: any) {
-          const errorMessage = error?.response?.data?.message || error?.message || 'Silme işlemi başarısız oldu';
+          const errorMessage =
+            error?.response?.data?.message ||
+            error?.message ||
+            'Silme işlemi başarısız oldu';
           message.error(errorMessage);
         }
       },
@@ -64,7 +89,10 @@ const Templates: React.FC = () => {
           message.success('Şablon başarıyla silindi');
           actionRef.current?.reload();
         } catch (error: any) {
-          const errorMessage = error?.response?.data?.message || error?.message || 'Silme işlemi başarısız oldu';
+          const errorMessage =
+            error?.response?.data?.message ||
+            error?.message ||
+            'Silme işlemi başarısız oldu';
           message.error(errorMessage);
         }
       },
@@ -78,7 +106,10 @@ const Templates: React.FC = () => {
       message.success('Şablon başarıyla çoğaltıldı');
       actionRef.current?.reload();
     } catch (error: any) {
-      const errorMessage = error?.response?.data?.message || error?.message || 'Çoğaltma işlemi başarısız oldu';
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        'Çoğaltma işlemi başarısız oldu';
       message.error(errorMessage);
     }
   };
@@ -97,10 +128,12 @@ const Templates: React.FC = () => {
       fixed: 'left',
       render: (_, record) => (
         <Space>
-          <a onClick={() => {
-            setCurrentRow(record);
-            setUpdateModalOpen(true);
-          }}>
+          <a
+            onClick={() => {
+              setCurrentRow(record);
+              setUpdateModalOpen(true);
+            }}
+          >
             {record.name}
           </a>
           {record.is_default && <Tag color="blue">Varsayılan</Tag>}
@@ -136,9 +169,7 @@ const Templates: React.FC = () => {
       width: 150,
       search: false,
       render: (_, record) => (
-        <Tooltip title={record.from_email}>
-          {record.from_name}
-        </Tooltip>
+        <Tooltip title={record.from_email}>{record.from_name}</Tooltip>
       ),
     },
     {
@@ -198,10 +229,7 @@ const Templates: React.FC = () => {
       width: 180,
       fixed: 'right',
       render: (_, record) => [
-        <a
-          key="preview"
-          onClick={() => handlePreview(record)}
-        >
+        <a key="preview" onClick={() => handlePreview(record)}>
           <EyeOutlined /> Önizle
         </a>,
         <a
@@ -213,10 +241,7 @@ const Templates: React.FC = () => {
         >
           Düzenle
         </a>,
-        <a
-          key="duplicate"
-          onClick={() => handleDuplicate(record.id)}
-        >
+        <a key="duplicate" onClick={() => handleDuplicate(record.id)}>
           <CopyOutlined /> Çoğalt
         </a>,
         <a
@@ -272,7 +297,8 @@ const Templates: React.FC = () => {
             tags: params.tags,
             search: params.search,
             sort_by: Object.keys(sort || {})[0],
-            sort_order: Object.values(sort || {})[0] === 'ascend' ? 'asc' : 'desc',
+            sort_order:
+              Object.values(sort || {})[0] === 'ascend' ? 'asc' : 'desc',
           });
           return {
             data: response.data,
@@ -304,7 +330,7 @@ const Templates: React.FC = () => {
             setCreateModalOpen(false);
             actionRef.current?.reload();
             return true;
-          } catch (error) {
+          } catch (_error) {
             message.error('Oluşturma işlemi başarısız oldu');
             return false;
           }
@@ -320,6 +346,73 @@ const Templates: React.FC = () => {
           name="description"
           label="Açıklama"
           placeholder="Şablon açıklaması..."
+        />
+
+        {/* Değişken Kullanım Rehberi */}
+        <Alert
+          message={
+            <Space direction="vertical" size="small" style={{ width: '100%' }}>
+              <Text strong>
+                <InfoCircleOutlined /> Kişiselleştirme Değişkenleri
+              </Text>
+              <Text type="secondary" style={{ fontSize: '12px' }}>
+                Email konusu ve içeriğinde kişiye özel bilgiler
+                kullanabilirsiniz. Değişkenler hem {'{field}'} hem de{' '}
+                {'{{field}}'} formatında kullanılabilir.
+              </Text>
+              <div style={{ marginTop: 8 }}>
+                <Text type="secondary" style={{ fontSize: '11px' }}>
+                  <strong>Standart Alanlar:</strong>
+                  <br />
+                  {'{{first_name}}'}, {'{{last_name}}'}, {'{{full_name}}'},{' '}
+                  {'{{email}}'}, {'{{phone}}'}, {'{{mobile_phone}}'}
+                  <br />
+                  {'{{company}}'}, {'{{company_title}}'}, {'{{position}}'},{' '}
+                  {'{{customer_representative}}'}
+                  <br />
+                  {'{{country}}'}, {'{{state}}'}, {'{{district}}'},{' '}
+                  {'{{address_1}}'}, {'{{address_2}}'}
+                  <br />
+                  {'{{importance_level}}'}, {'{{notes}}'}, {'{{status}}'},{' '}
+                  {'{{source}}'}
+                </Text>
+              </div>
+              <div style={{ marginTop: 8 }}>
+                <Text type="secondary" style={{ fontSize: '11px' }}>
+                  <strong>Excel'den Gelen Özel Alanlar:</strong>
+                  <br />
+                  Excel'deki sütun başlıklarını aynen kullanabilirsiniz. Örnek:{' '}
+                  {'{{Şehir}}'}, {'{{Bütçe}}'}, {'{{Sektör}}'}
+                  <br />
+                  <Text type="warning">
+                    Not: Sütun adları büyük/küçük harf duyarlıdır, Excel'deki
+                    başlıkla birebir aynı olmalıdır.
+                  </Text>
+                </Text>
+              </div>
+              <div
+                style={{
+                  marginTop: 8,
+                  padding: '8px',
+                  background: '#f5f5f5',
+                  borderRadius: 4,
+                }}
+              >
+                <Text type="secondary" style={{ fontSize: '11px' }}>
+                  <strong>Örnek Kullanım:</strong>
+                  <br />
+                  Konu: "Merhaba {'{{first_name}}'}, yeni fırsatlar sizi
+                  bekliyor!"
+                  <br />
+                  İçerik: "Sayın {'{{full_name}}'}, {'{{company}}'} için özel
+                  teklifimiz..."
+                </Text>
+              </div>
+            </Space>
+          }
+          type="info"
+          showIcon
+          style={{ marginBottom: 16 }}
         />
         <ProFormSelect
           name="category"
@@ -415,12 +508,12 @@ const Templates: React.FC = () => {
             if (values.tags && typeof values.tags === 'string') {
               values.tags = values.tags.split(',').map((t: string) => t.trim());
             }
-            await updateTemplate(currentRow!.id, values);
+            await updateTemplate(currentRow?.id, values);
             message.success('Şablon başarıyla güncellendi');
             setUpdateModalOpen(false);
             actionRef.current?.reload();
             return true;
-          } catch (error) {
+          } catch (_error) {
             message.error('Güncelleme işlemi başarısız oldu');
             return false;
           }
@@ -529,14 +622,30 @@ const Templates: React.FC = () => {
       >
         {currentRow && (
           <div>
-            <div style={{ marginBottom: 16, padding: 16, background: '#f5f5f5', borderRadius: 4 }}>
-              <p><strong>Konu:</strong> {currentRow.subject}</p>
+            <div
+              style={{
+                marginBottom: 16,
+                padding: 16,
+                background: '#f5f5f5',
+                borderRadius: 4,
+              }}
+            >
+              <p>
+                <strong>Konu:</strong> {currentRow.subject}
+              </p>
               {currentRow.preheader && (
-                <p><strong>Preheader:</strong> {currentRow.preheader}</p>
+                <p>
+                  <strong>Preheader:</strong> {currentRow.preheader}
+                </p>
               )}
-              <p><strong>Gönderen:</strong> {currentRow.from_name} &lt;{currentRow.from_email}&gt;</p>
+              <p>
+                <strong>Gönderen:</strong> {currentRow.from_name} &lt;
+                {currentRow.from_email}&gt;
+              </p>
               {currentRow.reply_to && (
-                <p><strong>Yanıt:</strong> {currentRow.reply_to}</p>
+                <p>
+                  <strong>Yanıt:</strong> {currentRow.reply_to}
+                </p>
               )}
             </div>
             <div

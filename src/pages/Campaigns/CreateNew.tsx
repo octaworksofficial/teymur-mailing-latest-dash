@@ -1,16 +1,49 @@
-import { StepsForm, ProFormText, ProFormTextArea, ProFormSwitch, ProFormDateTimePicker, ProFormDigit, ProFormSelect, ProTable } from '@ant-design/pro-components';
+import {
+  ArrowDownOutlined,
+  CloseOutlined,
+  DeleteOutlined,
+  PlusOutlined,
+} from '@ant-design/icons';
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
-import { Card, message, Button, Space, Tag, Table, Descriptions, Modal, Select, Badge, Alert, Divider, DatePicker } from 'antd';
-import { PlusOutlined, DeleteOutlined, ArrowDownOutlined, CloseOutlined } from '@ant-design/icons';
-import React, { useState, useEffect, useRef } from 'react';
+import {
+  ModalForm,
+  ProFormDateTimePicker,
+  ProFormDigit,
+  ProFormSelect,
+  ProFormSwitch,
+  ProFormText,
+  ProFormTextArea,
+  ProTable,
+  StepsForm,
+} from '@ant-design/pro-components';
 import { history, useParams } from '@umijs/max';
-import { getContacts, getContact } from '@/services/contacts';
-import { getTemplates } from '@/services/templates';
-import { createCampaign, getCampaign, updateCampaign } from '@/services/campaigns';
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  DatePicker,
+  Descriptions,
+  Divider,
+  Modal,
+  message,
+  Select,
+  Space,
+  Table,
+  Tag,
+} from 'antd';
+import moment from 'moment';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  createCampaign,
+  getCampaign,
+  updateCampaign,
+} from '@/services/campaigns';
+import { getContact, getContacts } from '@/services/contacts';
+import { createTemplate, getTemplates } from '@/services/templates';
+import type { TemplateInSequence } from '@/types/campaign';
 import type { Contact, ContactResponse } from '@/types/contact';
 import type { EmailTemplate } from '@/types/template';
-import type { TemplateInSequence } from '@/types/campaign';
-import moment from 'moment';
 import './Create.less';
 
 const CampaignCreateNew: React.FC = () => {
@@ -20,17 +53,27 @@ const CampaignCreateNew: React.FC = () => {
   const formRef = useRef<any>(null);
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [selectedContacts, setSelectedContacts] = useState<number[]>([]);
-  const [selectedContactDetails, setSelectedContactDetails] = useState<Contact[]>([]);
+  const [selectedContactDetails, setSelectedContactDetails] = useState<
+    Contact[]
+  >([]);
   const [pendingSelection, setPendingSelection] = useState<number[]>([]);
-  const [pendingSelectionDetails, setPendingSelectionDetails] = useState<Contact[]>([]);
+  const [pendingSelectionDetails, setPendingSelectionDetails] = useState<
+    Contact[]
+  >([]);
   const [filteredTotal, setFilteredTotal] = useState<number>(0);
   const [currentFilters, setCurrentFilters] = useState<any>({});
-  const [templateSequence, setTemplateSequence] = useState<TemplateInSequence[]>([]);
+  const [templateSequence, setTemplateSequence] = useState<
+    TemplateInSequence[]
+  >([]);
   const [isRecurring, setIsRecurring] = useState(false);
   const [firstSendDate, setFirstSendDate] = useState<string>('');
   const [intervalDays, setIntervalDays] = useState<number>(3);
   const [templateModalVisible, setTemplateModalVisible] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<number | undefined>(undefined);
+  const [createTemplateModalVisible, setCreateTemplateModalVisible] =
+    useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<number | undefined>(
+    undefined,
+  );
   const [initialValues, setInitialValues] = useState<any>({});
   const [loading, setLoading] = useState(false);
   const [loadingContacts, setLoadingContacts] = useState(false);
@@ -48,23 +91,25 @@ const CampaignCreateNew: React.FC = () => {
     try {
       const response = await getCampaign(campaignId);
       const campaign = response.data;
-      
+
       if (!campaign) {
         throw new Error('Kampanya bulunamadı');
       }
-      
+
       // Form başlangıç değerlerini set et
       setInitialValues({
         name: campaign.name,
         description: campaign.description,
         stop_on_reply: campaign.stop_on_reply,
         reply_notification_email: campaign.reply_notification_email,
-        first_send_date: campaign.first_send_date ? moment(campaign.first_send_date) : undefined,
+        first_send_date: campaign.first_send_date
+          ? moment(campaign.first_send_date)
+          : undefined,
         interval_days: campaign.recurrence_interval_days || 3,
         is_recurring: campaign.is_recurring || false,
         status: campaign.status || 'draft',
       });
-      
+
       // Kampanya bilgilerini state'e aktar
       setSelectedContacts(campaign.target_contact_ids || []);
       setIsRecurring(campaign.is_recurring || false);
@@ -72,48 +117,62 @@ const CampaignCreateNew: React.FC = () => {
       setIntervalDays(campaign.recurrence_interval_days || 3);
       setTemplateSequence(campaign.template_sequence || []);
       setCampaignStatus(campaign.status || 'draft');
-      
+
       // Seçili kişilerin detaylarını yükle
-      if (campaign.target_contact_ids && campaign.target_contact_ids.length > 0) {
+      if (
+        campaign.target_contact_ids &&
+        campaign.target_contact_ids.length > 0
+      ) {
         // Küçük listeler için otomatik yükle, büyük listeler için manuel
         const contactCount = campaign.target_contact_ids.length;
-        
+
         if (contactCount <= 100) {
           // 100'den az kişi varsa otomatik yükle
           try {
-            console.log('Yüklenen contact ID\'leri:', campaign.target_contact_ids);
-            const contactPromises = campaign.target_contact_ids.map(contactId =>
-              getContact(contactId).catch(err => {
-                console.error(`Contact ${contactId} yüklenemedi:`, err);
-                return null;
-              })
+            console.log(
+              "Yüklenen contact ID'leri:",
+              campaign.target_contact_ids,
+            );
+            const contactPromises = campaign.target_contact_ids.map(
+              (contactId) =>
+                getContact(contactId).catch((err) => {
+                  console.error(`Contact ${contactId} yüklenemedi:`, err);
+                  return null;
+                }),
             );
             const contactsResults = await Promise.all(contactPromises);
             console.log('Contact results:', contactsResults);
             const contacts = contactsResults
-              .filter((result): result is ContactResponse => result !== null && result?.success === true)
-              .map(result => result.data)
+              .filter(
+                (result): result is ContactResponse =>
+                  result !== null && result?.success === true,
+              )
+              .map((result) => result.data)
               .filter((contact): contact is Contact => contact !== undefined);
             console.log('Başarıyla yüklenen contacts:', contacts.length);
             setSelectedContactDetails(contacts);
             if (contacts.length < contactCount) {
-              message.warning(`${contactCount} kişiden ${contacts.length} tanesi yüklenebildi`);
+              message.warning(
+                `${contactCount} kişiden ${contacts.length} tanesi yüklenebildi`,
+              );
             }
           } catch (error) {
             console.error('Kişiler yüklenirken hata:', error);
-            message.warning(`${contactCount} kişi ID'si yüklendi, ancak detaylar getirilemedi`);
+            message.warning(
+              `${contactCount} kişi ID'si yüklendi, ancak detaylar getirilemedi`,
+            );
           }
         } else {
           // 100'den fazla kişi varsa sadece bildirim göster
           message.info(
             `${contactCount} kişi seçili. Detayları görmek için "Detayları Yükle" butonuna tıklayın.`,
-            5
+            5,
           );
         }
       }
-      
+
       message.success('Program yüklendi');
-    } catch (error) {
+    } catch (_error) {
       message.error('Program yüklenemedi');
       history.push('/campaigns/list');
     } finally {
@@ -123,9 +182,13 @@ const CampaignCreateNew: React.FC = () => {
 
   const loadTemplates = async () => {
     try {
-      const response = await getTemplates({ page: 1, limit: 100, status: 'active' });
+      const response = await getTemplates({
+        page: 1,
+        limit: 100,
+        status: 'active',
+      });
       setTemplates(response.data);
-    } catch (error) {
+    } catch (_error) {
       message.error('Şablonlar yüklenemedi');
     }
   };
@@ -139,26 +202,34 @@ const CampaignCreateNew: React.FC = () => {
 
     setLoadingContacts(true);
     try {
-      console.log('Manuel yükleme - Contact ID\'leri:', selectedContacts);
+      console.log("Manuel yükleme - Contact ID'leri:", selectedContacts);
       // Promise.all ile paralel yükleme
-      const contactPromises = selectedContacts.map(contactId =>
-        getContact(contactId).catch(err => {
+      const contactPromises = selectedContacts.map((contactId) =>
+        getContact(contactId).catch((err) => {
           console.error(`Contact ${contactId} yüklenemedi:`, err);
           return null;
-        })
+        }),
       );
       const contactsResults = await Promise.all(contactPromises);
       console.log('Manuel yükleme - Contact results:', contactsResults);
       const contacts = contactsResults
-        .filter((result): result is ContactResponse => result !== null && result?.success === true)
-        .map(result => result.data)
+        .filter(
+          (result): result is ContactResponse =>
+            result !== null && result?.success === true,
+        )
+        .map((result) => result.data)
         .filter((contact): contact is Contact => contact !== undefined);
-      
-      console.log('Manuel yükleme - Başarıyla yüklenen contacts:', contacts.length);
+
+      console.log(
+        'Manuel yükleme - Başarıyla yüklenen contacts:',
+        contacts.length,
+      );
       setSelectedContactDetails(contacts);
-      
+
       if (contacts.length < selectedContacts.length) {
-        message.warning(`${selectedContacts.length} kişiden ${contacts.length} tanesi yüklenebildi`);
+        message.warning(
+          `${selectedContacts.length} kişiden ${contacts.length} tanesi yüklenebildi`,
+        );
       } else {
         message.success(`${contacts.length} kişi detayı başarıyla yüklendi`);
       }
@@ -176,18 +247,22 @@ const CampaignCreateNew: React.FC = () => {
       message.warning('Lütfen eklenecek kişileri seçin');
       return;
     }
-    
+
     const newIds = [...selectedContacts, ...pendingSelection];
     const uniqueIds = [...new Set(newIds)];
     setSelectedContacts(uniqueIds);
-    
-    const existingDetails = selectedContactDetails.filter(c => uniqueIds.includes(c.id));
-    const newDetails = pendingSelectionDetails.filter(c => !selectedContactDetails.some(sc => sc.id === c.id));
+
+    const existingDetails = selectedContactDetails.filter((c) =>
+      uniqueIds.includes(c.id),
+    );
+    const newDetails = pendingSelectionDetails.filter(
+      (c) => !selectedContactDetails.some((sc) => sc.id === c.id),
+    );
     setSelectedContactDetails([...existingDetails, ...newDetails]);
-    
+
     setPendingSelection([]);
     setPendingSelectionDetails([]);
-    
+
     message.success(`${pendingSelection.length} kişi kampanyaya eklendi`);
   };
 
@@ -197,34 +272,44 @@ const CampaignCreateNew: React.FC = () => {
       message.warning('Eklenecek kişi bulunamadı');
       return;
     }
-    
+
     try {
-      const { page, pageSize, ...otherFilters } = currentFilters;
+      const {
+        page: _page,
+        pageSize: _pageSize,
+        ...otherFilters
+      } = currentFilters;
       const response = await getContacts({
         ...otherFilters,
         page: 1,
         pageSize: filteredTotal,
       });
-      
+
       const allContacts = response.data;
-      const newIds = [...selectedContacts, ...allContacts.map(c => c.id)];
+      const newIds = [...selectedContacts, ...allContacts.map((c) => c.id)];
       const uniqueIds = [...new Set(newIds)];
       setSelectedContacts(uniqueIds);
-      
-      const existingDetails = selectedContactDetails.filter(c => uniqueIds.includes(c.id));
-      const newDetails = allContacts.filter(c => !selectedContactDetails.some(sc => sc.id === c.id));
+
+      const existingDetails = selectedContactDetails.filter((c) =>
+        uniqueIds.includes(c.id),
+      );
+      const newDetails = allContacts.filter(
+        (c) => !selectedContactDetails.some((sc) => sc.id === c.id),
+      );
       setSelectedContactDetails([...existingDetails, ...newDetails]);
-      
+
       message.success(`${allContacts.length} kişi kampanyaya eklendi`);
-    } catch (error) {
+    } catch (_error) {
       message.error('Kişiler eklenirken hata oluştu');
     }
   };
 
   // Seçilen kişiyi çıkar
   const handleRemoveContact = (contactId: number) => {
-    setSelectedContacts(selectedContacts.filter(id => id !== contactId));
-    setSelectedContactDetails(selectedContactDetails.filter(c => c.id !== contactId));
+    setSelectedContacts(selectedContacts.filter((id) => id !== contactId));
+    setSelectedContactDetails(
+      selectedContactDetails.filter((c) => c.id !== contactId),
+    );
   };
 
   // Kişi kolonları
@@ -338,8 +423,24 @@ const CampaignCreateNew: React.FC = () => {
       },
       render: (_: any, record: Contact) => {
         if (!record.importance_level) return '-';
-        const colors = ['', 'default', 'default', 'blue', 'blue', 'cyan', 'cyan', 'orange', 'orange', 'red', 'red'];
-        return <Tag color={colors[record.importance_level]}>{record.importance_level}</Tag>;
+        const colors = [
+          '',
+          'default',
+          'default',
+          'blue',
+          'blue',
+          'cyan',
+          'cyan',
+          'orange',
+          'orange',
+          'red',
+          'red',
+        ];
+        return (
+          <Tag color={colors[record.importance_level]}>
+            {record.importance_level}
+          </Tag>
+        );
       },
     },
     {
@@ -384,7 +485,10 @@ const CampaignCreateNew: React.FC = () => {
         placeholder: 'Özel alan ara...',
       },
       render: (_, record) => {
-        if (!record.custom_fields || Object.keys(record.custom_fields).length === 0) {
+        if (
+          !record.custom_fields ||
+          Object.keys(record.custom_fields).length === 0
+        ) {
           return <span style={{ color: '#999' }}>-</span>;
         }
         const fields = Object.entries(record.custom_fields);
@@ -396,7 +500,9 @@ const CampaignCreateNew: React.FC = () => {
               </Tag>
             ))}
             {fields.length > 2 && (
-              <Tag color="default" style={{ fontSize: 11 }}>+{fields.length - 2}</Tag>
+              <Tag color="default" style={{ fontSize: 11 }}>
+                +{fields.length - 2}
+              </Tag>
             )}
           </Space>
         );
@@ -414,8 +520,18 @@ const CampaignCreateNew: React.FC = () => {
         complained: { text: 'Şikayet', status: 'Warning' },
       },
       render: (_, record) => {
-        const colors = { active: 'green', unsubscribed: 'default', bounced: 'red', complained: 'orange' };
-        const labels = { active: 'Aktif', unsubscribed: 'İptal', bounced: 'Bounce', complained: 'Şikayet' };
+        const colors = {
+          active: 'green',
+          unsubscribed: 'default',
+          bounced: 'red',
+          complained: 'orange',
+        };
+        const labels = {
+          active: 'Aktif',
+          unsubscribed: 'İptal',
+          bounced: 'Bounce',
+          complained: 'Şikayet',
+        };
         return <Tag color={colors[record.status]}>{labels[record.status]}</Tag>;
       },
     },
@@ -440,7 +556,11 @@ const CampaignCreateNew: React.FC = () => {
           unsubscribed: 'Değil',
           pending: 'Bekliyor',
         };
-        return <Tag color={colors[record.subscription_status]}>{labels[record.subscription_status]}</Tag>;
+        return (
+          <Tag color={colors[record.subscription_status]}>
+            {labels[record.subscription_status]}
+          </Tag>
+        );
       },
     },
     {
@@ -474,7 +594,8 @@ const CampaignCreateNew: React.FC = () => {
     {
       title: 'Ad Soyad',
       key: 'name',
-      render: (_: any, record: Contact) => `${record.first_name} ${record.last_name}`,
+      render: (_: any, record: Contact) =>
+        `${record.first_name} ${record.last_name}`,
     },
     {
       title: 'Şirket',
@@ -500,7 +621,9 @@ const CampaignCreateNew: React.FC = () => {
             </Tag>
           ))}
           {record.tags && record.tags.length > 2 && (
-            <Tag color="default" style={{ fontSize: 11 }}>+{record.tags.length - 2}</Tag>
+            <Tag color="default" style={{ fontSize: 11 }}>
+              +{record.tags.length - 2}
+            </Tag>
           )}
         </Space>
       ),
@@ -509,7 +632,10 @@ const CampaignCreateNew: React.FC = () => {
       title: 'Özel Alanlar',
       key: 'custom_fields',
       render: (_: any, record: Contact) => {
-        if (!record.custom_fields || Object.keys(record.custom_fields).length === 0) {
+        if (
+          !record.custom_fields ||
+          Object.keys(record.custom_fields).length === 0
+        ) {
           return <span style={{ color: '#999' }}>-</span>;
         }
         const fields = Object.entries(record.custom_fields);
@@ -521,7 +647,9 @@ const CampaignCreateNew: React.FC = () => {
               </Tag>
             ))}
             {fields.length > 2 && (
-              <Tag color="default" style={{ fontSize: 11 }}>+{fields.length - 2}</Tag>
+              <Tag color="default" style={{ fontSize: 11 }}>
+                +{fields.length - 2}
+              </Tag>
             )}
           </Space>
         );
@@ -532,9 +660,23 @@ const CampaignCreateNew: React.FC = () => {
       dataIndex: 'status',
       key: 'status',
       render: (status: string) => {
-        const colors = { active: 'green', unsubscribed: 'default', bounced: 'red', complained: 'orange' };
-        const labels = { active: 'Aktif', unsubscribed: 'İptal', bounced: 'Bounce', complained: 'Şikayet' };
-        return <Tag color={colors[status as keyof typeof colors]}>{labels[status as keyof typeof labels]}</Tag>;
+        const colors = {
+          active: 'green',
+          unsubscribed: 'default',
+          bounced: 'red',
+          complained: 'orange',
+        };
+        const labels = {
+          active: 'Aktif',
+          unsubscribed: 'İptal',
+          bounced: 'Bounce',
+          complained: 'Şikayet',
+        };
+        return (
+          <Tag color={colors[status as keyof typeof colors]}>
+            {labels[status as keyof typeof labels]}
+          </Tag>
+        );
       },
     },
     {
@@ -576,13 +718,17 @@ const CampaignCreateNew: React.FC = () => {
       message.warning('Lütfen bir şablon seçin');
       return;
     }
-    
-    const lastDelay = templateSequence.length > 0 
-      ? templateSequence[templateSequence.length - 1].send_delay_days + intervalDays
-      : 0;
-    
-    const scheduledDate = firstSendDate 
-      ? moment(firstSendDate).add(lastDelay, 'days').format('YYYY-MM-DD HH:mm:ss')
+
+    const lastDelay =
+      templateSequence.length > 0
+        ? templateSequence[templateSequence.length - 1].send_delay_days +
+          intervalDays
+        : 0;
+
+    const scheduledDate = firstSendDate
+      ? moment(firstSendDate)
+          .add(lastDelay, 'days')
+          .format('YYYY-MM-DD HH:mm:ss')
       : '';
 
     setTemplateSequence([
@@ -593,7 +739,7 @@ const CampaignCreateNew: React.FC = () => {
         scheduled_date: scheduledDate,
       },
     ]);
-    
+
     setTemplateModalVisible(false);
     setSelectedTemplate(undefined);
   };
@@ -605,7 +751,8 @@ const CampaignCreateNew: React.FC = () => {
 
   const recalculateDates = (sequence: TemplateInSequence[]) => {
     const updated = sequence.map((item, index) => {
-      const delay = index === 0 ? 0 : sequence[index - 1].send_delay_days + intervalDays;
+      const delay =
+        index === 0 ? 0 : sequence[index - 1].send_delay_days + intervalDays;
       const scheduled = firstSendDate
         ? moment(firstSendDate).add(delay, 'days').format('YYYY-MM-DD HH:mm:ss')
         : '';
@@ -624,7 +771,9 @@ const CampaignCreateNew: React.FC = () => {
       const updated = templateSequence.map((item) => ({
         ...item,
         scheduled_date: dateString
-          ? moment(dateString).add(item.send_delay_days, 'days').format('YYYY-MM-DD HH:mm:ss')
+          ? moment(dateString)
+              .add(item.send_delay_days, 'days')
+              .format('YYYY-MM-DD HH:mm:ss')
           : '',
       }));
       setTemplateSequence(updated);
@@ -648,7 +797,9 @@ const CampaignCreateNew: React.FC = () => {
       if (templateSequence.length > 0 && firstSendDate) {
         const updated = templateSequence.map((item, index) => {
           const delay = index === 0 ? 0 : index * value; // Her şablon için index * interval
-          const scheduled = moment(firstSendDate).add(delay, 'days').format('YYYY-MM-DD HH:mm:ss');
+          const scheduled = moment(firstSendDate)
+            .add(delay, 'days')
+            .format('YYYY-MM-DD HH:mm:ss');
           return {
             ...item,
             send_delay_days: delay,
@@ -662,19 +813,21 @@ const CampaignCreateNew: React.FC = () => {
   };
 
   return (
-    <Card 
+    <Card
       className="campaign-create-form"
       title={
         <h2 style={{ margin: 0 }}>
-          {isEditMode ? 'Email Programını Düzenle' : 'Yeni Email Programı Oluştur'}
+          {isEditMode
+            ? 'Email Programını Düzenle'
+            : 'Yeni Email Programı Oluştur'}
         </h2>
       }
-      style={{ 
-        maxWidth: '1800px', 
+      style={{
+        maxWidth: '1800px',
         width: '100%',
-        overflowX: 'hidden', 
-        padding: 0, 
-        margin: '24px auto' 
+        overflowX: 'hidden',
+        padding: 0,
+        margin: '24px auto',
       }}
       styles={{ body: { padding: window.innerWidth <= 768 ? 8 : 24 } }}
       loading={loading}
@@ -703,24 +856,40 @@ const CampaignCreateNew: React.FC = () => {
               await createCampaign(campaignData);
               message.success('Email programı başarıyla oluşturuldu');
             }
-            
+
             history.push('/campaigns/list');
             return true;
-          } catch (error) {
-            message.error(isEditMode ? 'Güncelleme işlemi başarısız oldu' : 'Oluşturma işlemi başarısız oldu');
+          } catch (_error) {
+            message.error(
+              isEditMode
+                ? 'Güncelleme işlemi başarısız oldu'
+                : 'Oluşturma işlemi başarısız oldu',
+            );
             return false;
           }
         }}
         stepsFormRender={(dom, submitter) => {
           // Submitter'ı parçalara ayır
-          const submitterArray = Array.isArray(submitter) ? submitter : [submitter];
-          const previousButton = submitterArray.find((btn: any) => btn?.key === 'pre');
-          const nextButtons = submitterArray.filter((btn: any) => btn?.key !== 'pre');
-          
+          const submitterArray = Array.isArray(submitter)
+            ? submitter
+            : [submitter];
+          const previousButton = submitterArray.find(
+            (btn: any) => btn?.key === 'pre',
+          );
+          const nextButtons = submitterArray.filter(
+            (btn: any) => btn?.key !== 'pre',
+          );
+
           return (
             <div>
               {dom}
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 24 }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  marginTop: 24,
+                }}
+              >
                 <div>{previousButton || <div />}</div>
                 <div style={{ display: 'flex', gap: 8 }}>{nextButtons}</div>
               </div>
@@ -752,12 +921,12 @@ const CampaignCreateNew: React.FC = () => {
             label="Açıklama"
             placeholder="Program açıklaması..."
           />
-          
+
           <Divider>Hedef Kişileri Seçin</Divider>
-          
+
           {/* Tüm Kişiler Tablosu */}
-          <Card 
-            title={<span>Tüm Kişiler</span>} 
+          <Card
+            title={<span>Tüm Kişiler</span>}
             size="small"
             style={{ marginBottom: 24 }}
           >
@@ -765,7 +934,9 @@ const CampaignCreateNew: React.FC = () => {
               <Alert
                 message={
                   <Space>
-                    <span>Seçilen: <strong>{pendingSelection.length}</strong> kişi</span>
+                    <span>
+                      Seçilen: <strong>{pendingSelection.length}</strong> kişi
+                    </span>
                     <Button
                       type="primary"
                       size="small"
@@ -788,7 +959,7 @@ const CampaignCreateNew: React.FC = () => {
                 style={{ marginBottom: 16 }}
               />
             )}
-            
+
             <ProTable<Contact>
               actionRef={contactTableRef}
               rowKey="id"
@@ -798,12 +969,12 @@ const CampaignCreateNew: React.FC = () => {
                 defaultCollapsed: false,
                 collapseRender: false,
               }}
-              form={{ 
+              form={{
                 component: false,
-                onFinish: async (values) => {
+                onFinish: async (_values) => {
                   // Enter tuşuna basıldığında reload tetikle
                   contactTableRef.current?.reload();
-                }
+                },
               }}
               request={async (params) => {
                 try {
@@ -813,34 +984,36 @@ const CampaignCreateNew: React.FC = () => {
                   else if (params.last_name) searchTerm = params.last_name;
                   else if (params.company) searchTerm = params.company;
                   else if (params.position) searchTerm = params.position;
-                  
+
                   // Filtreleri hazırla - tüm yeni alanları dahil et
                   const filters = {
                     page: params.current || 1,
                     pageSize: params.pageSize || 10,
                     email: params.email || undefined,
                     status: params.status || undefined,
-                    subscription_status: params.subscription_status || undefined,
+                    subscription_status:
+                      params.subscription_status || undefined,
                     tags: params.tags || undefined,
                     custom_fields: params.custom_fields || undefined,
                     search: searchTerm || undefined,
-                    customer_representative: params.customer_representative || undefined,
+                    customer_representative:
+                      params.customer_representative || undefined,
                     country: params.country || undefined,
                     state: params.state || undefined,
                     district: params.district || undefined,
                     importance_level: params.importance_level || undefined,
                   };
-                  
+
                   setCurrentFilters(filters);
                   const response = await getContacts(filters);
                   setFilteredTotal(response.total);
-                  
+
                   return {
                     data: response.data,
                     success: true,
                     total: response.total,
                   };
-                } catch (error) {
+                } catch (_error) {
                   message.error('Kişiler yüklenemedi');
                   return { data: [], success: false, total: 0 };
                 }
@@ -867,7 +1040,7 @@ const CampaignCreateNew: React.FC = () => {
           </Card>
 
           {/* Seçilen Kişiler Tablosu */}
-          <Card 
+          <Card
             title={
               <Space>
                 <span>Kampanyaya Eklenecek Kişiler</span>
@@ -877,19 +1050,20 @@ const CampaignCreateNew: React.FC = () => {
             size="small"
             extra={
               <Space>
-                {selectedContacts.length > 0 && selectedContactDetails.length === 0 && (
-                  <Button
-                    type="primary"
-                    size="small"
-                    loading={loadingContacts}
-                    onClick={loadSelectedContactDetails}
-                  >
-                    Detayları Yükle ({selectedContacts.length} kişi)
-                  </Button>
-                )}
+                {selectedContacts.length > 0 &&
+                  selectedContactDetails.length === 0 && (
+                    <Button
+                      type="primary"
+                      size="small"
+                      loading={loadingContacts}
+                      onClick={loadSelectedContactDetails}
+                    >
+                      Detayları Yükle ({selectedContacts.length} kişi)
+                    </Button>
+                  )}
                 {selectedContactDetails.length > 0 && (
-                  <Button 
-                    danger 
+                  <Button
+                    danger
                     size="small"
                     onClick={() => {
                       setSelectedContacts([]);
@@ -903,21 +1077,37 @@ const CampaignCreateNew: React.FC = () => {
             }
           >
             {selectedContactDetails.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '60px 0', color: '#999' }}>
+              <div
+                style={{
+                  textAlign: 'center',
+                  padding: '60px 0',
+                  color: '#999',
+                }}
+              >
                 {selectedContacts.length > 0 ? (
                   <>
-                    <Badge count={selectedContacts.length} showZero style={{ fontSize: 32, marginBottom: 16 }} />
+                    <Badge
+                      count={selectedContacts.length}
+                      showZero
+                      style={{ fontSize: 32, marginBottom: 16 }}
+                    />
                     <p style={{ fontSize: 16, marginTop: 16 }}>
                       <strong>{selectedContacts.length} kişi seçildi</strong>
                     </p>
                     <p style={{ color: '#666' }}>
-                      Kişi detaylarını görmek için yukarıdaki "Detayları Yükle" butonuna tıklayın
+                      Kişi detaylarını görmek için yukarıdaki "Detayları Yükle"
+                      butonuna tıklayın
                     </p>
                   </>
                 ) : (
                   <>
-                    <ArrowDownOutlined style={{ fontSize: 48, marginBottom: 16 }} />
-                    <p>Yukarıdaki tablodan kişi seçin ve "Kampanyaya Ekle" butonuna tıklayın</p>
+                    <ArrowDownOutlined
+                      style={{ fontSize: 48, marginBottom: 16 }}
+                    />
+                    <p>
+                      Yukarıdaki tablodan kişi seçin ve "Kampanyaya Ekle"
+                      butonuna tıklayın
+                    </p>
                   </>
                 )}
               </div>
@@ -996,7 +1186,8 @@ const CampaignCreateNew: React.FC = () => {
               style: { width: '100%' },
               showTime: { format: 'HH:mm' },
               format: 'YYYY-MM-DD HH:mm',
-              onChange: (_, dateString) => handleFirstSendDateChange(dateString as string),
+              onChange: (_, dateString) =>
+                handleFirstSendDateChange(dateString as string),
             }}
           />
 
@@ -1012,24 +1203,26 @@ const CampaignCreateNew: React.FC = () => {
             />
           )}
 
-          <Card 
-            title="Şablonlar" 
-            style={{ 
+          <Card
+            title="Şablonlar"
+            style={{
               marginTop: 16,
-              maxWidth: '100%'
+              maxWidth: '100%',
             }}
           >
             <Space direction="vertical" style={{ width: '100%', gap: 16 }}>
               {templateSequence.map((item, index) => {
-                const template = templates.find((t) => t.id === item.template_id);
+                const template = templates.find(
+                  (t) => t.id === item.template_id,
+                );
                 return (
                   <Card
-                    key={index}
+                    key={`template-${item.template_id}-${index}`}
                     size="small"
                     title={`${index + 1}. Email`}
-                    style={{ 
+                    style={{
                       backgroundColor: '#fafafa',
-                      border: '1px solid #d9d9d9'
+                      border: '1px solid #d9d9d9',
                     }}
                     extra={
                       <Button
@@ -1042,24 +1235,44 @@ const CampaignCreateNew: React.FC = () => {
                       </Button>
                     }
                   >
-                    <Space direction="vertical" style={{ width: '100%' }} size={12}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                    <Space
+                      direction="vertical"
+                      style={{ width: '100%' }}
+                      size={12}
+                    >
+                      <div
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: '1fr 1fr',
+                          gap: 16,
+                        }}
+                      >
                         <div>
                           <strong>Şablon:</strong> {template?.name}
                         </div>
                         <div>
-                          <strong>Gönderim Gecikmesi:</strong> {item.send_delay_days === 0 ? 'Hemen' : `${item.send_delay_days} gün sonra`}
+                          <strong>Gönderim Gecikmesi:</strong>{' '}
+                          {item.send_delay_days === 0
+                            ? 'Hemen'
+                            : `${item.send_delay_days} gün sonra`}
                         </div>
                       </div>
-                      
+
                       <div>
                         <strong>Gönderim Tarihi:</strong>
                         <DatePicker
                           showTime={{ format: 'HH:mm' }}
                           format="YYYY-MM-DD HH:mm"
-                          value={item.scheduled_date ? moment(item.scheduled_date) : null}
-                          onChange={(date, dateString) => {
-                            handleTemplateDateChange(index, dateString as string);
+                          value={
+                            item.scheduled_date
+                              ? moment(item.scheduled_date)
+                              : null
+                          }
+                          onChange={(_date, dateString) => {
+                            handleTemplateDateChange(
+                              index,
+                              dateString as string,
+                            );
                           }}
                           style={{ marginLeft: 8, width: 250 }}
                           placeholder="Tarih seçin"
@@ -1082,23 +1295,32 @@ const CampaignCreateNew: React.FC = () => {
                   }
                   // Tekrarlayan email kapalıysa ve zaten 1 şablon varsa ekleme yapma
                   if (!isRecurring && templateSequence.length >= 1) {
-                    message.warning('Tekrarlayan email kapalıyken sadece 1 şablon ekleyebilirsiniz');
+                    message.warning(
+                      'Tekrarlayan email kapalıyken sadece 1 şablon ekleyebilirsiniz',
+                    );
                     return;
                   }
                   setTemplateModalVisible(true);
                 }}
               >
-                {templateSequence.length === 0 ? 'İlk Şablonu Ekle' : 'Yeni Şablon Ekle'}
+                {templateSequence.length === 0
+                  ? 'İlk Şablonu Ekle'
+                  : 'Yeni Şablon Ekle'}
               </Button>
-              
+
               {!isRecurring && templateSequence.length >= 1 && (
-                <Tag color="orange" icon={<PlusOutlined />} style={{ marginTop: 8 }}>
-                  Tekrarlayan email açık olmalı - Birden fazla şablon eklemek için yukarıdan açın
+                <Tag
+                  color="orange"
+                  icon={<PlusOutlined />}
+                  style={{ marginTop: 8 }}
+                >
+                  Tekrarlayan email açık olmalı - Birden fazla şablon eklemek
+                  için yukarıdan açın
                 </Tag>
               )}
             </Space>
           </Card>
-          
+
           <Modal
             title="Şablon Seç"
             open={templateModalVisible}
@@ -1109,6 +1331,31 @@ const CampaignCreateNew: React.FC = () => {
             }}
             okText="Ekle"
             cancelText="İptal"
+            footer={[
+              <Button
+                key="create"
+                type="dashed"
+                icon={<PlusOutlined />}
+                onClick={() => {
+                  setTemplateModalVisible(false);
+                  setCreateTemplateModalVisible(true);
+                }}
+              >
+                Yeni Şablon Oluştur
+              </Button>,
+              <Button
+                key="cancel"
+                onClick={() => {
+                  setTemplateModalVisible(false);
+                  setSelectedTemplate(undefined);
+                }}
+              >
+                İptal
+              </Button>,
+              <Button key="ok" type="primary" onClick={addTemplate}>
+                Ekle
+              </Button>,
+            ]}
           >
             <Select
               style={{ width: '100%' }}
@@ -1121,12 +1368,166 @@ const CampaignCreateNew: React.FC = () => {
               }))}
             />
           </Modal>
+
+          {/* Yeni Şablon Oluşturma Modal */}
+          <ModalForm
+            title="Yeni Email Şablonu Oluştur"
+            width={800}
+            open={createTemplateModalVisible}
+            onOpenChange={setCreateTemplateModalVisible}
+            onFinish={async (values) => {
+              try {
+                // Tags string'i array'e çevir
+                if (values.tags && typeof values.tags === 'string') {
+                  values.tags = values.tags
+                    .split(',')
+                    .map((t: string) => t.trim());
+                }
+                const response = await createTemplate(values);
+                message.success('Şablon başarıyla oluşturuldu');
+
+                // Yeni şablonu listeye ekle
+                await loadTemplates();
+
+                // Oluşturulan şablonu otomatik olarak seç ve sequence'e ekle
+                if (response.data?.id) {
+                  const newTemplateId = response.data.id;
+                  setSelectedTemplate(newTemplateId);
+
+                  // Modal'ı kapat ve template'i sequence'e ekle
+                  setCreateTemplateModalVisible(false);
+
+                  // Template'i sequence'e ekle
+                  const lastDelay =
+                    templateSequence.length > 0
+                      ? templateSequence[templateSequence.length - 1]
+                          .send_delay_days + intervalDays
+                      : 0;
+
+                  const scheduledDate = firstSendDate
+                    ? moment(firstSendDate)
+                        .add(lastDelay, 'days')
+                        .format('YYYY-MM-DD HH:mm:ss')
+                    : '';
+
+                  const newSequence: TemplateInSequence = {
+                    template_id: newTemplateId,
+                    send_delay_days: lastDelay,
+                    scheduled_date: scheduledDate,
+                  };
+                  setTemplateSequence([...templateSequence, newSequence]);
+                  message.success('Şablon kampanyaya eklendi');
+                }
+
+                return true;
+              } catch (_error) {
+                message.error('Şablon oluşturma işlemi başarısız oldu');
+                return false;
+              }
+            }}
+            modalProps={{
+              onCancel: () => {
+                setCreateTemplateModalVisible(false);
+              },
+            }}
+          >
+            <ProFormText
+              name="name"
+              label="Şablon Adı"
+              rules={[{ required: true, message: 'Lütfen şablon adı girin' }]}
+              placeholder="Örn: Hoş Geldiniz Email"
+            />
+            <ProFormTextArea
+              name="description"
+              label="Açıklama"
+              placeholder="Şablon açıklaması..."
+            />
+            <ProFormSelect
+              name="category"
+              label="Kategori"
+              rules={[{ required: true, message: 'Lütfen kategori seçin' }]}
+              options={[
+                { label: 'Bülten', value: 'newsletter' },
+                { label: 'Promosyon', value: 'promotional' },
+                { label: 'İşlemsel', value: 'transactional' },
+                { label: 'Hoş Geldin', value: 'welcome' },
+                { label: 'Duyuru', value: 'announcement' },
+                { label: 'Takip', value: 'follow-up' },
+                { label: 'Hatırlatma', value: 'reminder' },
+                { label: 'Diğer', value: 'other' },
+              ]}
+            />
+            <ProFormText
+              name="subject"
+              label="Email Konusu"
+              rules={[{ required: true, message: 'Lütfen email konusu girin' }]}
+              placeholder="Örn: Hoş Geldiniz {{first_name}}!"
+            />
+            <ProFormTextArea
+              name="preheader"
+              label="Preheader (Önizleme Metni)"
+              placeholder="Inbox'ta gösterilecek kısa açıklama..."
+            />
+            <ProFormTextArea
+              name="body_html"
+              label="HTML İçerik"
+              rules={[{ required: true, message: 'Lütfen HTML içerik girin' }]}
+              fieldProps={{ rows: 8 }}
+              placeholder="<html>...</html>"
+            />
+            <ProFormTextArea
+              name="body_text"
+              label="Plain Text İçerik"
+              fieldProps={{ rows: 4 }}
+              placeholder="HTML desteklemeyen emailler için alternatif metin..."
+            />
+            <ProFormText
+              name="from_name"
+              label="Gönderen Adı"
+              placeholder="Örn: Email Otomasyon Platformu"
+            />
+            <ProFormText
+              name="from_email"
+              label="Gönderen Email"
+              placeholder="Örn: noreply@platform.com"
+            />
+            <ProFormText
+              name="reply_to"
+              label="Yanıt Email"
+              placeholder="Örn: destek@platform.com"
+            />
+            <ProFormSelect
+              name="priority"
+              label="Öncelik"
+              options={[
+                { label: 'Yüksek', value: 'high' },
+                { label: 'Normal', value: 'normal' },
+                { label: 'Düşük', value: 'low' },
+              ]}
+              initialValue="normal"
+            />
+            <ProFormSelect
+              name="status"
+              label="Durum"
+              options={[
+                { label: 'Taslak', value: 'draft' },
+                { label: 'Aktif', value: 'active' },
+                { label: 'Arşiv', value: 'archived' },
+              ]}
+              initialValue="active"
+            />
+            <ProFormText
+              name="tags"
+              label="Etiketler"
+              placeholder="virgülle ayırın: welcome, onboarding"
+            />
+          </ModalForm>
         </StepsForm.StepForm>
 
         {/* Adım 3: Diğer Ayarlar */}
-        <StepsForm.StepForm 
-          name="step3" 
-          title="Diğer Ayarlar" 
+        <StepsForm.StepForm
+          name="step3"
+          title="Diğer Ayarlar"
           initialValues={initialValues}
           onValuesChange={(changedValues) => {
             if (changedValues.status !== undefined) {
@@ -1138,7 +1539,9 @@ const CampaignCreateNew: React.FC = () => {
             name="status"
             label="Kampanya Durumu"
             initialValue="draft"
-            rules={[{ required: true, message: 'Lütfen kampanya durumunu seçin' }]}
+            rules={[
+              { required: true, message: 'Lütfen kampanya durumunu seçin' },
+            ]}
             options={[
               {
                 label: 'Taslak',
@@ -1154,7 +1557,7 @@ const CampaignCreateNew: React.FC = () => {
               placeholder: 'Kampanya durumunu seçin',
             }}
           />
-          
+
           <ProFormSwitch
             name="stop_on_reply"
             label="Yanıt Gelirse Gönderimi Durdur"
@@ -1166,7 +1569,9 @@ const CampaignCreateNew: React.FC = () => {
             label="Yanıt Bildirim Email"
             placeholder="bildirim@platform.com"
             tooltip="Alıcılar yanıt verdiğinde bu adrese bildirim gelecek"
-            rules={[{ type: 'email', message: 'Geçerli bir email adresi girin' }]}
+            rules={[
+              { type: 'email', message: 'Geçerli bir email adresi girin' },
+            ]}
           />
         </StepsForm.StepForm>
 
@@ -1187,7 +1592,9 @@ const CampaignCreateNew: React.FC = () => {
             </Descriptions.Item>
             <Descriptions.Item label="Kampanya Durumu">
               <Tag color={campaignStatus === 'active' ? 'green' : 'default'}>
-                {campaignStatus === 'active' ? '🟢 Aktif - Otomatik gönderim başlayacak' : '📝 Taslak - Gönderim yapılmayacak'}
+                {campaignStatus === 'active'
+                  ? '🟢 Aktif - Otomatik gönderim başlayacak'
+                  : '📝 Taslak - Gönderim yapılmayacak'}
               </Tag>
             </Descriptions.Item>
           </Descriptions>
@@ -1195,12 +1602,17 @@ const CampaignCreateNew: React.FC = () => {
           <Card title="Email Gönderim Takvimi" style={{ marginTop: 16 }}>
             <Table
               dataSource={templateSequence.map((item, index) => {
-                const template = templates.find((t) => t.id === item.template_id);
+                const template = templates.find(
+                  (t) => t.id === item.template_id,
+                );
                 return {
                   key: index,
                   sequence: index + 1,
                   template: template?.name,
-                  delay: item.send_delay_days === 0 ? 'Hemen' : `${item.send_delay_days} gün sonra`,
+                  delay:
+                    item.send_delay_days === 0
+                      ? 'Hemen'
+                      : `${item.send_delay_days} gün sonra`,
                   date: item.scheduled_date,
                 };
               })}

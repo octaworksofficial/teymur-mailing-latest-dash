@@ -12,44 +12,80 @@ const DEFAULT_BCC = process.env.EMAIL_DEFAULT_BCC || '';
 
 /**
  * Template içindeki değişkenleri kişi verileriyle değiştir
- * Örnek: "Merhaba {first_name}" -> "Merhaba Deniz"
+ * Desteklenen formatlar: {field_name} veya {{field_name}}
+ * 
+ * Örnekler:
+ * - "Merhaba {first_name}" -> "Merhaba Deniz"
+ * - "Sayın {{full_name}}" -> "Sayın Deniz Can"
+ * - "{{company}} şirketinden" -> "ABC Şirket şirketinden"
+ * 
+ * Tüm contact tablosu alanları kullanılabilir:
+ * - first_name, last_name, email, phone, mobile_phone
+ * - company, company_title, position
+ * - customer_representative, country, state, district
+ * - address_1, address_2, importance_level, notes
+ * - full_name (otomatik: first_name + last_name)
+ * 
+ * Custom fields için: {custom_FieldName} veya {{custom_FieldName}}
  */
 function replaceTemplateVariables(text, contact) {
   if (!text) return text;
   
   let result = text;
   
-  // Standart alanlar (tüm contact alanları dahil)
-  const replacements = {
-    '{first_name}': contact.first_name || '',
-    '{last_name}': contact.last_name || '',
-    '{email}': contact.email || '',
-    '{company}': contact.company || '',
-    '{position}': contact.position || '',
-    '{phone}': contact.phone || '',
-    '{mobile_phone}': contact.mobile_phone || '',
-    '{full_name}': `${contact.first_name || ''} ${contact.last_name || ''}`.trim(),
-    '{customer_representative}': contact.customer_representative || '',
-    '{country}': contact.country || '',
-    '{state}': contact.state || '',
-    '{district}': contact.district || '',
-    '{address_1}': contact.address_1 || '',
-    '{address_2}': contact.address_2 || '',
-    '{company_title}': contact.company_title || '',
-    '{importance_level}': contact.importance_level ? String(contact.importance_level) : '',
-    '{notes}': contact.notes || '',
+  // Tüm contact alanlarını dinamik olarak ekle
+  const contactFields = {
+    first_name: contact.first_name || '',
+    last_name: contact.last_name || '',
+    email: contact.email || '',
+    company: contact.company || '',
+    position: contact.position || '',
+    phone: contact.phone || '',
+    mobile_phone: contact.mobile_phone || '',
+    full_name: `${contact.first_name || ''} ${contact.last_name || ''}`.trim(),
+    customer_representative: contact.customer_representative || '',
+    country: contact.country || '',
+    state: contact.state || '',
+    district: contact.district || '',
+    address_1: contact.address_1 || '',
+    address_2: contact.address_2 || '',
+    company_title: contact.company_title || '',
+    importance_level: contact.importance_level ? String(contact.importance_level) : '',
+    notes: contact.notes || '',
+    status: contact.status || '',
+    subscription_status: contact.subscription_status || '',
+    source: contact.source || '',
   };
   
-  // Standart değişkenleri değiştir
-  Object.entries(replacements).forEach(([key, value]) => {
-    result = result.replace(new RegExp(key, 'g'), value);
+  // Her alan için hem {field} hem {{field}} formatını destekle
+  Object.entries(contactFields).forEach(([key, value]) => {
+    // {{field}} formatı
+    const doubleBracePattern = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
+    result = result.replace(doubleBracePattern, value);
+    
+    // {field} formatı
+    const singleBracePattern = new RegExp(`\\{${key}\\}`, 'g');
+    result = result.replace(singleBracePattern, value);
   });
   
-  // Custom fields
+  // Custom fields - Excel'den gelen özel alanlar
   if (contact.custom_fields && typeof contact.custom_fields === 'object') {
     Object.entries(contact.custom_fields).forEach(([key, value]) => {
-      const placeholder = `{custom_${key}}`;
-      result = result.replace(new RegExp(placeholder, 'g'), value);
+      // {{FieldName}} formatı - Excel başlık adıyla birebir aynı
+      const doubleBracePattern = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
+      result = result.replace(doubleBracePattern, value || '');
+      
+      // {FieldName} formatı
+      const singleBracePattern = new RegExp(`\\{${key}\\}`, 'g');
+      result = result.replace(singleBracePattern, value || '');
+      
+      // {{custom_FieldName}} formatı (geriye uyumluluk için)
+      const customDoubleBracePattern = new RegExp(`\\{\\{custom_${key}\\}\\}`, 'g');
+      result = result.replace(customDoubleBracePattern, value || '');
+      
+      // {custom_FieldName} formatı (geriye uyumluluk için)
+      const customSingleBracePattern = new RegExp(`\\{custom_${key}\\}`, 'g');
+      result = result.replace(customSingleBracePattern, value || '');
     });
   }
   
