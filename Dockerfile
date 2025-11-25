@@ -1,8 +1,13 @@
-# Use Node.js 20 (required for Ant Design Pro v6)
-FROM node:20-alpine
+# Use Node.js 20 Debian (better compatibility for Mako bundler)
+FROM node:20-slim
 
 # Install system dependencies
-RUN apk add --no-cache python3 make g++ git
+RUN apt-get update && apt-get install -y \
+    python3 \
+    make \
+    g++ \
+    git \
+    && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /app
