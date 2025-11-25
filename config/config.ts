@@ -18,15 +18,22 @@ const PUBLIC_PATH: string = '/';
 
 export default defineConfig({
   /**
+   * @name Disable Mako bundler for Railway compatibility
+   * @description Use Webpack bundler instead of Mako
+   */
+  mako: false,
+
+  /**
    * @name Meta tags for mobile responsiveness
    */
   metas: [
     {
       name: 'viewport',
-      content: 'width=device-width, initial-scale=0.8, maximum-scale=1.0, user-scalable=yes',
+      content:
+        'width=device-width, initial-scale=0.8, maximum-scale=1.0, user-scalable=yes',
     },
   ],
-  
+
   /**
    * @name 开启 hash 模式
    * @description 让 build 之后的产物包含 hash 后缀。通常用于增量发布和避免浏览器加载缓存。
@@ -181,10 +188,10 @@ export default defineConfig({
   },
   /**
    * @name 是否开启 mako
-   * @description 使用 mako 极速研发
+   * @description 使用 mako 极速研发 - Disabled for Railway compatibility
    * @doc https://umijs.org/docs/api/config#mako
    */
-  mako: {},
+  // mako: {}, // Disabled - using Webpack instead
   esbuildMinifyIIFE: true,
   requestRecord: {},
   exportStatic: {},
