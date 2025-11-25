@@ -24,6 +24,7 @@ if (!fs.existsSync(distPath)) {
 }
 
 // API Routes
+const authRouter = require('./routes/auth');
 const contactsRouter = require('./routes/contacts');
 const templatesRouter = require('./routes/templates');
 const campaignsRouter = require('./routes/campaigns');
@@ -53,6 +54,7 @@ app.use((req, res, next) => {
 });
 
 // API Routes
+app.use('/api', authRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/contacts', contactsRouter);
 app.use('/api/templates', templatesRouter);

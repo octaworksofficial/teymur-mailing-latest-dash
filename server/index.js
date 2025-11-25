@@ -6,6 +6,7 @@ require('dotenv').config();
 // Timezone'u Türkiye olarak ayarla
 process.env.TZ = 'Europe/Istanbul';
 
+const authRouter = require('./routes/auth');
 const contactsRouter = require('./routes/contacts');
 const templatesRouter = require('./routes/templates');
 const campaignsRouter = require('./routes/campaigns');
@@ -27,6 +28,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // Routes
+app.use('/api', authRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/contacts', contactsRouter);
 app.use('/api/templates', templatesRouter);

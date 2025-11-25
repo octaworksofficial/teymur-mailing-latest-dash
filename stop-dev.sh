@@ -17,6 +17,7 @@ lsof -ti:3001 | xargs kill -9 2>/dev/null
 echo -e "${YELLOW}Frontend durduruluyor...${NC}"
 pkill -f "max dev"
 lsof -ti:8000 | xargs kill -9 2>/dev/null
+lsof -ti:3002 | xargs kill -9 2>/dev/null
 
 sleep 2
 

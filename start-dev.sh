@@ -22,9 +22,10 @@ echo -e "${YELLOW}[2/4] Port 3001 temizleniyor...${NC}"
 lsof -ti:3001 | xargs kill -9 2>/dev/null
 sleep 1
 
-# 3. Port 8000'i temizle (Frontend)
-echo -e "${YELLOW}[3/4] Port 8000 temizleniyor...${NC}"
+# 3. Frontend portlarını temizle (8000, 3002)
+echo -e "${YELLOW}[3/4] Frontend portları temizleniyor (8000, 3002)...${NC}"
 lsof -ti:8000 | xargs kill -9 2>/dev/null
+lsof -ti:3002 | xargs kill -9 2>/dev/null
 sleep 1
 
 # 4. Backend'i başlat (Port 3001)
@@ -42,9 +43,9 @@ else
     exit 1
 fi
 
-# 5. Frontend'i başlat (Port 8000)
-echo -e "\n${YELLOW}Frontend başlatılıyor (Port 8000)...${NC}"
-UMI_DEV_SERVER_PORT=8000 npm start &
+# 5. Frontend'i başlat
+echo -e "\n${YELLOW}Frontend başlatılıyor...${NC}"
+npm run start:dev &
 FRONTEND_PID=$!
 
 echo -e "\n${GREEN}================================================${NC}"
@@ -53,7 +54,7 @@ echo -e "${GREEN}================================================${NC}"
 echo -e "\n${BLUE}Backend PID:${NC}  $BACKEND_PID"
 echo -e "${BLUE}Frontend PID:${NC} $FRONTEND_PID"
 echo -e "\n${GREEN}📊 Backend API:${NC}  http://localhost:3001/api/contacts"
-echo -e "${GREEN}🌐 Frontend:${NC}     http://localhost:8000"
+echo -e "${GREEN}🌐 Frontend:${NC}     http://localhost:3002 ${YELLOW}(veya port otomatik seçilirse gösterilen adres)${NC}"
 echo -e "\n${YELLOW}Durdurmak için:${NC} Ctrl+C veya ./stop-dev.sh"
 echo -e "${GREEN}================================================${NC}\n"
 

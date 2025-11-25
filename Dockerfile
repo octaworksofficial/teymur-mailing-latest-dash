@@ -27,8 +27,9 @@ COPY . .
 # Build the application (avoid cache conflicts)
 RUN npm run build
 
-# Clean up node_modules to reduce image size
-RUN npm prune --production
+# Remove devDependencies but keep production dependencies (express, cors, etc)
+# Note: Don't prune - we need express and other server dependencies
+# RUN npm prune --production
 
 # Expose port
 EXPOSE 8080
