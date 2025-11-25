@@ -1,5 +1,5 @@
-# Use Node.js 18
-FROM node:18-alpine
+# Use Node.js 20 (required for Ant Design Pro v6)
+FROM node:20-alpine
 
 # Install system dependencies
 RUN apk add --no-cache python3 make g++ git
@@ -10,8 +10,8 @@ WORKDIR /app
 # Copy package files first for better caching
 COPY package*.json ./
 
-# Install dependencies using lockfile for faster, deterministic builds
-RUN npm ci --include=dev
+# Install dependencies with legacy peer deps for compatibility
+RUN npm ci --include=dev --legacy-peer-deps
 
 # Copy source code
 COPY . .
