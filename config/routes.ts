@@ -62,16 +62,16 @@
     ],
   },
   {
-    path: '/scheduler-logs',
-    name: 'scheduler-logs',
-    icon: 'code',
-    component: './SchedulerLogs',
-  },
-  {
     path: '/company-info',
     name: 'company-info',
     icon: 'bank',
     component: './CompanyInfo',
+  },
+  {
+    path: '/scheduler-logs',
+    name: 'scheduler-logs',
+    icon: 'code',
+    component: './SchedulerLogs',
   },
   {
     path: '/',
