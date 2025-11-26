@@ -1456,12 +1456,14 @@ const CampaignCreateNew: React.FC = () => {
                   style={{ width: '100%' }}
                 >
                   <Text strong>
-                    <InfoCircleOutlined /> Kişiselleştirme Değişkenleri
+                    <InfoCircleOutlined /> Kişiselleştirme Değişkenleri - Email
+                    İçeriğinizi Özelleştirin
                   </Text>
                   <Text type="secondary" style={{ fontSize: '12px' }}>
-                    Email konusu ve içeriğinde kişiye özel bilgiler
-                    kullanabilirsiniz. Değişkenler hem {'{field}'} hem de{' '}
-                    {'{{field}}'} formatında kullanılabilir.
+                    Email konusu ve içeriğinde her alıcıya özel bilgiler
+                    kullanarak daha etkili kampanyalar oluşturabilirsiniz.{' '}
+                    Değişkenler hem {'{field}'} hem de {'{{field}}'} formatında
+                    kullanılabilir.
                   </Text>
                   <div style={{ marginTop: 8 }}>
                     <Text type="secondary" style={{ fontSize: '11px' }}>
