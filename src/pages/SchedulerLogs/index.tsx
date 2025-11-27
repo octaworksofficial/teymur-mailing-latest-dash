@@ -46,9 +46,9 @@ const SchedulerLogs: React.FC = () => {
     if (passwordInput === '2423') {
       setIsAuthenticated(true);
       setIsPasswordModalVisible(false);
-      message.success('Giriş başarılı');
+      message.success('Giriş yapıldı! Scheduler loglarına erişim sağlandı.');
     } else {
-      message.error('Hatalı şifre');
+      message.error('Hatalı şifre! Lütfen tekrar deneyin.');
       setPasswordInput('');
     }
   };
