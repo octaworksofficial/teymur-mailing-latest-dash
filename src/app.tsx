@@ -98,14 +98,12 @@ export const layout: RunTimeLayoutConfig = ({
         width: '331px',
       },
     ],
-    links: isDevOrTest
-      ? [
-          <Link key="scheduler-logs" to="/scheduler-logs">
-            <LinkOutlined />
-            <span>Scheduler Logs</span>
-          </Link>,
-        ]
-      : [],
+    links: [
+      <Link key="scheduler-logs" to="/scheduler-logs">
+        <LinkOutlined />
+        <span>Scheduler Logs</span>
+      </Link>,
+    ],
     menuHeaderRender: undefined,
     // 自定义 403 页面
     // unAccessible: <div>unAccessible</div>,
