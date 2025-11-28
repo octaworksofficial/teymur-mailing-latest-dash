@@ -72,6 +72,7 @@
     name: 'scheduler-logs',
     icon: 'code',
     component: './SchedulerLogs',
+    hideInMenu: true,
   },
   {
     path: '/',

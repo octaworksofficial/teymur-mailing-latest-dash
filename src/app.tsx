@@ -100,9 +100,9 @@ export const layout: RunTimeLayoutConfig = ({
     ],
     links: isDevOrTest
       ? [
-          <Link key="openapi" to="/umi/plugin/openapi" target="_blank">
+          <Link key="scheduler-logs" to="/scheduler-logs">
             <LinkOutlined />
-            <span>OpenAPI 文档</span>
+            <span>Scheduler Logs</span>
           </Link>,
         ]
       : [],

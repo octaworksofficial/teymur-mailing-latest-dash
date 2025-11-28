@@ -7,24 +7,12 @@ const Footer: React.FC = () => {
       style={{
         background: 'none',
       }}
-      copyright="2025 OCTA Works"
+      copyright="2025 CERİLAS Yüksek Teknoloji San. ve Tic. A.Ş."
       links={[
         {
           key: 'help',
           title: 'Yardım',
-          href: '#',
-          blankTarget: false,
-        },
-        {
-          key: 'privacy',
-          title: 'Gizlilik',
-          href: '#',
-          blankTarget: false,
-        },
-        {
-          key: 'terms',
-          title: 'Kullanım Şartları',
-          href: '#',
+          href: 'mailto:deniz@cerilas.com',
           blankTarget: false,
         },
       ]}
