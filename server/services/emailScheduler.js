@@ -207,7 +207,22 @@ async function logEmailSent(campaignId, contactId, templateId, emailTo, subject,
     // tracking_id'yi döndür
     return result.rows[0];
   } catch (error) {
-    console.error('Campaign sent kaydı oluşturulurken hata:', error);
+    console.error('❌ Campaign sent kaydı oluşturulurken hata:', {
+      error: error.message,
+      stack: error.stack,
+      campaignId,
+      contactId,
+      templateId,
+      sequenceIndex,
+      status,
+      errorDetails: {
+        code: error.code,
+        detail: error.detail,
+        hint: error.hint,
+        position: error.position,
+        constraint: error.constraint
+      }
+    });
     return null;
   }
 }
