@@ -1,11 +1,49 @@
-import { PlusOutlined, UploadOutlined, DownloadOutlined, DeleteOutlined, EditOutlined, FileExcelOutlined, InboxOutlined } from '@ant-design/icons';
+import {
+  DeleteOutlined,
+  DownloadOutlined,
+  EditOutlined,
+  FileExcelOutlined,
+  InboxOutlined,
+  PlusOutlined,
+  UploadOutlined,
+} from '@ant-design/icons';
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
-import { PageContainer, ProTable, ModalForm, ProFormText, ProFormSelect, ProFormTextArea } from '@ant-design/pro-components';
-import { Button, Space, Tag, message, Popconfirm, Input, Form, Divider, Modal, Upload, Table, Alert, Progress } from 'antd';
+import {
+  ModalForm,
+  PageContainer,
+  ProFormSelect,
+  ProFormText,
+  ProFormTextArea,
+  ProTable,
+} from '@ant-design/pro-components';
+import {
+  Alert,
+  Button,
+  Divider,
+  Form,
+  Modal,
+  message,
+  Popconfirm,
+  Progress,
+  Space,
+  Table,
+  Tag,
+  Upload,
+} from 'antd';
 import React, { useRef, useState } from 'react';
-import { getContacts, createContact, updateContact, deleteContact, bulkDeleteContacts, exportContactsToExcel, importContactsFromExcel, downloadExcelTemplate, getContactSentEmails } from '@/services/contacts';
-import type { Contact } from '@/types/contact';
 import CustomFieldsEditor from '@/components/CustomFieldsEditor';
+import {
+  bulkDeleteContacts,
+  createContact,
+  deleteContact,
+  downloadExcelTemplate,
+  exportContactsToExcel,
+  getContactSentEmails,
+  getContacts,
+  importContactsFromExcel,
+  updateContact,
+} from '@/services/contacts';
+import type { Contact } from '@/types/contact';
 
 const Contacts: React.FC = () => {
   const actionRef = useRef<ActionType>(null);
@@ -14,11 +52,12 @@ const Contacts: React.FC = () => {
   const [currentContact, setCurrentContact] = useState<Contact | null>(null);
   const [customFields, setCustomFields] = useState<Record<string, string>>({});
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
-  
+
   // Sent emails modal
   const [sentEmailsModalVisible, setSentEmailsModalVisible] = useState(false);
-  const [selectedContactForEmails, setSelectedContactForEmails] = useState<Contact | null>(null);
-  
+  const [selectedContactForEmails, setSelectedContactForEmails] =
+    useState<Contact | null>(null);
+
   // Excel import/export states
   const [importModalVisible, setImportModalVisible] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
@@ -81,7 +120,7 @@ const Contacts: React.FC = () => {
       hideInSearch: true,
     },
     {
-      title: 'Müşteri Temsilcisi',
+      title: 'M. Temsilcisi',
       dataIndex: 'customer_representative',
       width: 180,
     },
@@ -133,8 +172,24 @@ const Contacts: React.FC = () => {
       },
       render: (_: any, record: Contact) => {
         if (!record.importance_level) return '-';
-        const colors = ['', 'default', 'default', 'blue', 'blue', 'cyan', 'cyan', 'orange', 'orange', 'red', 'red'];
-        return <Tag color={colors[record.importance_level]}>{record.importance_level}</Tag>;
+        const colors = [
+          '',
+          'default',
+          'default',
+          'blue',
+          'blue',
+          'cyan',
+          'cyan',
+          'orange',
+          'orange',
+          'red',
+          'red',
+        ];
+        return (
+          <Tag color={colors[record.importance_level]}>
+            {record.importance_level}
+          </Tag>
+        );
       },
     },
     {
@@ -171,30 +226,32 @@ const Contacts: React.FC = () => {
         }
         return (
           <Space direction="vertical" size={4} style={{ width: '100%' }}>
-            {Object.entries(fields).slice(0, 3).map(([key, value]) => (
-              <Space key={key} size={4} style={{ width: '100%' }}>
-                <Tag 
-                  color="blue" 
-                  style={{ 
-                    minWidth: 70,
-                    textAlign: 'center',
-                    fontWeight: 500,
-                    margin: 0
-                  }}
-                >
-                  {key}
-                </Tag>
-                <Tag 
-                  color="green"
-                  style={{ 
-                    flex: 1,
-                    margin: 0
-                  }}
-                >
-                  {String(value)}
-                </Tag>
-              </Space>
-            ))}
+            {Object.entries(fields)
+              .slice(0, 3)
+              .map(([key, value]) => (
+                <Space key={key} size={4} style={{ width: '100%' }}>
+                  <Tag
+                    color="blue"
+                    style={{
+                      minWidth: 70,
+                      textAlign: 'center',
+                      fontWeight: 500,
+                      margin: 0,
+                    }}
+                  >
+                    {key}
+                  </Tag>
+                  <Tag
+                    color="green"
+                    style={{
+                      flex: 1,
+                      margin: 0,
+                    }}
+                  >
+                    {String(value)}
+                  </Tag>
+                </Space>
+              ))}
             {Object.keys(fields).length > 3 && (
               <Tag color="default" style={{ fontSize: 11 }}>
                 +{Object.keys(fields).length - 3} alan daha
@@ -281,7 +338,7 @@ const Contacts: React.FC = () => {
               await deleteContact(record.id);
               message.success('Müşteri başarıyla silindi');
               actionRef.current?.reload();
-            } catch (error) {
+            } catch (_error) {
               message.error('Silme işlemi başarısız');
             }
           }}
@@ -298,7 +355,9 @@ const Contacts: React.FC = () => {
     try {
       await createContact({
         ...values,
-        tags: values.tags ? values.tags.split(',').map((t: string) => t.trim()) : [],
+        tags: values.tags
+          ? values.tags.split(',').map((t: string) => t.trim())
+          : [],
         custom_fields: customFields,
       });
       message.success('Müşteri başarıyla eklendi');
@@ -306,7 +365,7 @@ const Contacts: React.FC = () => {
       setCustomFields({});
       actionRef.current?.reload();
       return true;
-    } catch (error) {
+    } catch (_error) {
       message.error('Müşteri eklenirken hata oluştu');
       return false;
     }
@@ -317,7 +376,9 @@ const Contacts: React.FC = () => {
     try {
       await updateContact(currentContact.id, {
         ...values,
-        tags: values.tags ? values.tags.split(',').map((t: string) => t.trim()) : [],
+        tags: values.tags
+          ? values.tags.split(',').map((t: string) => t.trim())
+          : [],
         custom_fields: customFields,
       });
       message.success('Müşteri başarıyla güncellendi');
@@ -326,7 +387,7 @@ const Contacts: React.FC = () => {
       setCustomFields({});
       actionRef.current?.reload();
       return true;
-    } catch (error) {
+    } catch (_error) {
       message.error('Güncelleme sırasında hata oluştu');
       return false;
     }
@@ -339,11 +400,11 @@ const Contacts: React.FC = () => {
     }
 
     try {
-      await bulkDeleteContacts(selectedRowKeys.map(key => Number(key)));
+      await bulkDeleteContacts(selectedRowKeys.map((key) => Number(key)));
       message.success(`${selectedRowKeys.length} kişi başarıyla silindi`);
       setSelectedRowKeys([]);
       actionRef.current?.reload();
-    } catch (error) {
+    } catch (_error) {
       message.error('Silme işlemi sırasında hata oluştu');
     }
   };
@@ -353,7 +414,7 @@ const Contacts: React.FC = () => {
     try {
       downloadExcelTemplate();
       message.success('Excel şablonu indirildi');
-    } catch (error) {
+    } catch (_error) {
       message.error('Şablon indirilemedi');
     }
   };
@@ -364,8 +425,8 @@ const Contacts: React.FC = () => {
       const params = actionRef.current?.pageInfo || {};
       const result = await exportContactsToExcel(params as any);
       message.success(`${result.count} kişi Excel'e aktarıldı`);
-    } catch (error) {
-      message.error('Excel\'e aktarma başarısız oldu');
+    } catch (_error) {
+      message.error("Excel'e aktarma başarısız oldu");
     }
   };
 
@@ -395,12 +456,12 @@ const Contacts: React.FC = () => {
         errors: result.errors,
       });
       setImportPreview(result.preview);
-      
+
       if (result.imported > 0) {
         message.success(`${result.imported} kişi başarıyla içe aktarıldı`);
         actionRef.current?.reload();
       }
-      
+
       if (result.failed > 0) {
         message.warning(`${result.failed} kişi içe aktarılamadı`);
       }
@@ -418,7 +479,6 @@ const Contacts: React.FC = () => {
     setImportResult(null);
     setImportPreview([]);
   };
-
 
   return (
     <PageContainer
@@ -445,10 +505,7 @@ const Contacts: React.FC = () => {
               cancelText="İptal"
               okButtonProps={{ danger: true }}
             >
-              <Button
-                danger
-                icon={<DeleteOutlined />}
-              >
+              <Button danger icon={<DeleteOutlined />}>
                 Seçilileri Sil ({selectedRowKeys.length})
               </Button>
             </Popconfirm>
@@ -498,7 +555,7 @@ const Contacts: React.FC = () => {
             console.log('ProTable Params:', params); // Debug
             console.log('Sort:', sort); // Debug
             console.log('Filter:', filter); // Debug
-            
+
             const response = await getContacts({
               page: params.current,
               pageSize: params.pageSize,
@@ -560,17 +617,45 @@ const Contacts: React.FC = () => {
         />
         <ProFormText name="first_name" label="Ad" placeholder="Ad" />
         <ProFormText name="last_name" label="Soyad" placeholder="Soyad" />
-        <ProFormText name="phone" label="Telefon" placeholder="+90 5XX XXX XX XX" />
-        <ProFormText name="mobile_phone" label="Mobil Telefon" placeholder="+90 5XX XXX XX XX" />
+        <ProFormText
+          name="phone"
+          label="Telefon"
+          placeholder="+90 5XX XXX XX XX"
+        />
+        <ProFormText
+          name="mobile_phone"
+          label="Mobil Telefon"
+          placeholder="+90 5XX XXX XX XX"
+        />
         <ProFormText name="company" label="Şirket" placeholder="Şirket adı" />
-        <ProFormText name="company_title" label="Firma Ünvanı" placeholder="Firma ünvanı" />
-        <ProFormText name="position" label="Pozisyon" placeholder="Görev unvanı" />
-        <ProFormText name="customer_representative" label="Müşteri Temsilcisi" placeholder="Temsilci adı" />
+        <ProFormText
+          name="company_title"
+          label="Firma Ünvanı"
+          placeholder="Firma ünvanı"
+        />
+        <ProFormText
+          name="position"
+          label="Pozisyon"
+          placeholder="Görev unvanı"
+        />
+        <ProFormText
+          name="customer_representative"
+          label="Müşteri Temsilcisi"
+          placeholder="Temsilci adı"
+        />
         <ProFormText name="country" label="Ülke" placeholder="Türkiye" />
         <ProFormText name="state" label="İl" placeholder="İstanbul" />
         <ProFormText name="district" label="İlçe" placeholder="Kadıköy" />
-        <ProFormText name="address_1" label="Adres 1" placeholder="Birinci adres satırı" />
-        <ProFormText name="address_2" label="Adres 2" placeholder="İkinci adres satırı" />
+        <ProFormText
+          name="address_1"
+          label="Adres 1"
+          placeholder="Birinci adres satırı"
+        />
+        <ProFormText
+          name="address_2"
+          label="Adres 2"
+          placeholder="İkinci adres satırı"
+        />
         <ProFormSelect
           name="importance_level"
           label="Önem Derecesi"
@@ -630,9 +715,12 @@ const Contacts: React.FC = () => {
             rows: 2,
           }}
         />
-        
+
         <Divider>Özel Alanlar</Divider>
-        <Form.Item label="Özel Alanlar" tooltip="Müşteriye özel bilgiler ekleyebilirsiniz">
+        <Form.Item
+          label="Özel Alanlar"
+          tooltip="Müşteriye özel bilgiler ekleyebilirsiniz"
+        >
           <CustomFieldsEditor value={customFields} onChange={setCustomFields} />
         </Form.Item>
       </ModalForm>
@@ -681,17 +769,45 @@ const Contacts: React.FC = () => {
         />
         <ProFormText name="first_name" label="Ad" placeholder="Ad" />
         <ProFormText name="last_name" label="Soyad" placeholder="Soyad" />
-        <ProFormText name="phone" label="Telefon" placeholder="+90 5XX XXX XX XX" />
-        <ProFormText name="mobile_phone" label="Mobil Telefon" placeholder="+90 5XX XXX XX XX" />
+        <ProFormText
+          name="phone"
+          label="Telefon"
+          placeholder="+90 5XX XXX XX XX"
+        />
+        <ProFormText
+          name="mobile_phone"
+          label="Mobil Telefon"
+          placeholder="+90 5XX XXX XX XX"
+        />
         <ProFormText name="company" label="Şirket" placeholder="Şirket adı" />
-        <ProFormText name="company_title" label="Firma Ünvanı" placeholder="Firma ünvanı" />
-        <ProFormText name="position" label="Pozisyon" placeholder="Görev unvanı" />
-        <ProFormText name="customer_representative" label="Müşteri Temsilcisi" placeholder="Temsilci adı" />
+        <ProFormText
+          name="company_title"
+          label="Firma Ünvanı"
+          placeholder="Firma ünvanı"
+        />
+        <ProFormText
+          name="position"
+          label="Pozisyon"
+          placeholder="Görev unvanı"
+        />
+        <ProFormText
+          name="customer_representative"
+          label="Müşteri Temsilcisi"
+          placeholder="Temsilci adı"
+        />
         <ProFormText name="country" label="Ülke" placeholder="Türkiye" />
         <ProFormText name="state" label="İl" placeholder="İstanbul" />
         <ProFormText name="district" label="İlçe" placeholder="Kadıköy" />
-        <ProFormText name="address_1" label="Adres 1" placeholder="Birinci adres satırı" />
-        <ProFormText name="address_2" label="Adres 2" placeholder="İkinci adres satırı" />
+        <ProFormText
+          name="address_1"
+          label="Adres 1"
+          placeholder="Birinci adres satırı"
+        />
+        <ProFormText
+          name="address_2"
+          label="Adres 2"
+          placeholder="İkinci adres satırı"
+        />
         <ProFormSelect
           name="importance_level"
           label="Önem Derecesi"
@@ -749,9 +865,12 @@ const Contacts: React.FC = () => {
             rows: 2,
           }}
         />
-        
+
         <Divider>Özel Alanlar</Divider>
-        <Form.Item label="Özel Alanlar" tooltip="Müşteriye özel bilgiler ekleyebilirsiniz">
+        <Form.Item
+          label="Özel Alanlar"
+          tooltip="Müşteriye özel bilgiler ekleyebilirsiniz"
+        >
           <CustomFieldsEditor value={customFields} onChange={setCustomFields} />
         </Form.Item>
       </ModalForm>
@@ -786,12 +905,29 @@ const Contacts: React.FC = () => {
                 message="Excel Dosyası Yükleme"
                 description={
                   <div>
-                    <p>✨ <strong>Özel Alanlar ve Etiketler için Kolay Format:</strong></p>
+                    <p>
+                      ✨{' '}
+                      <strong>
+                        Özel Alanlar ve Etiketler için Kolay Format:
+                      </strong>
+                    </p>
                     <ul style={{ marginBottom: 0, paddingLeft: 20 }}>
-                      <li><strong>Etiketler:</strong> "tags" kolonunda virgülle ayırın (örn: vip,teknoloji,istanbul)</li>
-                      <li><strong>Özel Alanlar:</strong> "custom_field_1_name" ve "custom_field_1_value" şeklinde kullanın</li>
-                      <li>Örnek: custom_field_1_name: "Şehir", custom_field_1_value: "İstanbul"</li>
-                      <li>İstediğiniz kadar özel alan ekleyebilirsiniz (custom_field_2, custom_field_3...)</li>
+                      <li>
+                        <strong>Etiketler:</strong> "tags" kolonunda virgülle
+                        ayırın (örn: vip,teknoloji,istanbul)
+                      </li>
+                      <li>
+                        <strong>Özel Alanlar:</strong> "custom_field_1_name" ve
+                        "custom_field_1_value" şeklinde kullanın
+                      </li>
+                      <li>
+                        Örnek: custom_field_1_name: "Şehir",
+                        custom_field_1_value: "İstanbul"
+                      </li>
+                      <li>
+                        İstediğiniz kadar özel alan ekleyebilirsiniz
+                        (custom_field_2, custom_field_3...)
+                      </li>
                     </ul>
                   </div>
                 }
@@ -842,9 +978,13 @@ const Contacts: React.FC = () => {
                 message="İçe Aktarma Tamamlandı"
                 description={
                   <div>
-                    <p><strong>Başarılı:</strong> {importResult.imported} kişi</p>
+                    <p>
+                      <strong>Başarılı:</strong> {importResult.imported} kişi
+                    </p>
                     {importResult.failed > 0 && (
-                      <p style={{ color: '#ff4d4f' }}><strong>Başarısız:</strong> {importResult.failed} kişi</p>
+                      <p style={{ color: '#ff4d4f' }}>
+                        <strong>Başarısız:</strong> {importResult.failed} kişi
+                      </p>
                     )}
                   </div>
                 }
@@ -861,18 +1001,42 @@ const Contacts: React.FC = () => {
                     pagination={false}
                     scroll={{ x: 600 }}
                     columns={[
-                      { title: 'Email', dataIndex: 'email', key: 'email', width: 200 },
-                      { title: 'Ad', dataIndex: 'first_name', key: 'first_name', width: 100 },
-                      { title: 'Soyad', dataIndex: 'last_name', key: 'last_name', width: 100 },
-                      { title: 'Şirket', dataIndex: 'company', key: 'company', width: 150 },
+                      {
+                        title: 'Email',
+                        dataIndex: 'email',
+                        key: 'email',
+                        width: 200,
+                      },
+                      {
+                        title: 'Ad',
+                        dataIndex: 'first_name',
+                        key: 'first_name',
+                        width: 100,
+                      },
+                      {
+                        title: 'Soyad',
+                        dataIndex: 'last_name',
+                        key: 'last_name',
+                        width: 100,
+                      },
+                      {
+                        title: 'Şirket',
+                        dataIndex: 'company',
+                        key: 'company',
+                        width: 150,
+                      },
                       {
                         title: 'Etiketler',
                         dataIndex: 'tags',
                         key: 'tags',
                         render: (tags: string[]) => (
                           <Space size={[0, 4]} wrap>
-                            {tags?.map((tag, idx) => (
-                              <Tag key={idx} color="blue" style={{ fontSize: 11 }}>
+                            {tags?.map((tag) => (
+                              <Tag
+                                key={tag}
+                                color="blue"
+                                style={{ fontSize: 11 }}
+                              >
                                 {tag}
                               </Tag>
                             ))}
@@ -886,14 +1050,26 @@ const Contacts: React.FC = () => {
 
               {importResult.errors.length > 0 && (
                 <div>
-                  <h4 style={{ color: '#ff4d4f' }}>Hatalar ({importResult.errors.length}):</h4>
+                  <h4 style={{ color: '#ff4d4f' }}>
+                    Hatalar ({importResult.errors.length}):
+                  </h4>
                   <Table
                     dataSource={importResult.errors}
                     size="small"
                     pagination={{ pageSize: 5 }}
                     columns={[
-                      { title: 'Satır', dataIndex: 'row', key: 'row', width: 60 },
-                      { title: 'Email', dataIndex: 'email', key: 'email', width: 200 },
+                      {
+                        title: 'Satır',
+                        dataIndex: 'row',
+                        key: 'row',
+                        width: 60,
+                      },
+                      {
+                        title: 'Email',
+                        dataIndex: 'email',
+                        key: 'email',
+                        width: 200,
+                      },
                       { title: 'Hata', dataIndex: 'error', key: 'error' },
                     ]}
                   />
@@ -925,16 +1101,23 @@ const SentEmailsModal: React.FC<{
 }> = ({ visible, contact, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [emails, setEmails] = useState<any[]>([]);
-  const [pagination, setPagination] = useState({ page: 1, pageSize: 10, total: 0 });
+  const [pagination, setPagination] = useState({
+    page: 1,
+    pageSize: 10,
+    total: 0,
+  });
   const [selectedEmail, setSelectedEmail] = useState<any>(null);
   const [previewVisible, setPreviewVisible] = useState(false);
 
   const loadEmails = async (page = 1, pageSize = 10) => {
     if (!contact) return;
-    
+
     try {
       setLoading(true);
-      const response = await getContactSentEmails(contact.id, { page, pageSize });
+      const response = await getContactSentEmails(contact.id, {
+        page,
+        pageSize,
+      });
       if (response.success) {
         setEmails(response.data);
         setPagination({
@@ -943,7 +1126,7 @@ const SentEmailsModal: React.FC<{
           total: response.pagination.total,
         });
       }
-    } catch (error) {
+    } catch (_error) {
       message.error('Emailler yüklenirken hata oluştu');
     } finally {
       setLoading(false);
@@ -964,7 +1147,10 @@ const SentEmailsModal: React.FC<{
       render: (_, record) => (
         <Space direction="vertical" size={0}>
           <strong>{record.campaign_name}</strong>
-          <Tag color={record.campaign_status === 'active' ? 'green' : 'default'} style={{ fontSize: 11 }}>
+          <Tag
+            color={record.campaign_status === 'active' ? 'green' : 'default'}
+            style={{ fontSize: 11 }}
+          >
             {record.campaign_status}
           </Tag>
         </Space>
@@ -977,7 +1163,9 @@ const SentEmailsModal: React.FC<{
       render: (_, record) => (
         <Space direction="vertical" size={0}>
           <span>{record.template_name}</span>
-          <Tag color="blue" style={{ fontSize: 11 }}>#{record.sequence_index + 1}</Tag>
+          <Tag color="blue" style={{ fontSize: 11 }}>
+            #{record.sequence_index + 1}
+          </Tag>
         </Space>
       ),
     },
@@ -1004,13 +1192,19 @@ const SentEmailsModal: React.FC<{
       title: 'Gönderim Tarihi',
       dataIndex: 'sent_date',
       width: 150,
-      render: (_: any, record: any) => record.sent_date ? new Date(record.sent_date).toLocaleString('tr-TR') : '-',
+      render: (_: any, record: any) =>
+        record.sent_date
+          ? new Date(record.sent_date).toLocaleString('tr-TR')
+          : '-',
     },
     {
       title: 'Açılma',
       dataIndex: 'opened_at',
       width: 150,
-      render: (_: any, record: any) => record.opened_at ? new Date(record.opened_at).toLocaleString('tr-TR') : '-',
+      render: (_: any, record: any) =>
+        record.opened_at
+          ? new Date(record.opened_at).toLocaleString('tr-TR')
+          : '-',
     },
     {
       title: 'İşlem',
@@ -1081,10 +1275,13 @@ const SentEmailsModal: React.FC<{
         }}
         width={800}
         footer={[
-          <Button key="close" onClick={() => {
-            setPreviewVisible(false);
-            setSelectedEmail(null);
-          }}>
+          <Button
+            key="close"
+            onClick={() => {
+              setPreviewVisible(false);
+              setSelectedEmail(null);
+            }}
+          >
             Kapat
           </Button>,
         ]}
@@ -1093,9 +1290,19 @@ const SentEmailsModal: React.FC<{
           <div>
             <Divider orientation="left">Bilgiler</Divider>
             <Space direction="vertical" style={{ width: '100%' }}>
-              <div><strong>Kampanya:</strong> {selectedEmail.campaign_name}</div>
-              <div><strong>Şablon:</strong> {selectedEmail.template_name} (#{selectedEmail.sequence_index + 1})</div>
-              <div><strong>Gönderim:</strong> {selectedEmail.sent_date ? new Date(selectedEmail.sent_date).toLocaleString('tr-TR') : 'Henüz gönderilmedi'}</div>
+              <div>
+                <strong>Kampanya:</strong> {selectedEmail.campaign_name}
+              </div>
+              <div>
+                <strong>Şablon:</strong> {selectedEmail.template_name} (#
+                {selectedEmail.sequence_index + 1})
+              </div>
+              <div>
+                <strong>Gönderim:</strong>{' '}
+                {selectedEmail.sent_date
+                  ? new Date(selectedEmail.sent_date).toLocaleString('tr-TR')
+                  : 'Henüz gönderilmedi'}
+              </div>
               {selectedEmail.is_failed && (
                 <Alert
                   message="Gönderim Hatası"
@@ -1105,18 +1312,21 @@ const SentEmailsModal: React.FC<{
                 />
               )}
             </Space>
-            
+
             <Divider orientation="left">Email İçeriği</Divider>
-            <div 
-              style={{ 
-                border: '1px solid #d9d9d9', 
-                padding: 16, 
+            <div
+              style={{
+                border: '1px solid #d9d9d9',
+                padding: 16,
                 borderRadius: 4,
                 maxHeight: '500px',
                 overflow: 'auto',
-                backgroundColor: '#fff'
+                backgroundColor: '#fff',
               }}
-              dangerouslySetInnerHTML={{ __html: selectedEmail.rendered_body_html }}
+              // biome-ignore lint/security/noDangerouslySetInnerHtml: Email content needs to be rendered as HTML
+              dangerouslySetInnerHTML={{
+                __html: selectedEmail.rendered_body_html,
+              }}
             />
           </div>
         )}
@@ -1124,6 +1334,5 @@ const SentEmailsModal: React.FC<{
     </>
   );
 };
-
 
 export default Contacts;

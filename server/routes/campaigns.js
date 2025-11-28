@@ -537,4 +537,77 @@ router.get('/stats/summary', async (req, res) => {
   }
 });
 
+// Email Yanıt Webhook - n8n'den çağrılır
+router.post('/email-reply', async (req, res) => {
+  const { tracking_id, campaign_id, contact_id, from, subject, body, replied_at } = req.body;
+  
+  try {
+    console.log(`📬 Email yanıtı alındı - Tracking ID: ${tracking_id}`, {
+      campaignId: campaign_id,
+      contactId: contact_id,
+      from
+    });
+    
+    // tracking_id ile campaign_sends kaydını bul ve güncelle
+    const result = await pool.query(
+      `UPDATE campaign_sends 
+       SET is_replied = true, 
+           replied_at = $1,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE tracking_id = $2
+       RETURNING id, campaign_id, contact_id, sequence_index`,
+      [replied_at || new Date(), tracking_id]
+    );
+    
+    if (result.rows.length === 0) {
+      console.log(`⚠️ Tracking ID bulunamadı: ${tracking_id}`);
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Tracking ID bulunamadı' 
+      });
+    }
+    
+    const sendRecord = result.rows[0];
+    
+    console.log(`✅ Email yanıtı kaydedildi:`, {
+      campaignId: sendRecord.campaign_id,
+      contactId: sendRecord.contact_id,
+      sequenceIndex: sendRecord.sequence_index,
+      from
+    });
+    
+    // Contact'ın engagement score'unu artır (yanıt = +5 puan)
+    await pool.query(
+      `UPDATE contacts 
+       SET engagement_score = COALESCE(engagement_score, 0) + 5,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1`,
+      [sendRecord.contact_id]
+    );
+    
+    // Kampanya istatistiklerini güncelle
+    await pool.query(
+      `UPDATE email_campaigns 
+       SET total_replied = COALESCE(total_replied, 0) + 1,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1`,
+      [sendRecord.campaign_id]
+    );
+    
+    res.json({ 
+      success: true, 
+      campaign_id: sendRecord.campaign_id, 
+      contact_id: sendRecord.contact_id,
+      message: 'Email yanıtı başarıyla kaydedildi' 
+    });
+    
+  } catch (error) {
+    console.error('❌ Email yanıt kaydetme hatası:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
 module.exports = router;

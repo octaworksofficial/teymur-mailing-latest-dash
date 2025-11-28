@@ -96,7 +96,7 @@ function replaceTemplateVariables(text, contact) {
  * n8n webhook ile email gönder
  * NOT: HTML artık tracking ve personalization ile geldiği için burada işleme yapmıyoruz
  */
-async function sendEmail(to, subject, htmlBody, contact) {
+async function sendEmail(to, subject, htmlBody, contact, trackingId = null, campaignId = null, contactId = null) {
   try {
     const payload = {
       to,
@@ -109,7 +109,16 @@ async function sendEmail(to, subject, htmlBody, contact) {
     if (DEFAULT_CC) payload.cc = DEFAULT_CC;
     if (DEFAULT_BCC) payload.bcc = DEFAULT_BCC;
     
-    console.log(`📧 Email gönderiliyor: ${to} - ${subject}`);
+    // Tracking bilgilerini ekle (n8n'de email header'larına eklenecek)
+    if (trackingId || campaignId || contactId) {
+      payload.tracking_info = {
+        tracking_id: trackingId,
+        campaign_id: campaignId,
+        contact_id: contactId
+      };
+    }
+    
+    console.log(`📧 Email gönderiliyor: ${to} - ${subject}${trackingId ? ` [Tracking: ${trackingId}]` : ''}`);
     
     const response = await axios.post(N8N_WEBHOOK_URL, payload, {
       headers: {
@@ -438,12 +447,15 @@ async function processScheduledEmails() {
           // Subject'i de personalize et
           const personalizedSubject = replaceTemplateVariables(template.subject, contact);
           
-          // Email'i gönder
+          // Email'i gönder (tracking bilgileriyle birlikte)
           const result = await sendEmail(
             contact.email,
             personalizedSubject,
             trackedHtml,
-            contact
+            contact,
+            sendRecord.tracking_id,  // tracking_id ekle
+            campaignId,              // campaign_id ekle
+            contactId                // contact_id ekle
           );
           
           if (result.success) {
