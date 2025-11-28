@@ -508,7 +508,9 @@ const Templates: React.FC = () => {
             if (values.tags && typeof values.tags === 'string') {
               values.tags = values.tags.split(',').map((t: string) => t.trim());
             }
-            await updateTemplate(currentRow?.id, values);
+            if (currentRow?.id) {
+              await updateTemplate(currentRow.id, values);
+            }
             message.success('Şablon başarıyla güncellendi');
             setUpdateModalOpen(false);
             actionRef.current?.reload();
@@ -658,6 +660,7 @@ const Templates: React.FC = () => {
                 maxHeight: 600,
                 overflow: 'auto',
               }}
+              // biome-ignore lint/security/noDangerouslySetInnerHtml: Template content needs to be rendered as HTML
               dangerouslySetInnerHTML={{ __html: currentRow.body_html }}
             />
           </div>

@@ -6,13 +6,7 @@ import { history, Link } from '@umijs/max';
 import { ConfigProvider } from 'antd';
 import trTR from 'antd/locale/tr_TR';
 import React from 'react';
-import {
-  AvatarDropdown,
-  AvatarName,
-  Footer,
-  Question,
-  SelectLang,
-} from '@/components';
+import { AvatarDropdown, AvatarName, Footer, Question } from '@/components';
 import { currentUser as queryCurrentUser } from '@/services/ant-design-pro/api';
 import defaultSettings from '../config/defaultSettings';
 import { errorConfig } from './requestErrorConfig';
@@ -68,10 +62,7 @@ export const layout: RunTimeLayoutConfig = ({
   setInitialState,
 }) => {
   return {
-    actionsRender: () => [
-      <Question key="doc" />,
-      <SelectLang key="SelectLang" />,
-    ],
+    actionsRender: () => [<Question key="doc" />],
     avatarProps: {
       src: initialState?.currentUser?.avatar,
       title: <AvatarName />,

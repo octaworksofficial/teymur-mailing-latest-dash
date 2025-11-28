@@ -300,7 +300,9 @@ const Contacts: React.FC = () => {
             setSelectedContactForEmails(record);
             setSentEmailsModalVisible(true);
           }}
-          style={{ color: record.total_emails_sent > 0 ? '#1890ff' : '#999' }}
+          style={{
+            color: (record.total_emails_sent || 0) > 0 ? '#1890ff' : '#999',
+          }}
         >
           {record.total_emails_sent || 0}
         </a>

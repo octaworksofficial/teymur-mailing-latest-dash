@@ -1,13 +1,27 @@
-import { ArrowDownOutlined, ArrowUpOutlined, MailOutlined, SendOutlined, EyeOutlined, ReloadOutlined, UserOutlined, FileTextOutlined, ThunderboltOutlined } from '@ant-design/icons';
-import { Card, Col, Row, Statistic, Table, Tag, Spin, message } from 'antd';
 import { Column } from '@ant-design/charts';
+import {
+  ArrowDownOutlined,
+  ArrowUpOutlined,
+  EyeOutlined,
+  FileTextOutlined,
+  MailOutlined,
+  ReloadOutlined,
+  SendOutlined,
+  ThunderboltOutlined,
+  UserOutlined,
+} from '@ant-design/icons';
 import { PageContainer } from '@ant-design/pro-components';
+import { Card, Col, Row, Spin, Statistic, Table, Tag } from 'antd';
 import React, { useEffect, useState } from 'react';
-import { getDashboardData } from '@/services/dashboard';
-import { getContactStats } from '@/services/contacts';
 import { getCampaignStats } from '@/services/campaigns';
+import { getContactStats } from '@/services/contacts';
+import type {
+  ActiveCampaign,
+  DashboardStats,
+  WeeklyEmailData,
+} from '@/services/dashboard';
+import { getDashboardData } from '@/services/dashboard';
 import { getTemplateStats } from '@/services/templates';
-import type { DashboardStats, WeeklyEmailData, ActiveCampaign } from '@/services/dashboard';
 
 const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -28,13 +42,13 @@ const Dashboard: React.FC = () => {
       // Dashboard ana verilerini getir
       try {
         const dashboardResponse = await getDashboardData();
-        
+
         if (dashboardResponse.data) {
           setStats(dashboardResponse.data.stats);
           setWeeklyData(dashboardResponse.data.weeklyEmails);
           setCampaigns(dashboardResponse.data.activeCampaigns);
         }
-      } catch (dashboardError) {
+      } catch (_dashboardError) {
         console.log('Dashboard endpoint not available, using fallback data');
         // Fallback: Mock data kullan
         setWeeklyData([
@@ -54,7 +68,7 @@ const Dashboard: React.FC = () => {
         if (contactStatsResponse.data?.total_contacts) {
           setContactCount(contactStatsResponse.data.total_contacts);
         }
-      } catch (error) {
+      } catch (_error) {
         console.log('Contact stats endpoint not available');
       }
 
@@ -63,7 +77,7 @@ const Dashboard: React.FC = () => {
         if (campaignStatsResponse.data?.summary?.total_campaigns) {
           setCampaignCount(campaignStatsResponse.data.summary.total_campaigns);
         }
-      } catch (error) {
+      } catch (_error) {
         console.log('Campaign stats endpoint not available');
       }
 
@@ -72,10 +86,9 @@ const Dashboard: React.FC = () => {
         if (templateStatsResponse.data?.summary?.total_templates) {
           setTemplateCount(templateStatsResponse.data.summary.total_templates);
         }
-      } catch (error) {
+      } catch (_error) {
         console.log('Template stats endpoint not available');
       }
-
     } catch (error) {
       console.error('Dashboard data loading error:', error);
       // Kullanıcıya hata mesajı gösterme - sessizce fallback kullan

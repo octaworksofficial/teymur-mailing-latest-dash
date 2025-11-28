@@ -29,11 +29,13 @@ export default {
   'app.settings.security.phone': 'Güvenlik Telefonu',
   'app.settings.security.phone-description': 'Bağlı telefon',
   'app.settings.security.question': 'Güvenlik Sorusu',
-  'app.settings.security.question-description': 'Güvenlik sorusu ayarlanmadı, güvenlik politikası hesabınızı etkili bir şekilde koruyabilir',
+  'app.settings.security.question-description':
+    'Güvenlik sorusu ayarlanmadı, güvenlik politikası hesabınızı etkili bir şekilde koruyabilir',
   'app.settings.security.email': 'Yedekleme Email',
   'app.settings.security.email-description': 'Bağlı email',
   'app.settings.security.mfa': 'MFA Cihazı',
-  'app.settings.security.mfa-description': 'Bağlı olmayan MFA cihazı, bağlandıktan sonra iki faktörlü doğrulama gerçekleştirilebilir',
+  'app.settings.security.mfa-description':
+    'Bağlı olmayan MFA cihazı, bağlandıktan sonra iki faktörlü doğrulama gerçekleştirilebilir',
   'app.settings.security.modify': 'Değiştir',
   'app.settings.security.set': 'Ayarla',
   'app.settings.security.bind': 'Bağla',
@@ -42,10 +44,12 @@ export default {
   'app.settings.binding.alipay': 'Alipay Hesabını Bağla',
   'app.settings.binding.alipay-description': 'Şu anda bağlı Alipay hesabı yok',
   'app.settings.binding.dingding': 'DingTalk Hesabını Bağla',
-  'app.settings.binding.dingding-description': 'Şu anda bağlı DingTalk hesabı yok',
+  'app.settings.binding.dingding-description':
+    'Şu anda bağlı DingTalk hesabı yok',
   'app.settings.binding.bind': 'Bağla',
   'app.settings.notification.password': 'Hesap Şifresi',
-  'app.settings.notification.password-description': 'Diğer kullanıcılar güvenlik ayarlarını değiştirir',
+  'app.settings.notification.password-description':
+    'Diğer kullanıcılar güvenlik ayarlarını değiştirir',
   'app.settings.notification.messages': 'Sistem Mesajları',
   'app.settings.notification.messages-description': 'Sistem mesajları',
   'app.settings.notification.todo': 'Yapılacak Bildirim',

@@ -1,5 +1,5 @@
-import { Steps, Card, Button, Space } from 'antd';
 import { PageContainer } from '@ant-design/pro-components';
+import { Button, Card, Space, Steps } from 'antd';
 import React, { useState } from 'react';
 
 const { Step } = Steps;
@@ -16,7 +16,8 @@ const CreateCampaign: React.FC = () => {
             Kampanya adı ve açıklamasını girin
           </p>
           <p style={{ color: '#888' }}>
-            Bu adımda kampanya adı, açıklama ve temel ayarlar için form alanları bulunacak.
+            Bu adımda kampanya adı, açıklama ve temel ayarlar için form alanları
+            bulunacak.
           </p>
         </Card>
       ),
@@ -42,7 +43,8 @@ const CreateCampaign: React.FC = () => {
             Alıcıları seçin ve filtreler uygulayın
           </p>
           <p style={{ color: '#888' }}>
-            Bu adımda etiketler, segmentler ve özel filtrelere göre kişileri seçebileceksiniz.
+            Bu adımda etiketler, segmentler ve özel filtrelere göre kişileri
+            seçebileceksiniz.
           </p>
         </Card>
       ),
@@ -55,7 +57,8 @@ const CreateCampaign: React.FC = () => {
             Kampanyanızın ne zaman gönderileceğini ayarlayın
           </p>
           <p style={{ color: '#888' }}>
-            Seçenekler: Hemen gönder, Daha sonra için zamanla, Tekrarlayan kampanya, Koşullu gönderim
+            Seçenekler: Hemen gönder, Daha sonra için zamanla, Tekrarlayan
+            kampanya, Koşullu gönderim
           </p>
         </Card>
       ),
@@ -97,30 +100,20 @@ const CreateCampaign: React.FC = () => {
           ))}
         </Steps>
 
-        <div style={{ minHeight: 300 }}>
-          {steps[currentStep].content}
-        </div>
+        <div style={{ minHeight: 300 }}>{steps[currentStep].content}</div>
 
         <div style={{ marginTop: 24 }}>
           <Space>
-            {currentStep > 0 && (
-              <Button onClick={() => prev()}>
-                Önceki
-              </Button>
-            )}
+            {currentStep > 0 && <Button onClick={() => prev()}>Önceki</Button>}
             {currentStep < steps.length - 1 && (
               <Button type="primary" onClick={() => next()}>
                 Sonraki
               </Button>
             )}
             {currentStep === steps.length - 1 && (
-              <Button type="primary">
-                Kampanyayı Başlat
-              </Button>
+              <Button type="primary">Kampanyayı Başlat</Button>
             )}
-            <Button>
-              Taslak Olarak Kaydet
-            </Button>
+            <Button>Taslak Olarak Kaydet</Button>
           </Space>
         </div>
       </Card>

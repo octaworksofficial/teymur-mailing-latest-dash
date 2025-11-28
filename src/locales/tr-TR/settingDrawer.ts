@@ -27,5 +27,6 @@ export default {
   'app.setting.weakmode': 'Renk Körü Modu',
   'app.setting.copy': 'Ayarları Kopyala',
   'app.setting.copyinfo': 'Kopyalama başarılı',
-  'app.setting.production.hint': 'Ayar paneli sadece geliştirme ortamında gösterilir',
+  'app.setting.production.hint':
+    'Ayar paneli sadece geliştirme ortamında gösterilir',
 };

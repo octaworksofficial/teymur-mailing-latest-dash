@@ -1,11 +1,21 @@
-import { LockOutlined, MobileOutlined, UserOutlined } from '@ant-design/icons';
+import {
+  AlipayCircleOutlined,
+  LockOutlined,
+  MobileOutlined,
+  TaobaoCircleOutlined,
+  UserOutlined,
+  WeiboCircleOutlined,
+} from '@ant-design/icons';
 import {
   LoginForm,
   ProFormCaptcha,
   ProFormCheckbox,
   ProFormText,
 } from '@ant-design/pro-components';
-import { FormattedMessage, Helmet, useModel } from '@umijs/max';
+import {
+  Helmet,
+  useModel,
+} from '@umijs/max';
 import { Alert, App, Tabs } from 'antd';
 import { createStyles } from 'antd-style';
 import React, { useState } from 'react';
@@ -51,6 +61,12 @@ const useStyles = createStyles(({ token }) => {
   };
 });
 
+const ActionIcons = () => {
+  const { styles } = useStyles();
+
+  return null; // Social login iconlarını kaldırdık
+};
+
 const Lang = () => {
   return null;
 };
@@ -76,7 +92,6 @@ const Login: React.FC = () => {
   const { initialState, setInitialState } = useModel('@@initialState');
   const { styles } = useStyles();
   const { message } = App.useApp();
-  const intl = useIntl();
 
   const fetchUserInfo = async () => {
     const userInfo = await initialState?.fetchUserInfo?.();

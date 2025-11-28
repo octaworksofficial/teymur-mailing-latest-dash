@@ -1,10 +1,15 @@
-import { PlusOutlined, CopyOutlined, DeleteOutlined } from '@ant-design/icons';
+import { CopyOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
-import { Button, message, Space, Tag, Popconfirm, Progress } from 'antd';
-import React, { useRef, useState } from 'react';
 import { history } from '@umijs/max';
-import { getCampaigns, deleteCampaign, bulkDeleteCampaigns, duplicateCampaign } from '@/services/campaigns';
+import { Button, message, Popconfirm, Progress, Space, Tag } from 'antd';
+import React, { useRef, useState } from 'react';
+import {
+  bulkDeleteCampaigns,
+  deleteCampaign,
+  duplicateCampaign,
+  getCampaigns,
+} from '@/services/campaigns';
 import type { EmailCampaign } from '@/types/campaign';
 
 const CampaignList: React.FC = () => {
@@ -34,7 +39,7 @@ const CampaignList: React.FC = () => {
       await deleteCampaign(id);
       message.success('Program silindi');
       actionRef.current?.reload();
-    } catch (error) {
+    } catch (_error) {
       message.error('Silme işlemi başarısız oldu');
     }
   };
@@ -49,7 +54,7 @@ const CampaignList: React.FC = () => {
       message.success(`${selectedRowKeys.length} program silindi`);
       setSelectedRowKeys([]);
       actionRef.current?.reload();
-    } catch (error) {
+    } catch (_error) {
       message.error('Toplu silme işlemi başarısız oldu');
     }
   };
@@ -59,7 +64,7 @@ const CampaignList: React.FC = () => {
       await duplicateCampaign(id);
       message.success('Program çoğaltıldı');
       actionRef.current?.reload();
-    } catch (error) {
+    } catch (_error) {
       message.error('Çoğaltma işlemi başarısız oldu');
     }
   };
@@ -76,7 +81,9 @@ const CampaignList: React.FC = () => {
       dataIndex: 'name',
       ellipsis: true,
       render: (_, record) => (
-        <a onClick={() => history.push(`/campaigns/edit/${record.id}`)}>{record.name}</a>
+        <a onClick={() => history.push(`/campaigns/edit/${record.id}`)}>
+          {record.name}
+        </a>
       ),
     },
     {
@@ -100,7 +107,9 @@ const CampaignList: React.FC = () => {
         cancelled: { text: 'İptal Edildi', status: 'Error' },
       },
       render: (_, record) => (
-        <Tag color={statusColors[record.status]}>{statusLabels[record.status]}</Tag>
+        <Tag color={statusColors[record.status]}>
+          {statusLabels[record.status]}
+        </Tag>
       ),
     },
     {
@@ -115,7 +124,9 @@ const CampaignList: React.FC = () => {
       dataIndex: 'template_sequence',
       width: 100,
       search: false,
-      render: (_, record) => <Tag color="green">{record.template_sequence?.length || 0} email</Tag>,
+      render: (_, record) => (
+        <Tag color="green">{record.template_sequence?.length || 0} email</Tag>
+      ),
     },
     {
       title: 'Tekrarlayan',
@@ -147,17 +158,29 @@ const CampaignList: React.FC = () => {
       search: false,
       render: (_, record) => {
         if (record.total_sent === 0) return <span>-</span>;
-        const openRate = Math.round((record.total_opened / record.total_sent) * 100);
-        const clickRate = Math.round((record.total_clicked / record.total_sent) * 100);
+        const openRate = Math.round(
+          (record.total_opened / record.total_sent) * 100,
+        );
+        const clickRate = Math.round(
+          (record.total_clicked / record.total_sent) * 100,
+        );
         return (
           <Space direction="vertical" size="small" style={{ width: '100%' }}>
             <div>
               <span style={{ fontSize: 12 }}>Açılma: </span>
-              <Progress percent={openRate} size="small" style={{ width: 100 }} />
+              <Progress
+                percent={openRate}
+                size="small"
+                style={{ width: 100 }}
+              />
             </div>
             <div>
               <span style={{ fontSize: 12 }}>Tıklama: </span>
-              <Progress percent={clickRate} size="small" style={{ width: 100 }} />
+              <Progress
+                percent={clickRate}
+                size="small"
+                style={{ width: 100 }}
+              />
             </div>
           </Space>
         );
@@ -174,7 +197,9 @@ const CampaignList: React.FC = () => {
           <Tag color="green">📖 {record.total_opened}</Tag>
           <Tag color="orange">👆 {record.total_clicked}</Tag>
           <Tag color="purple">💬 {record.total_replied}</Tag>
-          {record.total_failed > 0 && <Tag color="red">❌ {record.total_failed}</Tag>}
+          {record.total_failed > 0 && (
+            <Tag color="red">❌ {record.total_failed}</Tag>
+          )}
         </Space>
       ),
     },
@@ -242,7 +267,7 @@ const CampaignList: React.FC = () => {
           Yeni Program
         </Button>,
       ]}
-      request={async (params, sort) => {
+      request={async (params, _sort) => {
         try {
           const response = await getCampaigns({
             page: params.current,
@@ -256,7 +281,7 @@ const CampaignList: React.FC = () => {
             success: response.success,
             total: response.pagination.total,
           };
-        } catch (error) {
+        } catch (_error) {
           message.error('Veriler yüklenemedi');
           return {
             data: [],

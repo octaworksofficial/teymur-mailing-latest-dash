@@ -1,5 +1,5 @@
 import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
-import { Button, Form, Input, Space, Typography, Card, Row, Col } from 'antd';
+import { Button, Card, Col, Input, Row, Typography } from 'antd';
 import React from 'react';
 
 const { Text } = Typography;
@@ -9,10 +9,13 @@ interface CustomFieldsEditorProps {
   onChange?: (value: Record<string, any>) => void;
 }
 
-const CustomFieldsEditor: React.FC<CustomFieldsEditorProps> = ({ value = {}, onChange }) => {
-  const [fields, setFields] = React.useState<Array<{ key: string; value: string }>>(
-    Object.entries(value).map(([key, val]) => ({ key, value: String(val) }))
-  );
+const CustomFieldsEditor: React.FC<CustomFieldsEditorProps> = ({
+  value = {},
+  onChange,
+}) => {
+  const [fields, setFields] = React.useState<
+    Array<{ key: string; value: string }>
+  >(Object.entries(value).map(([key, val]) => ({ key, value: String(val) })));
 
   const handleAdd = () => {
     const newFields = [...fields, { key: '', value: '' }];
@@ -38,7 +41,8 @@ const CustomFieldsEditor: React.FC<CustomFieldsEditorProps> = ({ value = {}, onC
       if (key.trim()) {
         // Sayı mı kontrol et
         const numValue = Number(value);
-        obj[key.trim()] = !isNaN(numValue) && value.trim() !== '' ? numValue : value;
+        obj[key.trim()] =
+          !Number.isNaN(numValue) && value.trim() !== '' ? numValue : value;
       }
     });
     onChange?.(obj);
@@ -48,29 +52,31 @@ const CustomFieldsEditor: React.FC<CustomFieldsEditorProps> = ({ value = {}, onC
     <div>
       <div style={{ marginBottom: 12 }}>
         <Text type="secondary" style={{ fontSize: 13 }}>
-          Her müşteri için özel bilgiler ekleyebilirsiniz (şehir, sektör, bütçe, vb.)
+          Her müşteri için özel bilgiler ekleyebilirsiniz (şehir, sektör, bütçe,
+          vb.)
         </Text>
       </div>
-      
+
       {fields.length === 0 && (
-        <Card 
-          size="small" 
-          style={{ 
-            marginBottom: 12, 
-            background: '#fafafa', 
-            border: '1px dashed #d9d9d9' 
+        <Card
+          size="small"
+          style={{
+            marginBottom: 12,
+            background: '#fafafa',
+            border: '1px dashed #d9d9d9',
           }}
         >
           <Text type="secondary" style={{ fontSize: 12 }}>
-            Henüz özel alan eklenmedi. "Özel Alan Ekle" butonuna tıklayarak başlayın.
+            Henüz özel alan eklenmedi. "Özel Alan Ekle" butonuna tıklayarak
+            başlayın.
           </Text>
         </Card>
       )}
 
       {fields.map((field, index) => (
-        <Card 
-          key={index} 
-          size="small" 
+        <Card
+          key={`field-${field.key}-${index}`}
+          size="small"
           style={{ marginBottom: 8, background: '#fafafa' }}
           bodyStyle={{ padding: '12px' }}
         >
@@ -80,10 +86,14 @@ const CustomFieldsEditor: React.FC<CustomFieldsEditorProps> = ({ value = {}, onC
                 placeholder="Alan adı (örn: sehir, sektor)"
                 value={field.key}
                 onChange={(e) => handleChange(index, 'key', e.target.value)}
-                prefix={<Text strong style={{ color: '#1890ff', fontSize: 12 }}>KEY:</Text>}
-                style={{ 
+                prefix={
+                  <Text strong style={{ color: '#1890ff', fontSize: 12 }}>
+                    KEY:
+                  </Text>
+                }
+                style={{
                   fontWeight: 500,
-                  background: 'white'
+                  background: 'white',
                 }}
               />
             </Col>
@@ -92,9 +102,11 @@ const CustomFieldsEditor: React.FC<CustomFieldsEditorProps> = ({ value = {}, onC
                 placeholder="Değer (örn: Istanbul, Teknoloji)"
                 value={field.value}
                 onChange={(e) => handleChange(index, 'value', e.target.value)}
-                prefix={<Text style={{ color: '#52c41a', fontSize: 12 }}>VALUE:</Text>}
-                style={{ 
-                  background: 'white'
+                prefix={
+                  <Text style={{ color: '#52c41a', fontSize: 12 }}>VALUE:</Text>
+                }
+                style={{
+                  background: 'white',
                 }}
               />
             </Col>

@@ -4,39 +4,47 @@ export interface EmailTemplate {
   id: number;
   name: string;
   description?: string;
-  category?: 'newsletter' | 'promotional' | 'transactional' | 'welcome' | 'announcement' | 'follow-up' | 'reminder' | 'other';
-  
+  category?:
+    | 'newsletter'
+    | 'promotional'
+    | 'transactional'
+    | 'welcome'
+    | 'announcement'
+    | 'follow-up'
+    | 'reminder'
+    | 'other';
+
   subject: string;
   preheader?: string;
-  
+
   body_html: string;
   body_text?: string;
-  
+
   from_name: string;
   from_email: string;
   reply_to?: string;
-  
+
   cc_emails?: string[];
   bcc_emails?: string[];
-  
+
   priority: 'high' | 'normal' | 'low';
   track_opens: boolean;
   track_clicks: boolean;
-  
+
   available_variables?: TemplateVariable[];
   attachments?: TemplateAttachment[];
   design_json?: any;
   thumbnail_url?: string;
-  
+
   tags?: string[];
   language: string;
-  
+
   usage_count: number;
   last_used_at?: string;
-  
+
   status: 'draft' | 'active' | 'archived';
   is_default: boolean;
-  
+
   created_by?: number;
   updated_by?: number;
   created_at: string;

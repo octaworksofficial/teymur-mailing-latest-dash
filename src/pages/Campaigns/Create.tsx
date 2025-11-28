@@ -1,37 +1,75 @@
-import { StepsForm, ProFormText, ProFormTextArea, ProFormSwitch, ProFormDateTimePicker, ProFormDigit, ProTable } from '@ant-design/pro-components';
+import {
+  ArrowRightOutlined,
+  CloseOutlined,
+  DeleteOutlined,
+  PlusOutlined,
+} from '@ant-design/icons';
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
-import { Card, message, Button, Space, Tag, Table, Descriptions, Modal, Select, Badge, Alert, Divider, Row, Col, Pagination } from 'antd';
-import { PlusOutlined, DeleteOutlined, ArrowRightOutlined, CloseOutlined, CheckCircleOutlined } from '@ant-design/icons';
-import React, { useState, useEffect, useRef } from 'react';
+import {
+  ProFormDateTimePicker,
+  ProFormDigit,
+  ProFormSwitch,
+  ProFormText,
+  ProFormTextArea,
+  ProTable,
+  StepsForm,
+} from '@ant-design/pro-components';
 import { history } from '@umijs/max';
+import {
+  Badge,
+  Button,
+  Card,
+  Col,
+  Descriptions,
+  Divider,
+  Modal,
+  message,
+  Pagination,
+  Row,
+  Select,
+  Space,
+  Table,
+  Tag,
+} from 'antd';
+import moment from 'moment';
+import React, { useEffect, useRef, useState } from 'react';
+import { createCampaign } from '@/services/campaigns';
 import { getContacts } from '@/services/contacts';
 import { getTemplates } from '@/services/templates';
-import { createCampaign } from '@/services/campaigns';
+import type { TemplateInSequence } from '@/types/campaign';
 import type { Contact } from '@/types/contact';
 import type { EmailTemplate } from '@/types/template';
-import type { TemplateInSequence } from '@/types/campaign';
-import moment from 'moment';
 import './Create.less';
 
 const CampaignCreate: React.FC = () => {
   const contactTableRef = useRef<ActionType>(null);
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  const [allFilteredContacts, setAllFilteredContacts] = useState<Contact[]>([]); // Filtrelenmiş tüm kişiler
+  const [_contacts, _setContacts] = useState<Contact[]>([]);
+  const [_allFilteredContacts, setAllFilteredContacts] = useState<Contact[]>(
+    [],
+  ); // Filtrelenmiş tüm kişiler
   const [filteredTotal, setFilteredTotal] = useState<number>(0); // Filtrelenmiş toplam sayı
   const [currentFilters, setCurrentFilters] = useState<any>({}); // Aktif filtreler
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [selectedContacts, setSelectedContacts] = useState<number[]>([]);
-  const [selectedContactDetails, setSelectedContactDetails] = useState<Contact[]>([]);
+  const [selectedContactDetails, setSelectedContactDetails] = useState<
+    Contact[]
+  >([]);
   const [selectedPage, setSelectedPage] = useState<number>(1); // Sağ panel pagination
   const [selectedPageSize, setSelectedPageSize] = useState<number>(10); // Sağ panel page size
   const [pendingSelection, setPendingSelection] = useState<number[]>([]); // Bekleyen seçimler
-  const [pendingSelectionDetails, setPendingSelectionDetails] = useState<Contact[]>([]); // Bekleyen seçim detayları
-  const [templateSequence, setTemplateSequence] = useState<TemplateInSequence[]>([]);
+  const [pendingSelectionDetails, setPendingSelectionDetails] = useState<
+    Contact[]
+  >([]); // Bekleyen seçim detayları
+  const [templateSequence, setTemplateSequence] = useState<
+    TemplateInSequence[]
+  >([]);
   const [isRecurring, setIsRecurring] = useState(false);
   const [firstSendDate, setFirstSendDate] = useState<string>('');
   const [intervalDays, setIntervalDays] = useState<number>(3);
   const [templateModalVisible, setTemplateModalVisible] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<number | undefined>(undefined);
+  const [selectedTemplate, setSelectedTemplate] = useState<number | undefined>(
+    undefined,
+  );
 
   // Kişileri yükle
   useEffect(() => {
@@ -40,9 +78,13 @@ const CampaignCreate: React.FC = () => {
 
   const loadTemplates = async () => {
     try {
-      const response = await getTemplates({ page: 1, limit: 100, status: 'active' });
+      const response = await getTemplates({
+        page: 1,
+        limit: 100,
+        status: 'active',
+      });
       setTemplates(response.data);
-    } catch (error) {
+    } catch (_error) {
       message.error('Şablonlar yüklenemedi');
     }
   };
@@ -53,20 +95,24 @@ const CampaignCreate: React.FC = () => {
       message.warning('Lütfen aktarılacak kişileri seçin');
       return;
     }
-    
+
     const newIds = [...selectedContacts, ...pendingSelection];
     const uniqueIds = [...new Set(newIds)];
     setSelectedContacts(uniqueIds);
-    
+
     // Detay listesini güncelle
-    const existingDetails = selectedContactDetails.filter(c => uniqueIds.includes(c.id));
-    const newDetails = pendingSelectionDetails.filter(c => !selectedContactDetails.some(sc => sc.id === c.id));
+    const existingDetails = selectedContactDetails.filter((c) =>
+      uniqueIds.includes(c.id),
+    );
+    const newDetails = pendingSelectionDetails.filter(
+      (c) => !selectedContactDetails.some((sc) => sc.id === c.id),
+    );
     setSelectedContactDetails([...existingDetails, ...newDetails]);
-    
+
     // Bekleyen seçimleri temizle
     setPendingSelection([]);
     setPendingSelectionDetails([]);
-    
+
     message.success(`${pendingSelection.length} kişi kampanyaya eklendi`);
   };
 
@@ -76,42 +122,48 @@ const CampaignCreate: React.FC = () => {
       message.warning('Eklenecek kişi bulunamadı');
       return;
     }
-    
+
     // Tüm filtrelenmiş kişileri çek (pagination olmadan)
     try {
       // Mevcut filtreleri kullan (page ve pageSize hariç)
-      const { page, pageSize, ...otherFilters } = currentFilters;
+      const { page: _, pageSize: __, ...otherFilters } = currentFilters;
       const response = await getContacts({
         ...otherFilters, // Aktif filtreleri uygula
         page: 1,
         pageSize: filteredTotal, // Tüm kayıtları çek
       });
-      
+
       const allContacts = response.data;
-      const newIds = [...selectedContacts, ...allContacts.map(c => c.id)];
+      const newIds = [...selectedContacts, ...allContacts.map((c) => c.id)];
       const uniqueIds = [...new Set(newIds)];
       setSelectedContacts(uniqueIds);
-      
+
       // Detay listesini güncelle
-      const existingDetails = selectedContactDetails.filter(c => uniqueIds.includes(c.id));
-      const newDetails = allContacts.filter(c => !selectedContactDetails.some(sc => sc.id === c.id));
+      const existingDetails = selectedContactDetails.filter((c) =>
+        uniqueIds.includes(c.id),
+      );
+      const newDetails = allContacts.filter(
+        (c) => !selectedContactDetails.some((sc) => sc.id === c.id),
+      );
       setSelectedContactDetails([...existingDetails, ...newDetails]);
-      
+
       message.success(`${allContacts.length} kişi kampanyaya eklendi`);
-    } catch (error) {
+    } catch (_error) {
       message.error('Kişiler eklenirken hata oluştu');
     }
   };
 
   // Seçilen kişileri detay listesine ekle (ARTIK DOĞRUDAN EKLEME YOK)
-  const handleAddContacts = (contactsToAdd: Contact[]) => {
+  const _handleAddContacts = (_contactsToAdd: Contact[]) => {
     // Bu fonksiyon artık kullanılmıyor - sadece row selection için
   };
 
   // Seçilen kişiyi çıkar
   const handleRemoveContact = (contactId: number) => {
-    setSelectedContacts(selectedContacts.filter(id => id !== contactId));
-    setSelectedContactDetails(selectedContactDetails.filter(c => c.id !== contactId));
+    setSelectedContacts(selectedContacts.filter((id) => id !== contactId));
+    setSelectedContactDetails(
+      selectedContactDetails.filter((c) => c.id !== contactId),
+    );
   };
 
   // Kişi seçim tablosu kolonları
@@ -225,8 +277,24 @@ const CampaignCreate: React.FC = () => {
       },
       render: (_: any, record: Contact) => {
         if (!record.importance_level) return '-';
-        const colors = ['', 'default', 'default', 'blue', 'blue', 'cyan', 'cyan', 'orange', 'orange', 'red', 'red'];
-        return <Tag color={colors[record.importance_level]}>{record.importance_level}</Tag>;
+        const colors = [
+          '',
+          'default',
+          'default',
+          'blue',
+          'blue',
+          'cyan',
+          'cyan',
+          'orange',
+          'orange',
+          'red',
+          'red',
+        ];
+        return (
+          <Tag color={colors[record.importance_level]}>
+            {record.importance_level}
+          </Tag>
+        );
       },
     },
     {
@@ -271,7 +339,10 @@ const CampaignCreate: React.FC = () => {
         placeholder: 'Özel alan ara...',
       },
       render: (_, record) => {
-        if (!record.custom_fields || Object.keys(record.custom_fields).length === 0) {
+        if (
+          !record.custom_fields ||
+          Object.keys(record.custom_fields).length === 0
+        ) {
           return <span style={{ color: '#999' }}>-</span>;
         }
         const fields = Object.entries(record.custom_fields);
@@ -283,7 +354,9 @@ const CampaignCreate: React.FC = () => {
               </Tag>
             ))}
             {fields.length > 2 && (
-              <Tag color="default" style={{ fontSize: 11 }}>+{fields.length - 2}</Tag>
+              <Tag color="default" style={{ fontSize: 11 }}>
+                +{fields.length - 2}
+              </Tag>
             )}
           </Space>
         );
@@ -337,7 +410,11 @@ const CampaignCreate: React.FC = () => {
           unsubscribed: 'Değil',
           pending: 'Bekliyor',
         };
-        return <Tag color={colors[record.subscription_status]}>{labels[record.subscription_status]}</Tag>;
+        return (
+          <Tag color={colors[record.subscription_status]}>
+            {labels[record.subscription_status]}
+          </Tag>
+        );
       },
     },
     {
@@ -366,13 +443,17 @@ const CampaignCreate: React.FC = () => {
       message.warning('Lütfen bir şablon seçin');
       return;
     }
-    
-    const lastDelay = templateSequence.length > 0 
-      ? templateSequence[templateSequence.length - 1].send_delay_days + intervalDays
-      : 0;
-    
-    const scheduledDate = firstSendDate 
-      ? moment(firstSendDate).add(lastDelay, 'days').format('YYYY-MM-DD HH:mm:ss')
+
+    const lastDelay =
+      templateSequence.length > 0
+        ? templateSequence[templateSequence.length - 1].send_delay_days +
+          intervalDays
+        : 0;
+
+    const scheduledDate = firstSendDate
+      ? moment(firstSendDate)
+          .add(lastDelay, 'days')
+          .format('YYYY-MM-DD HH:mm:ss')
       : '';
 
     setTemplateSequence([
@@ -383,7 +464,7 @@ const CampaignCreate: React.FC = () => {
         scheduled_date: scheduledDate,
       },
     ]);
-    
+
     setTemplateModalVisible(false);
     setSelectedTemplate(undefined);
   };
@@ -398,7 +479,8 @@ const CampaignCreate: React.FC = () => {
   // Tarihleri yeniden hesapla
   const recalculateDates = (sequence: TemplateInSequence[]) => {
     const updated = sequence.map((item, index) => {
-      const delay = index === 0 ? 0 : sequence[index - 1].send_delay_days + intervalDays;
+      const delay =
+        index === 0 ? 0 : sequence[index - 1].send_delay_days + intervalDays;
       const scheduled = firstSendDate
         ? moment(firstSendDate).add(delay, 'days').format('YYYY-MM-DD HH:mm:ss')
         : '';
@@ -418,7 +500,9 @@ const CampaignCreate: React.FC = () => {
       const updated = templateSequence.map((item) => ({
         ...item,
         scheduled_date: dateString
-          ? moment(dateString).add(item.send_delay_days, 'days').format('YYYY-MM-DD HH:mm:ss')
+          ? moment(dateString)
+              .add(item.send_delay_days, 'days')
+              .format('YYYY-MM-DD HH:mm:ss')
           : '',
       }));
       setTemplateSequence(updated);
@@ -434,13 +518,13 @@ const CampaignCreate: React.FC = () => {
   };
 
   return (
-    <Card 
+    <Card
       className="campaign-create-form"
-      style={{ 
-        maxWidth: '100%', 
+      style={{
+        maxWidth: '100%',
         overflowX: 'hidden',
         margin: 0,
-        padding: 0
+        padding: 0,
       }}
       styles={{ body: { padding: window.innerWidth <= 768 ? 4 : 24 } }}
     >
@@ -462,7 +546,7 @@ const CampaignCreate: React.FC = () => {
             message.success('Email programı başarıyla oluşturuldu');
             history.push('/campaigns/list');
             return true;
-          } catch (error) {
+          } catch (_error) {
             message.error('Oluşturma işlemi başarısız oldu');
             return false;
           }
@@ -476,7 +560,13 @@ const CampaignCreate: React.FC = () => {
           return (
             <div>
               {dom}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 24 }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  marginTop: 24,
+                }}
+              >
                 {submitter}
               </div>
             </div>
@@ -506,23 +596,23 @@ const CampaignCreate: React.FC = () => {
             label="Açıklama"
             placeholder="Program açıklaması..."
           />
-          
+
           <Divider>Hedef Kişileri Seçin</Divider>
-          
+
           <Row gutter={[16, 16]}>
             {/* Sol: Tüm Kişiler Tablosu */}
             <Col xs={24} sm={24} md={24} lg={14} xl={14}>
               {/* Seçim Alert'i - Sabit pozisyon */}
               {pendingSelection.length > 0 && (
-                <Card 
-                  size="small" 
-                  style={{ 
+                <Card
+                  size="small"
+                  style={{
                     marginBottom: 8,
                     marginLeft: 0,
                     marginRight: 0,
                     backgroundColor: '#e6f7ff',
                     borderColor: '#91d5ff',
-                    maxWidth: '100%'
+                    maxWidth: '100%',
                   }}
                   styles={{ body: { padding: '6px 8px' } }}
                 >
@@ -548,17 +638,18 @@ const CampaignCreate: React.FC = () => {
                   </Space>
                 </Card>
               )}
-              
-              <Card 
-                title={<span>📋 Tüm Kişiler</span>} 
+
+              <Card
+                title={<span>📋 Tüm Kişiler</span>}
                 size="small"
                 styles={{ body: { padding: 0 } }}
-                style={{ 
-                  height: window.innerWidth > 768 ? 'calc(100vh - 400px)' : 'auto',
+                style={{
+                  height:
+                    window.innerWidth > 768 ? 'calc(100vh - 400px)' : 'auto',
                   minHeight: window.innerWidth > 768 ? 600 : 400,
                   overflowY: 'auto',
                   display: 'flex',
-                  flexDirection: 'column'
+                  flexDirection: 'column',
                 }}
               >
                 <ProTable<Contact>
@@ -582,40 +673,42 @@ const CampaignCreate: React.FC = () => {
                       else if (params.last_name) searchTerm = params.last_name;
                       else if (params.company) searchTerm = params.company;
                       else if (params.position) searchTerm = params.position;
-                      
+
                       // Filtreleri hazırla - tüm yeni alanları dahil et
                       const filters = {
                         page: params.current || 1,
                         pageSize: params.pageSize || 10,
                         email: params.email || undefined,
                         status: params.status || undefined,
-                        subscription_status: params.subscription_status || undefined,
+                        subscription_status:
+                          params.subscription_status || undefined,
                         tags: params.tags || undefined,
                         custom_fields: params.custom_fields || undefined,
                         search: searchTerm || undefined,
-                        customer_representative: params.customer_representative || undefined,
+                        customer_representative:
+                          params.customer_representative || undefined,
                         country: params.country || undefined,
                         state: params.state || undefined,
                         district: params.district || undefined,
                         importance_level: params.importance_level || undefined,
                       };
-                      
+
                       // Aktif filtreleri sakla (tüm listeyi eklerken kullanmak için)
                       setCurrentFilters(filters);
-                      
+
                       // ProTable params'ı backend API'ye map et
                       const response = await getContacts(filters);
-                      
+
                       // Filtrelenmiş toplam sayıyı sakla
                       setFilteredTotal(response.total);
                       setAllFilteredContacts(response.data);
-                      
+
                       return {
                         data: response.data,
                         success: true,
                         total: response.total,
                       };
-                    } catch (error) {
+                    } catch (_error) {
                       message.error('Kişiler yüklenemedi');
                       return { data: [], success: false, total: 0 };
                     }
@@ -625,25 +718,26 @@ const CampaignCreate: React.FC = () => {
                     defaultPageSize: 10,
                     showSizeChanger: true,
                     pageSizeOptions: ['10', '20', '50'],
-                    style: { marginTop: 16, marginRight: 16, marginBottom:16 },
+                    style: { marginTop: 16, marginRight: 16, marginBottom: 16 },
                   }}
                   rowSelection={{
-                  selectedRowKeys: pendingSelection,
-                  onChange: (selectedRowKeys, selectedRows) => {
-                    setPendingSelection(selectedRowKeys as number[]);
-                    setPendingSelectionDetails(selectedRows);
-                  },
-                  preserveSelectedRowKeys: true,
-                }}
-                tableAlertRender={false}
-                tableAlertOptionRender={false}
-                scroll={{ x: 1400 }}
-                toolBarRender={false}
-              />
-            </Card>
-          </Col>            {/* Sağ: Seçilen Kişiler */}
+                    selectedRowKeys: pendingSelection,
+                    onChange: (selectedRowKeys, selectedRows) => {
+                      setPendingSelection(selectedRowKeys as number[]);
+                      setPendingSelectionDetails(selectedRows);
+                    },
+                    preserveSelectedRowKeys: true,
+                  }}
+                  tableAlertRender={false}
+                  tableAlertOptionRender={false}
+                  scroll={{ x: 1400 }}
+                  toolBarRender={false}
+                />
+              </Card>
+            </Col>{' '}
+            {/* Sağ: Seçilen Kişiler */}
             <Col xs={24} sm={24} md={24} lg={10} xl={10}>
-              <Card 
+              <Card
                 title={
                   <Space>
                     <span>✅ Seçilen Kişiler</span>
@@ -655,113 +749,199 @@ const CampaignCreate: React.FC = () => {
                 style={{ height: '100%' }}
               >
                 {selectedContactDetails.length === 0 ? (
-                  <div style={{ 
-                    textAlign: 'center', 
-                    padding: '40px 0', 
-                    color: '#999', 
-                    minHeight: window.innerWidth > 768 ? 600 : 300 
-                  }}>
-                    <ArrowRightOutlined style={{ fontSize: 32, marginBottom: 16 }} />
+                  <div
+                    style={{
+                      textAlign: 'center',
+                      padding: '40px 0',
+                      color: '#999',
+                      minHeight: window.innerWidth > 768 ? 600 : 300,
+                    }}
+                  >
+                    <ArrowRightOutlined
+                      style={{ fontSize: 32, marginBottom: 16 }}
+                    />
                     <p>Sol tablodan kişi seçin</p>
                   </div>
                 ) : (
-                  <div style={{ 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    height: window.innerWidth > 768 ? 'calc(100vh - 400px)' : 'auto',
-                    minHeight: window.innerWidth > 768 ? 600 : 300 
-                  }}>
-                    <div style={{ flex: 1, overflowY: 'auto', marginBottom: 12 }}>
-                      <Space direction="vertical" style={{ width: '100%' }} size="small">
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      height:
+                        window.innerWidth > 768
+                          ? 'calc(100vh - 400px)'
+                          : 'auto',
+                      minHeight: window.innerWidth > 768 ? 600 : 300,
+                    }}
+                  >
+                    <div
+                      style={{ flex: 1, overflowY: 'auto', marginBottom: 12 }}
+                    >
+                      <Space
+                        direction="vertical"
+                        style={{ width: '100%' }}
+                        size="small"
+                      >
                         {selectedContactDetails
-                          .slice((selectedPage - 1) * selectedPageSize, selectedPage * selectedPageSize)
+                          .slice(
+                            (selectedPage - 1) * selectedPageSize,
+                            selectedPage * selectedPageSize,
+                          )
                           .map((contact) => (
-                          <Card
-                            key={contact.id}
-                            size="small"
-                            hoverable
-                            extra={
-                              <Button
-                                type="text"
-                                danger
-                                size="small"
-                                icon={<CloseOutlined />}
-                                onClick={() => handleRemoveContact(contact.id)}
-                              />
-                            }
-                          >
-                            <div>
-                              <strong>{contact.first_name} {contact.last_name}</strong>
-                              {contact.position && (
-                                <span style={{ color: '#999', fontSize: 11, marginLeft: 4 }}>
-                                  • {contact.position}
-                                </span>
-                              )}
-                              <br />
-                              <small style={{ color: '#666' }}>📧 {contact.email}</small>
-                              {contact.phone && (
-                                <>
-                                  <br />
-                                  <small style={{ color: '#666' }}>📱 {contact.phone}</small>
-                                </>
-                              )}
-                              {contact.company && (
-                                <>
-                                  <br />
-                                  <small style={{ color: '#999' }}>🏢 {contact.company}</small>
-                                </>
-                              )}
-                              <div style={{ marginTop: 6 }}>
-                                <Space size={[4, 4]} wrap>
-                                  <Tag 
-                                    color={contact.status === 'active' ? 'green' : 'default'} 
-                                    style={{ fontSize: 10, margin: 0 }}
+                            <Card
+                              key={contact.id}
+                              size="small"
+                              hoverable
+                              extra={
+                                <Button
+                                  type="text"
+                                  danger
+                                  size="small"
+                                  icon={<CloseOutlined />}
+                                  onClick={() =>
+                                    handleRemoveContact(contact.id)
+                                  }
+                                />
+                              }
+                            >
+                              <div>
+                                <strong>
+                                  {contact.first_name} {contact.last_name}
+                                </strong>
+                                {contact.position && (
+                                  <span
+                                    style={{
+                                      color: '#999',
+                                      fontSize: 11,
+                                      marginLeft: 4,
+                                    }}
                                   >
-                                    {contact.status}
-                                  </Tag>
-                                  <Badge 
-                                    count={contact.engagement_score || 0} 
-                                    showZero
-                                    color={(contact.engagement_score || 0) > 70 ? 'green' : (contact.engagement_score || 0) > 40 ? 'orange' : 'red'}
-                                    style={{ fontSize: 10 }}
-                                  />
-                                  {contact.tags?.slice(0, 2).map((tag) => (
-                                    <Tag key={tag} color="blue" style={{ fontSize: 10, margin: 0 }}>
-                                      {tag}
+                                    • {contact.position}
+                                  </span>
+                                )}
+                                <br />
+                                <small style={{ color: '#666' }}>
+                                  📧 {contact.email}
+                                </small>
+                                {contact.phone && (
+                                  <>
+                                    <br />
+                                    <small style={{ color: '#666' }}>
+                                      📱 {contact.phone}
+                                    </small>
+                                  </>
+                                )}
+                                {contact.company && (
+                                  <>
+                                    <br />
+                                    <small style={{ color: '#999' }}>
+                                      🏢 {contact.company}
+                                    </small>
+                                  </>
+                                )}
+                                <div style={{ marginTop: 6 }}>
+                                  <Space size={[4, 4]} wrap>
+                                    <Tag
+                                      color={
+                                        contact.status === 'active'
+                                          ? 'green'
+                                          : 'default'
+                                      }
+                                      style={{ fontSize: 10, margin: 0 }}
+                                    >
+                                      {contact.status}
                                     </Tag>
-                                  ))}
-                                </Space>
-                              </div>
-                              {contact.custom_fields && Object.keys(contact.custom_fields).length > 0 && (
-                                <div style={{ marginTop: 6, paddingTop: 6, borderTop: '1px solid #f0f0f0' }}>
-                                  <small style={{ color: '#999', fontSize: 10 }}>Ö. Alanlar:</small>
-                                  <div style={{ marginTop: 2 }}>
-                                    <Space size={[4, 4]} wrap>
-                                      {Object.entries(contact.custom_fields).slice(0, 3).map(([key, value]) => (
-                                        <Tag key={key} color="purple" style={{ fontSize: 10, margin: 0 }}>
-                                          {key}: {String(value).substring(0, 10)}
-                                        </Tag>
-                                      ))}
-                                      {Object.keys(contact.custom_fields).length > 3 && (
-                                        <Tag color="default" style={{ fontSize: 10, margin: 0 }}>
-                                          +{Object.keys(contact.custom_fields).length - 3}
-                                        </Tag>
-                                      )}
-                                    </Space>
-                                  </div>
+                                    <Badge
+                                      count={contact.engagement_score || 0}
+                                      showZero
+                                      color={
+                                        (contact.engagement_score || 0) > 70
+                                          ? 'green'
+                                          : (contact.engagement_score || 0) > 40
+                                            ? 'orange'
+                                            : 'red'
+                                      }
+                                      style={{ fontSize: 10 }}
+                                    />
+                                    {contact.tags?.slice(0, 2).map((tag) => (
+                                      <Tag
+                                        key={tag}
+                                        color="blue"
+                                        style={{ fontSize: 10, margin: 0 }}
+                                      >
+                                        {tag}
+                                      </Tag>
+                                    ))}
+                                  </Space>
                                 </div>
-                              )}
-                            </div>
-                          </Card>
-                        ))}
+                                {contact.custom_fields &&
+                                  Object.keys(contact.custom_fields).length >
+                                    0 && (
+                                    <div
+                                      style={{
+                                        marginTop: 6,
+                                        paddingTop: 6,
+                                        borderTop: '1px solid #f0f0f0',
+                                      }}
+                                    >
+                                      <small
+                                        style={{ color: '#999', fontSize: 10 }}
+                                      >
+                                        Ö. Alanlar:
+                                      </small>
+                                      <div style={{ marginTop: 2 }}>
+                                        <Space size={[4, 4]} wrap>
+                                          {Object.entries(contact.custom_fields)
+                                            .slice(0, 3)
+                                            .map(([key, value]) => (
+                                              <Tag
+                                                key={key}
+                                                color="purple"
+                                                style={{
+                                                  fontSize: 10,
+                                                  margin: 0,
+                                                }}
+                                              >
+                                                {key}:{' '}
+                                                {String(value).substring(0, 10)}
+                                              </Tag>
+                                            ))}
+                                          {Object.keys(contact.custom_fields)
+                                            .length > 3 && (
+                                            <Tag
+                                              color="default"
+                                              style={{
+                                                fontSize: 10,
+                                                margin: 0,
+                                              }}
+                                            >
+                                              +
+                                              {Object.keys(
+                                                contact.custom_fields,
+                                              ).length - 3}
+                                            </Tag>
+                                          )}
+                                        </Space>
+                                      </div>
+                                    </div>
+                                  )}
+                              </div>
+                            </Card>
+                          ))}
                       </Space>
                     </div>
-                    
+
                     <Divider style={{ margin: '12px 0' }} />
-                    
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Button 
-                        danger 
+
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <Button
+                        danger
                         size="small"
                         onClick={() => {
                           setSelectedContacts([]);
@@ -771,7 +951,7 @@ const CampaignCreate: React.FC = () => {
                       >
                         Tümünü Temizle
                       </Button>
-                      
+
                       <Pagination
                         size="small"
                         current={selectedPage}
@@ -827,7 +1007,8 @@ const CampaignCreate: React.FC = () => {
               style: { width: '100%' },
               showTime: { format: 'HH:mm' },
               format: 'YYYY-MM-DD HH:mm',
-              onChange: (_, dateString) => handleFirstSendDateChange(dateString as string),
+              onChange: (_, dateString) =>
+                handleFirstSendDateChange(dateString as string),
             }}
           />
 
@@ -848,10 +1029,12 @@ const CampaignCreate: React.FC = () => {
           <Card title="Şablonlar" style={{ marginTop: 16 }}>
             <Space direction="vertical" style={{ width: '100%' }}>
               {templateSequence.map((item, index) => {
-                const template = templates.find((t) => t.id === item.template_id);
+                const template = templates.find(
+                  (t) => t.id === item.template_id,
+                );
                 return (
                   <Card
-                    key={index}
+                    key={`template-${item.template_id}-${index}`}
                     size="small"
                     title={`${index + 1}. Email`}
                     extra={
@@ -865,9 +1048,19 @@ const CampaignCreate: React.FC = () => {
                       </Button>
                     }
                   >
-                    <p><strong>Şablon:</strong> {template?.name}</p>
-                    <p><strong>Gönderim:</strong> {item.send_delay_days === 0 ? 'Hemen' : `${item.send_delay_days} gün sonra`}</p>
-                    <p><strong>Tarih:</strong> {item.scheduled_date || 'Tarih seçilmedi'}</p>
+                    <p>
+                      <strong>Şablon:</strong> {template?.name}
+                    </p>
+                    <p>
+                      <strong>Gönderim:</strong>{' '}
+                      {item.send_delay_days === 0
+                        ? 'Hemen'
+                        : `${item.send_delay_days} gün sonra`}
+                    </p>
+                    <p>
+                      <strong>Tarih:</strong>{' '}
+                      {item.scheduled_date || 'Tarih seçilmedi'}
+                    </p>
                   </Card>
                 );
               })}
@@ -884,15 +1077,17 @@ const CampaignCreate: React.FC = () => {
                   setTemplateModalVisible(true);
                 }}
               >
-                {templateSequence.length === 0 ? 'İlk Şablonu Ekle' : 'Yeni Şablon Ekle'}
+                {templateSequence.length === 0
+                  ? 'İlk Şablonu Ekle'
+                  : 'Yeni Şablon Ekle'}
               </Button>
-              
+
               {!firstSendDate && (
                 <Tag color="orange">Önce gönderim tarihi seçmelisiniz</Tag>
               )}
             </Space>
           </Card>
-          
+
           {/* Şablon Seçim Modal */}
           <Modal
             title="Şablon Seç"
@@ -911,7 +1106,9 @@ const CampaignCreate: React.FC = () => {
               value={selectedTemplate}
               onChange={setSelectedTemplate}
               options={templates
-                .filter((t) => !templateSequence.some((s) => s.template_id === t.id))
+                .filter(
+                  (t) => !templateSequence.some((s) => s.template_id === t.id),
+                )
                 .map((t) => ({
                   label: `${t.name} (${t.category})`,
                   value: t.id,
@@ -933,7 +1130,9 @@ const CampaignCreate: React.FC = () => {
             label="Yanıt Bildirim Email"
             placeholder="bildirim@platform.com"
             tooltip="Alıcılar yanıt verdiğinde bu adrese bildirim gelecek"
-            rules={[{ type: 'email', message: 'Geçerli bir email adresi girin' }]}
+            rules={[
+              { type: 'email', message: 'Geçerli bir email adresi girin' },
+            ]}
           />
         </StepsForm.StepForm>
 
@@ -957,12 +1156,17 @@ const CampaignCreate: React.FC = () => {
           <Card title="Email Gönderim Takvimi" style={{ marginTop: 16 }}>
             <Table
               dataSource={templateSequence.map((item, index) => {
-                const template = templates.find((t) => t.id === item.template_id);
+                const template = templates.find(
+                  (t) => t.id === item.template_id,
+                );
                 return {
                   key: index,
                   sequence: index + 1,
                   template: template?.name,
-                  delay: item.send_delay_days === 0 ? 'Hemen' : `${item.send_delay_days} gün sonra`,
+                  delay:
+                    item.send_delay_days === 0
+                      ? 'Hemen'
+                      : `${item.send_delay_days} gün sonra`,
                   date: item.scheduled_date,
                 };
               })}

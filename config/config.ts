@@ -100,7 +100,7 @@ export default defineConfig({
    * @name layout 插件
    * @doc https://umijs.org/docs/max/layout-menu
    */
-  title: 'OCTA Works Mailing',
+  title: 'CERILAS Mailing Module',
   layout: {
     locale: true,
     ...defaultSettings,
@@ -115,7 +115,7 @@ export default defineConfig({
     plugins: ['duration'],
   },
   /**
-   * @name 国际化插件
+   * @name 国际化插件 - Turkish only
    * @doc https://umijs.org/docs/max/i18n
    */
   locale: {
