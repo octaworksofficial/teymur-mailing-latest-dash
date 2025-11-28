@@ -290,7 +290,7 @@ const Contacts: React.FC = () => {
     },
     {
       title: 'Gönderilen',
-      dataIndex: 'total_emails_sent',
+      dataIndex: 'total_email_sent',
       width: 100,
       sorter: true,
       hideInSearch: true,
@@ -301,10 +301,10 @@ const Contacts: React.FC = () => {
             setSentEmailsModalVisible(true);
           }}
           style={{
-            color: (record.total_emails_sent || 0) > 0 ? '#1890ff' : '#999',
+            color: (record.total_email_sent || 0) > 0 ? '#1890ff' : '#999',
           }}
         >
-          {record.total_emails_sent || 0}
+          {record.total_email_sent || 0}
         </a>
       ),
     },

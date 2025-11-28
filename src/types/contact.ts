@@ -23,7 +23,6 @@ export interface Contact {
   importance_level?: number;
   notes?: string;
   total_email_sent?: number;
-  total_emails_sent?: number; // API uyumluluğu için (eski alan adı)
   total_emails_opened?: number;
   total_emails_clicked?: number;
   total_emails_bounced?: number;
