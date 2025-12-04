@@ -1,0 +1,52 @@
+.attachment-uploader {
+  margin-top: 12px;
+  
+  .attachment-list {
+    margin-top: 12px;
+    background: #fafafa;
+    border-radius: 8px;
+    padding: 8px;
+    
+    .attachment-item {
+      padding: 8px 12px;
+      margin-bottom: 4px;
+      background: #fff;
+      border-radius: 6px;
+      border: 1px solid #f0f0f0;
+      transition: all 0.2s ease;
+      
+      &:hover {
+        border-color: #1890ff;
+        box-shadow: 0 2px 8px rgba(24, 144, 255, 0.1);
+      }
+      
+      &:last-child {
+        margin-bottom: 0;
+      }
+      
+      .ant-list-item-meta {
+        align-items: center;
+        
+        .ant-list-item-meta-avatar {
+          font-size: 20px;
+        }
+        
+        .ant-list-item-meta-title {
+          margin-bottom: 0;
+        }
+      }
+      
+      .ant-list-item-action {
+        margin-left: 12px;
+        
+        li {
+          padding: 0 4px;
+        }
+      }
+    }
+  }
+  
+  .ant-upload {
+    display: inline-block;
+  }
+}

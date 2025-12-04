@@ -3,6 +3,7 @@ import {
   DeleteOutlined,
   EyeOutlined,
   InfoCircleOutlined,
+  PaperClipOutlined,
   PlusOutlined,
 } from '@ant-design/icons';
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
@@ -35,6 +36,7 @@ import {
 } from '@/services/templates';
 import type { EmailTemplate } from '@/types/template';
 import EmailEditor from '@/components/EmailEditor';
+import AttachmentUploader from '@/components/AttachmentUploader';
 
 const { confirm } = Modal;
 const { Text } = Typography;
@@ -499,6 +501,17 @@ const Templates: React.FC = () => {
           label="Etiketler"
           placeholder="virgülle ayırın: welcome, onboarding"
         />
+        <Form.Item
+          name="attachments"
+          label={
+            <Space>
+              <PaperClipOutlined />
+              Ek Dosyalar
+            </Space>
+          }
+        >
+          <AttachmentUploader maxCount={5} maxSize={10} />
+        </Form.Item>
       </ModalForm>
 
       {/* Düzenleme Modal */}
@@ -622,6 +635,17 @@ const Templates: React.FC = () => {
             defaultValue: currentRow?.tags?.join(', '),
           }}
         />
+        <Form.Item
+          name="attachments"
+          label={
+            <Space>
+              <PaperClipOutlined />
+              Ek Dosyalar
+            </Space>
+          }
+        >
+          <AttachmentUploader maxCount={5} maxSize={10} />
+        </Form.Item>
       </ModalForm>
 
       {/* Önizleme Modal */}

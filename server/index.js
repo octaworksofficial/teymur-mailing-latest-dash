@@ -14,6 +14,7 @@ const dashboardRouter = require('./routes/dashboard');
 const logsRouter = require('./routes/logs');
 const companyInfoRouter = require('./routes/companyInfo');
 const trackingRouter = require('./routes/tracking');
+const uploadRouter = require('./routes/upload');
 const { startEmailScheduler } = require('./services/emailScheduler');
 
 const app = express();
@@ -36,6 +37,7 @@ app.use('/api/campaigns', campaignsRouter);
 app.use('/api/logs', logsRouter);
 app.use('/api/company-info', companyInfoRouter);
 app.use('/api/tracking', trackingRouter);
+app.use('/api/uploads', uploadRouter);
 
 // Health check
 app.get('/health', (req, res) => {
