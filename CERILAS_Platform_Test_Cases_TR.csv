@@ -1,0 +1,408 @@
+Test ID,Modül,Özellik,Test Senaryosu Açıklaması,Test Adımları,Beklenen Sonuç,Test Verisi,Öncelik,Durum,Tester Notları,Hata Açıklaması
+TC001,Kimlik Doğrulama,Giriş,Geçerli kimlik bilgileri ile başarılı giriş,"1. /user/login sayfasına git
+2. Geçerli email adresini gir
+3. Geçerli şifreyi gir
+4. Giriş butonuna tıkla",Kullanıcı başarıyla giriş yapmalı ve dashboard'a yönlendirilmeli,Email: test@cerilas.com / Şifre: Test123!,Yüksek,Bekliyor,,
+TC002,Kimlik Doğrulama,Giriş,Yanlış kimlik bilgileri ile başarısız giriş,"1. /user/login sayfasına git
+2. Yanlış email veya şifre gir
+3. Giriş butonuna tıkla",Hata mesajı gösterilmeli ve giriş başarısız olmalı,Email: wrong@test.com / Şifre: wrongpass,Yüksek,Bekliyor,,
+TC003,Kimlik Doğrulama,Giriş,Boş alanlar ile giriş denemesi,"1. /user/login sayfasına git
+2. Email ve şifre alanlarını boş bırak
+3. Giriş butonuna tıkla",Zorunlu alanlar için doğrulama hatası gösterilmeli,,Yüksek,Bekliyor,,
+TC004,Kimlik Doğrulama,Giriş,Geçersiz email formatı ile giriş,"1. /user/login sayfasına git
+2. Geçersiz email formatı gir (örn: test@)
+3. Şifre gir
+4. Giriş butonuna tıkla",Email format hatası gösterilmeli,Email: test@ / Şifre: validpass,Orta,Bekliyor,,
+TC005,Kimlik Doğrulama,Giriş,SQL Injection deneme,"1. /user/login sayfasına git
+2. Email alanına SQL injection kod gir
+3. Giriş butonuna tıkla",Sistem güvenli olmalı ve injection önlenmeli,"Email: admin'; DROP TABLE users; --",Yüksek,Bekliyor,,
+TC006,Kimlik Doğrulama,Çıkış,Kullanıcı çıkış işlevi,"1. Sisteme giriş yap
+2. Kullanıcı menüsüne tıkla
+3. Çıkış butonuna tıkla",Kullanıcı çıkış yapmalı ve giriş sayfasına yönlendirilmeli,,Orta,Bekliyor,,
+TC007,Kimlik Doğrulama,Oturum,Uzun süre aktif olmama durumu,"1. Sisteme giriş yap
+2. 30 dakika bekle
+3. Herhangi bir işlem yapmaya çalış",Oturum zaman aşımı uyarısı gösterilmeli ve yeniden giriş istenilmeli,,Orta,Bekliyor,,
+TC008,Kimlik Doğrulama,Güvenlik,Yetkilendirme kontrolü,"1. Sisteme giriş yap
+2. URL'yi manuel olarak değiştir (/admin gibi)
+3. Yetkisiz sayfaya erişmeye çalış",Yetkisiz erişim engellenmeli ve uyarı gösterilmeli,,Yüksek,Bekliyor,,
+TC009,Dashboard,Genel Bakış,Dashboard verilerinin görüntülenmesi,"1. Sisteme giriş yap
+2. /dashboard sayfasına git",Dashboard email istatistikleri ve grafikleri göstermeli,,Yüksek,Bekliyor,,
+TC010,Dashboard,İstatistikler,Email istatistiklerinin doğruluğu,"1. Toplam gönderilen emailler say
+2. Açılma oranlarını kontrol et
+3. Yanıt oranlarını kontrol et
+4. Gerçek verilerle karşılaştır",İstatistikler gerçek kampanya verileriyle eşleşmeli,,Yüksek,Bekliyor,,
+TC011,Dashboard,Grafik,Dashboard grafiklerinin işlevselliği,"1. Dashboard sayfasını aç
+2. Grafikleri incele
+3. Grafik üzerine hover yap
+4. Grafik etkileşimlerini test et",Grafikler doğru veri göstermeli ve etkileşimli olmalı,,Orta,Bekliyor,,
+TC012,Dashboard,Filtreler,Tarih filtreleri,"1. Dashboard'a git
+2. Tarih filtrelerini uygula
+3. Sonuçları kontrol et",Seçilen tarihe göre veriler filtrelenmeli,,Orta,Bekliyor,,
+TC013,Dashboard,Performans,Dashboard yüklenme hızı,"1. Tarayıcı cache'ini temizle
+2. Dashboard'a git
+3. Yüklenme süresini ölç",Dashboard 3 saniyeden kısa sürede yüklenmeli,,Orta,Bekliyor,,
+TC014,Dashboard,Responsive,Mobil cihazlarda dashboard,"1. Mobil cihazda dashboard'a git
+2. Tüm elementlerin görünümünü kontrol et
+3. Dokunmatik etkileşimleri test et",Dashboard mobil cihazlarda düzgün görünmeli,,Orta,Bekliyor,,
+TC015,Kişiler,Liste,Kişi listesini görüntüleme,"1. /contacts sayfasına git
+2. Kişi listesi görüntüsünü kontrol et",Tüm kişiler tablo formatında gösterilmeli,,Yüksek,Bekliyor,,
+TC016,Kişiler,Ekleme,Tekil kişi ekleme,"1. /contacts sayfasına git
+2. Kişi Ekle butonuna tıkla
+3. Kişi formunu doldur
+4. Kişiyi kaydet","Kişi başarıyla eklenmeli","İsim: Ahmet Yılmaz
+Email: ahmet@test.com
+Şirket: Test Şirketi",Yüksek,Bekliyor,,
+TC017,Kişiler,Ekleme,Geçersiz email ile kişi ekleme,"1. /contacts sayfasına git
+2. Kişi Ekle butonuna tıkla
+3. Geçersiz email formatı gir
+4. Kaydet butonuna tıkla",Email format hatası gösterilmeli,Email: geçersiz-email,Yüksek,Bekliyor,,
+TC018,Kişiler,Ekleme,Aynı email ile çoklu kişi ekleme,"1. Bir kişi ekle
+2. Aynı email ile başka kişi eklemeye çalış",Duplicate email hatası gösterilmeli,Email: ayni@email.com,Yüksek,Bekliyor,,
+TC019,Kişiler,Ekleme,Zorunlu alanları boş bırakarak kişi ekleme,"1. Kişi ekleme formunu aç
+2. Zorunlu alanları boş bırak
+3. Kaydet butonuna tıkla",Zorunlu alan hataları gösterilmeli,,Orta,Bekliyor,,
+TC020,Kişiler,Düzenleme,Mevcut kişiyi düzenleme,"1. /contacts sayfasına git
+2. Bir kişi seç
+3. Düzenle butonuna tıkla
+4. Kişi detaylarını değiştir
+5. Değişiklikleri kaydet",Kişi detayları başarıyla güncellenmeli,,Yüksek,Bekliyor,,
+TC021,Kişiler,Düzenleme,Kişi düzenleme sırasında iptal etme,"1. Kişi düzenleme sayfasını aç
+2. Değişiklik yap
+3. İptal butonuna tıkla",Değişiklikler kaydedilmemeli ve liste sayfasına dönülmeli,,Orta,Bekliyor,,
+TC022,Kişiler,Silme,Kişi silme işlevi,"1. /contacts sayfasına git
+2. Bir kişi seç
+3. Sil butonuna tıkla
+4. Silme işlemini onayla",Kişi listeden kaldırılmalı,,Yüksek,Bekliyor,,
+TC023,Kişiler,Silme,Kişi silme işlemini iptal etme,"1. Kişi silme işlemini başlat
+2. Onay penceresinde iptal et",Kişi silinmemeli ve listede kalmalı,,Orta,Bekliyor,,
+TC024,Kişiler,Silme,Çoklu kişi silme,"1. Birden fazla kişi seç
+2. Toplu silme butonuna tıkla
+3. İşlemi onayla",Seçilen tüm kişiler silinmeli,,Orta,Bekliyor,,
+TC025,Kişiler,Excel İçe Aktarma,Geçerli Excel dosyasından kişi aktarma,"1. /contacts sayfasına git
+2. Excel İçe Aktar butonuna tıkla
+3. Geçerli Excel dosyasını yükle
+4. Sütunları eşleştir
+5. Kişileri içe aktar",Excel'deki tüm geçerli kişiler başarıyla içe aktarılmalı,İsim/Email/Şirket sütunları olan Excel dosyası,Yüksek,Bekliyor,,
+TC026,Kişiler,Excel İçe Aktarma,Geçersiz Excel formatı ile içe aktarma,"1. /contacts sayfasına git
+2. Excel İçe Aktar butonuna tıkla
+3. Geçersiz Excel dosyasını yükle",Geçersiz format için hata mesajı gösterilmeli,Geçersiz Excel dosyası veya desteklenmeyen format,Orta,Bekliyor,,
+TC027,Kişiler,Excel İçe Aktarma,Boş Excel dosyası ile içe aktarma,"1. Boş Excel dosyası yükle
+2. İçe aktarma işlemini başlat",Boş dosya uyarısı gösterilmeli,Boş Excel dosyası,Orta,Bekliyor,,
+TC028,Kişiler,Excel İçe Aktarma,Büyük Excel dosyası ile içe aktarma,"1. 1000+ kişi içeren Excel dosyası yükle
+2. İçe aktarma işlemini başlat
+3. İşlem süresini gözlemle",Büyük dosya başarıyla işlenmeli ve performans kabul edilebilir olmalı,1000+ kişi içeren Excel dosyası,Orta,Bekliyor,,
+TC029,Kişiler,Excel İçe Aktarma,Geçersiz veriler içeren Excel ile içe aktarma,"1. Geçersiz email adresleri içeren Excel yükle
+2. İçe aktarma işlemini başlat",Geçerli veriler aktarılmalı ve geçersiz olanlar için uyarı gösterilmeli,Geçersiz email adresleri içeren Excel,Yüksek,Bekliyor,,
+TC030,Kişiler,Excel Dışa Aktarma,Kişileri Excel'e dışa aktarma,"1. /contacts sayfasına git
+2. Kişileri seç veya tümünü seç
+3. Dışa aktar butonuna tıkla",Seçilen kişilerle Excel dosyası indirilmeli,,Orta,Bekliyor,,
+TC031,Kişiler,Excel Dışa Aktarma,Boş liste ile dışa aktarma,"1. Tüm kişileri sil
+2. Dışa aktarma işlemini dene",Boş liste uyarısı gösterilmeli,,Düşük,Bekliyor,,
+TC032,Kişiler,Arama,İsme göre kişi arama,"1. /contacts sayfasına git
+2. Arama kutusuna isim gir
+3. Enter'a bas veya arama butonuna tıkla",İsim eşleşen kişiler filtrelenmiş şekilde gösterilmeli,Arama terimi: mevcut kişi ismi,Orta,Bekliyor,,
+TC033,Kişiler,Arama,Email'e göre kişi arama,"1. /contacts sayfasına git
+2. Arama kutusuna email gir
+3. Enter'a bas veya arama butonuna tıkla",Email eşleşen kişiler filtrelenmiş şekilde gösterilmeli,Arama terimi: mevcut kişi emaili,Orta,Bekliyor,,
+TC034,Kişiler,Arama,Şirket adına göre arama,"1. Arama kutusuna şirket adı gir
+2. Arama yap",Şirket adı eşleşen kişiler gösterilmeli,Arama terimi: şirket adı,Orta,Bekliyor,,
+TC035,Kişiler,Arama,Olmayan veri ile arama,"1. Arama kutusuna olmayan veri gir
+2. Arama yap","Sonuç bulunamadı mesajı gösterilmeli",Arama terimi: xyz123notexist,Düşük,Bekliyor,,
+TC036,Kişiler,Arama,Arama sonucunu temizleme,"1. Arama yap
+2. Arama kutusunu temizle
+3. Tüm listeye dön",Tüm kişiler yeniden gösterilmeli,,Düşük,Bekliyor,,
+TC037,Kişiler,Sayfalama,Kişi listesi sayfalama,"1. /contacts sayfasına git
+2. Büyük listeler için sayfalama varlığını kontrol et
+3. Sayfalar arası geçiş yap",Sayfalama doğru çalışmalı ve uygun kişileri göstermeli,,Orta,Bekliyor,,
+TC038,Kişiler,Sayfalama,Sayfa başına kişi sayısı değiştirme,"1. Sayfa başına öğe sayısını değiştir
+2. Sonuçları kontrol et",Seçilen sayıda kişi gösterilmeli,,Düşük,Bekliyor,,
+TC039,Kişiler,Detay,Kişi detay sayfası,"1. Bir kişiye tıkla
+2. Detay sayfasını kontrol et",Kişi detayları tam olarak gösterilmeli,,Orta,Bekliyor,,
+TC040,Kişiler,İstatistik,Kişi email istatistikleri,"1. Kişi detayına git
+2. Email istatistiklerini kontrol et",Gönderilen, açılan, yanıtlanan email sayıları doğru gösterilmeli,,Yüksek,Bekliyor,,
+TC041,Şablonlar,Liste,Email şablonlarını görüntüleme,"1. /templates sayfasına git
+2. Şablon listesi kontrol et",Oluşturulan tüm şablonlar liste formatında gösterilmeli,,Yüksek,Bekliyor,,
+TC042,Şablonlar,Oluşturma,Yeni email şablonu oluşturma,"1. /templates sayfasına git
+2. Şablon Oluştur butonuna tıkla
+3. Şablon formunu doldur (isim, konu, içerik)
+4. Şablonu kaydet","Şablon oluşturulmalı ve şablon listesinde görülmeli","İsim: Hoş Geldin Şablonu
+Konu: CERİLAS'a Hoş Geldiniz
+İçerik: HTML/Metin içeriği",Yüksek,Bekliyor,,
+TC043,Şablonlar,Oluşturma,Boş şablon oluşturma denemesi,"1. Şablon oluşturma sayfasını aç
+2. Zorunlu alanları boş bırak
+3. Kaydet butonuna tıkla",Zorunlu alan hataları gösterilmeli,,Orta,Bekliyor,,
+TC044,Şablonlar,Oluşturma,HTML şablon oluşturma,"1. Yeni şablon oluştur
+2. HTML içerik ekle
+3. HTML etiketleri kullan
+4. Kaydet",HTML içerik düzgün render edilmeli,HTML etiketli içerik,Yüksek,Bekliyor,,
+TC045,Şablonlar,Oluşturma,Çok uzun içerik ile şablon oluşturma,"1. Çok uzun içerik gir (10000+ karakter)
+2. Şablonu kaydetmeye çalış",Uzun içerik kabul edilmeli veya uygun limit uyarısı gösterilmeli,10000+ karakter içerik,Orta,Bekliyor,,
+TC046,Şablonlar,Düzenleme,Mevcut şablonu düzenleme,"1. /templates sayfasına git
+2. Şablon seç
+3. Düzenle butonuna tıkla
+4. Şablonu değiştir
+5. Değişiklikleri kaydet",Şablon başarıyla güncellenmeli,,Yüksek,Bekliyor,,
+TC047,Şablonlar,Düzenleme,Şablon düzenleme sırasında iptal,"1. Şablon düzenleme yap
+2. İptal butonuna tıkla",Değişiklikler kaydedilmemeli,,Orta,Bekliyor,,
+TC048,Şablonlar,Silme,Şablon silme,"1. /templates sayfasına git
+2. Şablon seç
+3. Sil butonuna tıkla
+4. Silme işlemini onayla",Şablon listeden kaldırılmalı,,Yüksek,Bekliyor,,
+TC049,Şablonlar,Silme,Kullanımda olan şablon silme,"1. Aktif kampanyada kullanılan şablonu silmeye çalış",Kullanımda olan şablon silinmemeli ve uyarı gösterilmeli,,Yüksek,Bekliyor,,
+TC050,Şablonlar,Değişkenler,Şablon değişkenlerini kullanma,"1. Şablon oluştur/düzenle
+2. {{name}}, {{company}} gibi değişkenler ekle
+3. Şablonu kaydet
+4. Kampanyada kullan",Değişkenler gönderilen emaillerde düzgün değiştirilmeli,,Yüksek,Bekliyor,,
+TC051,Şablonlar,Değişkenler,Geçersiz değişken kullanma,"1. Şablonda {{geçersiz}} değişken kullan
+2. Kampanya gönder",Geçersiz değişkenler için uyarı gösterilmeli,,Orta,Bekliyor,,
+TC052,Şablonlar,Önizleme,Şablon önizleme işlevi,"1. /templates sayfasına git
+2. Şablon seç
+3. Önizleme butonuna tıkla",Şablon emailde görüneceği şekilde gösterilmeli,,Orta,Bekliyor,,
+TC053,Şablonlar,Önizleme,Değişkenlerle önizleme,"1. Değişken içeren şablonun önizlemesini yap
+2. Test verilerinin görünümünü kontrol et",Değişkenler test verileriyle değiştirilmiş olmalı,,Orta,Bekliyor,,
+TC054,Şablonlar,Kopyalama,Şablon kopyalama,"1. Mevcut şablonu seç
+2. Kopyala butonuna tıkla
+3. Yeni şablon adı ver
+4. Kaydet",Şablon kopyalanmalı ve yeni isimle listelenmeli,,Orta,Bekliyor,,
+TC055,Şablonlar,Kategori,Şablon kategorilendirme,"1. Şablon oluştururken kategori seç
+2. Kategoriye göre filtreleme yap",Şablonlar kategorilerine göre organize edilmeli,,Düşük,Bekliyor,,
+TC056,Kampanyalar,Liste,Kampanya listesini görüntüleme,"1. /campaigns sayfasına git
+2. Kampanya listesi görüntüsünü kontrol et",Tüm kampanyalar durum ve istatistikleriyle gösterilmeli,,Yüksek,Bekliyor,,
+TC057,Kampanyalar,Oluşturma,Tek şablon ile yeni kampanya oluşturma,"1. /campaigns/create sayfasına git
+2. Kampanya detaylarını doldur
+3. Şablon seç
+4. Kişileri seç
+5. Zamanlama ayarla
+6. Kampanyayı kaydet","Kampanya başarıyla oluşturulmalı","İsim: Test Kampanyası
+Şablon: Mevcut şablon
+Kişiler: Seçilen kişiler
+Zamanlama: Gelecek tarih/saat",Yüksek,Bekliyor,,
+TC058,Kampanyalar,Oluşturma,Boş bilgilerle kampanya oluşturma,"1. Kampanya oluştur
+2. Zorunlu alanları boş bırak
+3. Kaydet",Zorunlu alan hataları gösterilmeli,,Orta,Bekliyor,,
+TC059,Kampanyalar,Oluşturma,Sekans kampanyası oluşturma,"1. /campaigns/create sayfasına git
+2. Sekans modunu etkinleştir
+3. Birden fazla şablon gecikmelerle ekle
+4. Kişileri seç
+5. Zamanlama ayarla
+6. Kampanyayı kaydet",Sekans kampanyası doğru şablon sırasıyla oluşturulmalı,,Yüksek,Bekliyor,,
+TC060,Kampanyalar,Oluşturma,Geçmiş tarih ile kampanya oluşturma,"1. Kampanya oluştururken geçmiş tarih seç
+2. Kaydetmeye çalış",Geçmiş tarih hatası gösterilmeli,,Orta,Bekliyor,,
+TC061,Kampanyalar,Oluşturma,Kişi seçmeden kampanya oluşturma,"1. Kampanya oluştur
+2. Kişi seçme
+3. Kaydet",Kişi seçilmedi hatası gösterilmeli,,Orta,Bekliyor,,
+TC062,Kampanyalar,Düzenleme,Taslak kampanya düzenleme,"1. /campaigns sayfasına git
+2. Taslak kampanya seç
+3. Düzenle butonuna tıkla
+4. Kampanya detaylarını değiştir
+5. Değişiklikleri kaydet",Taslak kampanya başarıyla güncellenmeli,,Yüksek,Bekliyor,,
+TC063,Kampanyalar,Düzenleme,Aktif kampanya düzenleme denemesi,"1. Aktif kampanyayı düzenlemeye çalış",Aktif kampanya düzenlenemez uyarısı gösterilmeli,,Yüksek,Bekliyor,,
+TC064,Kampanyalar,Durum,Kampanya durumu değiştirme,"1. /campaigns sayfasına git
+2. Kampanya seç
+3. Durum değiştir (Taslak/Aktif/Duraklatılmış)
+4. Değişiklikleri kaydet",Kampanya durumu güncellenmeli ve gönderim davranışını etkilemeli,,Yüksek,Bekliyor,,
+TC065,Kampanyalar,Durum,Taslaktan aktife geçiş,"1. Taslak kampanyayı aktif yap
+2. Sistem davranışını gözlemle",Kampanya aktif olmalı ve zamanlamasına göre gönderim başlamalı,,Yüksek,Bekliyor,,
+TC066,Kampanyalar,Durum,Aktif kampanyayı duraklat,"1. Aktif kampanyayı duraklat
+2. Gönderim durumunu kontrol et",Kampanya duraklamalı ve yeni email gönderilmemeli,,Yüksek,Bekliyor,,
+TC067,Kampanyalar,Silme,Kampanya silme,"1. /campaigns sayfasına git
+2. Kampanya seç
+3. Sil butonuna tıkla
+4. Silme işlemini onayla",Kampanya listeden kaldırılmalı,,Orta,Bekliyor,,
+TC068,Kampanyalar,Silme,Aktif kampanya silme denemesi,"1. Aktif kampanyayı silmeye çalış",Aktif kampanya silinemez uyarısı gösterilmeli,,Yüksek,Bekliyor,,
+TC069,Kampanyalar,Test Email,Test email gönderme,"1. Kampanya oluştur/düzenle
+2. Test Email Gönder butonuna tıkla
+3. Test email adresi gir
+4. Test gönder",Test email belirtilen adreste alınmalı,Test email adresi: tester@example.com,Yüksek,Bekliyor,,
+TC070,Kampanyalar,Test Email,Geçersiz email ile test gönderme,"1. Test email için geçersiz adres gir
+2. Göndermeye çalış",Geçersiz email hatası gösterilmeli,Geçersiz email: test@,Orta,Bekliyor,,
+TC071,Kampanyalar,Zamanlama,Gelecek için kampanya zamanlama,"1. Kampanya oluştur
+2. Gelecek tarih/saat ayarla
+3. Durumu Aktif yap
+4. Kampanyayı kaydet",Kampanya zamanlanmalı ve belirlenen zamanda gönderim başlamalı,,Yüksek,Bekliyor,,
+TC072,Kampanyalar,Zamanlama,Anlık kampanya gönderimi,"1. Kampanya oluştur
+2. Şu anda gönder seçeneği seç
+3. Aktif yap",Kampanya hemen gönderime başlamalı,,Yüksek,Bekliyor,,
+TC073,Kampanyalar,Yanıt Durdur,Yanıt gelince durdurma işlevi,"1. 'Yanıt Gelirse Durdur' etkinleştirilen kampanya oluştur
+2. Kampanya başlat
+3. Emaillerden birine yanıt ver
+4. O kişi için daha fazla email gönderilip gönderilmediğini kontrol et",Yanıt veren kişilere daha fazla email gönderilmemeli,,Yüksek,Bekliyor,,
+TC074,Kampanyalar,Yanıt Durdur,Yanıt durdurma devre dışı,"1. Yanıt durdurma özelliği kapalı kampanya oluştur
+2. Emaile yanıt ver
+3. Sonraki emailin gelip gelmediğini kontrol et",Yanıt verilse bile sonraki emailler gönderilmeli,,Orta,Bekliyor,,
+TC075,Kampanyalar,Analytics,Kampanya istatistiklerini görüntüleme,"1. /campaigns sayfasına git
+2. Gönderilen kampanya seç
+3. Analytics/istatistikleri görüntüle","Gönderilen sayı, açılma oranı, yanıt oranı vb. gösterilmeli",,Yüksek,Bekliyor,,
+TC076,Kampanyalar,Analytics,Gerçek zamanlı istatistikler,"1. Aktif kampanya istatistiklerini görüntüle
+2. Sayfayı yenile
+3. Güncel verileri kontrol et",İstatistikler gerçek zamanlı güncellenmeye yakın olmalı,,Orta,Bekliyor,,
+TC077,Kampanyalar,Kopyalama,Kampanya kopyalama,"1. Mevcut kampanyayı seç
+2. Kopyala butonuna tıkla
+3. Yeni kampanya adı ver",Kampanya ayarlarıyla birlikte kopyalanmalı,,Orta,Bekliyor,,
+TC078,Kampanyalar,Filtreleme,Kampanya durum filtresi,"1. Kampanya listesinde durum filtresi uygula
+2. Sonuçları kontrol et",Seçilen duruma göre kampanyalar filtrelenmeli,,Orta,Bekliyor,,
+TC079,Kampanyalar,Arama,Kampanya ismi ile arama,"1. Kampanya arama kutusuna isim gir
+2. Arama yap",İsim eşleşen kampanyalar gösterilmeli,,Düşük,Bekliyor,,
+TC080,Şirket Bilgileri,Görüntüleme,Şirket bilgilerini görüntüleme,"1. /company-info sayfasına git
+2. Gösterilen bilgileri kontrol et",Şirket detayları düzgün görüntülenmeli,,Orta,Bekliyor,,
+TC081,Şirket Bilgileri,Düzenleme,Şirket bilgilerini düzenleme,"1. /company-info sayfasına git
+2. Düzenle butonuna tıkla
+3. Şirket detaylarını değiştir
+4. Değişiklikleri kaydet",Şirket bilgileri başarıyla güncellenmeli,,Orta,Bekliyor,,
+TC082,Şirket Bilgileri,SMTP,SMTP ayarlarını yapılandırma,"1. /company-info sayfasına git
+2. SMTP ayarlarını yapılandır
+3. SMTP bağlantısını test et
+4. Ayarları kaydet",SMTP ayarları kaydedilmeli ve emailler düzgün gönderilmeli,,Yüksek,Bekliyor,,
+TC083,Şirket Bilgileri,SMTP,Yanlış SMTP ayarları,"1. Yanlış SMTP bilgileri gir
+2. Test et",SMTP bağlantı hatası gösterilmeli,Yanlış SMTP sunucu bilgileri,Yüksek,Bekliyor,,
+TC084,Şirket Bilgileri,SMTP,SMTP test emaili,"1. SMTP ayarlarını yap
+2. Test emaili gönder",Test emaili başarıyla gönderilmeli,,Yüksek,Bekliyor,,
+TC085,Zamanlayıcı Logları,Görüntüleme,Zamanlayıcı loglarına erişim,"1. Footer'daki Scheduler Logs linkine tıkla
+2. Log görüntüsünü kontrol et",Zamanlayıcı logları email gönderim geçmişiyle gösterilmeli,,Orta,Bekliyor,,
+TC086,Zamanlayıcı Logları,Filtreleme,Tarih ile log filtreleme,"1. /scheduler-logs sayfasına git
+2. Tarih filtrelerini uygula
+3. Sonuçları kontrol et",Loglar uygulanan kriterlere göre filtrelenmeli,,Orta,Bekliyor,,
+TC087,Zamanlayıcı Logları,Filtreleme,Durum ile log filtreleme,"1. Durum filtresi uygula
+2. Sonuçları kontrol et",Seçilen duruma göre loglar gösterilmeli,,Orta,Bekliyor,,
+TC088,Zamanlayıcı Logları,Detay,Log detaylarını görüntüleme,"1. Bir log kaydına tıkla
+2. Detay bilgileri kontrol et",Log detayları tam olarak gösterilmeli,,Düşük,Bekliyor,,
+TC089,Zamanlayıcı Logları,Arama,Log arama işlevi,"1. Log arama kutusuna metin gir
+2. Arama yap",Arama terimine uygun loglar gösterilmeli,,Düşük,Bekliyor,,
+TC090,Email Takip,Email Açılma,Email açılma takibi,"1. Kampanya emaili gönder
+2. Alıcı email kutusunda emaili aç
+3. Dashboard'da takibi kontrol et",Email açılması takip edilmeli ve analytics'te gösterilmeli,,Yüksek,Bekliyor,,
+TC091,Email Takip,Email Yanıt,Email yanıt takibi,"1. Kampanya emaili gönder
+2. Emaile yanıt ver
+3. Yanıt takibini kontrol et",Email yanıtı takip edilmeli ve yapılandırılmışsa kampanya durmalı,,Yüksek,Bekliyor,,
+TC092,Email Takip,Çoklu Açılma,Aynı emailin birden fazla açılması,"1. Emaili birden fazla kez aç
+2. Açılma sayısını kontrol et",Her açılma ayrı ayrı sayılmalı veya benzersiz açılma olarak kaydedilmeli,,Orta,Bekliyor,,
+TC093,Email Takip,Pixel Takip,Takip pixel'inin çalışması,"1. Email içeriğinde takip pixel kontrol et
+2. Email açıldığında pixel yüklenme kontrol et",Takip pixeli düzgün yüklenmeli ve açılma kaydedilmeli,,Yüksek,Bekliyor,,
+TC094,Navigasyon,Menü,Tüm menü öğelerinde gezinme,"1. Sisteme giriş yap
+2. Her menü öğesine tıkla
+3. Sayfanın doğru yüklendiğini doğrula",Tüm menü öğeleri hatasız doğru sayfalara yönlendirmeli,,Orta,Bekliyor,,
+TC095,Navigasyon,Breadcrumb,Breadcrumb navigasyonu,"1. Alt sayfalara git
+2. Breadcrumb görünümünü kontrol et
+3. Breadcrumb linklerine tıkla",Breadcrumb'lar doğru yolu göstermeli ve düzgün navigate etmeli,,Düşük,Bekliyor,,
+TC096,Navigasyon,URL,Doğrudan URL erişimi,"1. URL'yi tarayıcıya doğrudan gir
+2. Sayfanın yüklenip yüklenmediğini kontrol et",Tüm sayfalara doğrudan URL ile erişilebilmeli,,Orta,Bekliyor,,
+TC097,Navigasyon,Geri Buton,Tarayıcı geri butonu,"1. Sayfalarda gezin
+2. Tarayıcı geri butonunu kullan",Geri butonu düzgün çalışmalı,,Düşük,Bekliyor,,
+TC098,UI/UX,Responsive,Farklı ekran boyutlarında test,"1. Platform'u masaüstünde aç
+2. Tablet'te erişim sağla
+3. Mobil cihazda aç
+4. Layout uyumunu kontrol et",Platform tüm cihazlarda responsive olmalı ve işlevsel olmalı,,Orta,Bekliyor,,
+TC099,UI/UX,Responsive,Mobil menü işlevselliği,"1. Mobil cihazda menüyü aç
+2. Menü etkileşimlerini test et
+3. Alt menüleri kontrol et",Mobil menü tam işlevsel olmalı,,Orta,Bekliyor,,
+TC100,UI/UX,Loading,Yükleme göstergelerini kontrol etme,"1. Yükleme gerektiren işlemler gerçekleştir
+2. Yükleme göstergelerini kontrol et
+3. Tamamlanma durumlarını doğrula",Yükleme göstergeleri uygun şekilde görünüp kaybolmalı,,Düşük,Bekliyor,,
+TC101,UI/UX,Loading,Uzun süren işlemler için loading,"1. Büyük dosya yükleme işlemi yap
+2. Loading durumunu gözlemle
+3. İptal edilebilirlik kontrol et",Uzun işlemler için uygun loading gösterilmeli,,Orta,Bekliyor,,
+TC102,UI/UX,Hata Yönetimi,Hata mesajı görüntüleme,"1. Çeşitli hataları tetikle (ağ, doğrulama)
+2. Hata mesajı görüntüsünü kontrol et
+3. Hata kurtarmayı doğrula",Hata mesajları açık ve yardımcı olmalı,,Orta,Bekliyor,,
+TC103,UI/UX,Hata Yönetimi,Ağ bağlantısı hatası,"1. İnternet bağlantısını kes
+2. İşlem yapmaya çalış
+3. Hata mesajını kontrol et",Ağ hatası için uygun mesaj gösterilmeli,,Orta,Bekliyor,,
+TC104,UI/UX,Hata Yönetimi,500 sunucu hatası,"1. Sunucu hatası tetikle
+2. Hata sayfasını kontrol et",Kullanıcı dostu 500 hata sayfası gösterilmeli,,Orta,Bekliyor,,
+TC105,UI/UX,Hata Yönetimi,404 sayfa bulunamadı,"1. Geçersiz URL'ye git
+2. 404 sayfasını kontrol et",Kullanıcı dostu 404 sayfası gösterilmeli,,Orta,Bekliyor,,
+TC106,UI/UX,Form,Form doğrulama mesajları,"1. Formlarda geçersiz veri gir
+2. Doğrulama mesajlarını kontrol et",Doğrulama mesajları açık ve anlaşılır olmalı,,Orta,Bekliyor,,
+TC107,UI/UX,Form,Form otomatik kaydetme,"1. Uzun form doldur
+2. Sayfa yenileme veya çıkma durumunu test et",Form verileri kaybolmamalı veya uyarı verilmeli,,Düşük,Bekliyor,,
+TC108,Performans,Sayfa Yükleme,Sayfa yükleme performansını ölçme,"1. Tarayıcı cache'ini temizle
+2. Her sayfaya git
+3. Yükleme sürelerini ölç",Sayfalar kabul edilebilir süre limitlerinde yüklenmeli (< 3 saniye),,Orta,Bekliyor,,
+TC109,Performans,Sayfa Yükleme,Cache performansı,"1. Sayfaya ilk kez git
+2. Aynı sayfayı yeniden yükle
+3. Yükleme sürelerini karşılaştır",İkinci yükleme daha hızlı olmalı (cache etkisi),,Düşük,Bekliyor,,
+TC110,Performans,Büyük Veri,Büyük kişi listesiyle test,"1. Çok sayıda kişi ekle (1000+)
+2. Liste performansını test et
+3. Çok kişili kampanya oluştur",Sistem büyük veri setlerini performans sorunu olmadan işlemeli,Büyük kişi listesi (1000+ kişi),Orta,Bekliyor,,
+TC111,Performans,Büyük Veri,Çoklu kampanya performansı,"1. Birden fazla aktif kampanya oluştur
+2. Sistem performansını gözlemle
+3. Dashboard yükleme hızını kontrol et",Çoklu kampanyalar sistem performansını düşürmemeli,,Orta,Bekliyor,,
+TC112,Performans,Eş Zamanlı,Çoklu kullanıcı testi,"1. Farklı tarayıcılarda aynı anda giriş yap
+2. Aynı anda işlem yap
+3. Sistem tepkisini gözlemle",Sistem çoklu kullanıcıyı desteklemeli,,Düşük,Bekliyor,,
+TC113,Güvenlik,Input Doğrulama,Input alanlarında doğrulama testi,"1. Formlarda SQL injection dene
+2. XSS saldırıları dene
+3. Özel karakterlerle test et
+4. Aşırı uzun inputlarla test et",Sistem tüm inputları düzgün doğrulamalı ve temizlemeli,,Yüksek,Bekliyor,,
+TC114,Güvenlik,SQL Injection,SQL Injection saldırı testi,"1. Çeşitli formlarda SQL injection kodları gir
+2. Sistem tepkisini kontrol et","Sistem SQL injection'a karşı korumalı olmalı","SQL injection kodları: '; DROP TABLE--",Yüksek,Bekliyor,,
+TC115,Güvenlik,XSS,Cross-Site Scripting testi,"1. Input alanlarına JavaScript kodları gir
+2. Kod çalışıp çalışmadığını kontrol et",Sistem XSS saldırılarını önlemeli,XSS kodları: <script>alert('xss')</script>,Yüksek,Bekliyor,,
+TC116,Güvenlik,Oturum,Oturum zaman aşımı,"1. Sisteme giriş yap
+2. Uzun süre bekle
+3. İşlem yapmaya çalış",Oturum zaman aşımı olmalı ve yeniden kimlik doğrulama istenilmeli,,Orta,Bekliyor,,
+TC117,Güvenlik,Yetkilendirme,Yetki kontrolü,"1. Normal kullanıcı ile giriş yap
+2. Admin URL'lerini dene
+3. Yetkisiz işlemler dene",Yetkisiz erişim engellenip uyarı gösterilmeli,,Yüksek,Bekliyor,,
+TC118,Güvenlik,Şifre,Şifre güvenlik politikaları,"1. Zayıf şifre ile kayıt ol/şifre değiştir
+2. Sistem tepkisini kontrol et",Güçlü şifre politikası uygulanmalı,Zayıf şifre: 123,Orta,Bekliyor,,
+TC119,Entegrasyon,Email Teslimat,Uçtan uca email teslimat testi,"1. Kampanya oluştur
+2. Gerçek email adreslerine gönder
+3. Alıcı email kutularında teslimatı kontrol et
+4. Takibin çalışıp çalışmadığını doğrula",Emailler başarıyla teslim edilmeli ve takip çalışmalı,Gerçek email adresleri,Yüksek,Bekliyor,,
+TC120,Entegrasyon,Email Teslimat,Spam klasörü kontrolü,"1. Email gönder
+2. Spam klasörünü kontrol et
+3. Email headers'ını incele",Emailler spam olarak işaretlenmemeli,,Yüksek,Bekliyor,,
+TC121,Entegrasyon,Email Teslimat,Farklı email sağlayıcıları,"1. Gmail'e email gönder
+2. Outlook'a email gönder
+3. Diğer sağlayıcılara test et",Tüm email sağlayıcılarında düzgün görünmeli,,Orta,Bekliyor,,
+TC122,Entegrasyon,Email Teslimat,Email formatı testi,"1. HTML email gönder
+2. Metin email gönder
+3. Görünüm kontrolü yap",Her iki format da düzgün görünmeli,,Orta,Bekliyor,,
+TC123,Entegrasyon,Veritabanı,Veri tutarlılığını doğrulama,"1. Çeşitli işlemler gerçekleştir
+2. Veritabanı kayıtlarını kontrol et
+3. Veri bütünlüğünü doğrula",Tüm işlemler veritabanında tutarlılığı korumalı,,Yüksek,Bekliyor,,
+TC124,Entegrasyon,Veritabanı,Transaction yönetimi,"1. Uzun işlem başlat
+2. Yarıda kes
+3. Veri durumunu kontrol et",Yarım kalan işlemler veri bozukluğu yaratmamalı,,Yüksek,Bekliyor,,
+TC125,Entegrasyon,API,API yanıt süreleri,"1. API çağrıları yap
+2. Yanıt sürelerini ölç
+3. Timeout durumlarını test et",API'lar kabul edilebilir sürede yanıt vermeli,,Orta,Bekliyor,,
+TC126,Entegrasyon,SMTP,Farklı SMTP sağlayıcıları,"1. Gmail SMTP ile test et
+2. SendGrid ile test et
+3. Diğer SMTP sağlayıcıları dene",Farklı SMTP sağlayıcıları desteklenmeli,,Orta,Bekliyor,,
+TC127,Tarayıcı Uyumluluğu,Chrome,Chrome tarayıcısında test,"1. Chrome'da tüm işlevleri test et
+2. Görsel uyumluluğu kontrol et",Platform Chrome'da tam işlevsel olmalı,,Yüksek,Bekliyor,,
+TC128,Tarayıcı Uyumluluğu,Firefox,Firefox tarayıcısında test,"1. Firefox'ta tüm işlevleri test et
+2. Görsel uyumluluğu kontrol et",Platform Firefox'ta tam işlevsel olmalı,,Orta,Bekliyor,,
+TC129,Tarayıcı Uyumluluğu,Safari,Safari tarayıcısında test,"1. Safari'de tüm işlevleri test et
+2. Görsel uyumluluğu kontrol et",Platform Safari'de tam işlevsel olmalı,,Orta,Bekliyor,,
+TC130,Tarayıcı Uyumluluğu,Edge,Edge tarayıcısında test,"1. Edge'de tüm işlevleri test et
+2. Görsel uyumluluğu kontrol et",Platform Edge'de tam işlevsel olmalı,,Düşük,Bekliyor,,
+TC131,Mobil Test,iOS,iOS cihazlarda test,"1. iPhone/iPad'de platform'u aç
+2. Dokunmatik etkileşimleri test et
+3. Mobil özellikleri kontrol et",Platform iOS cihazlarda tam çalışmalı,,Orta,Bekliyor,,
+TC132,Mobil Test,Android,Android cihazlarda test,"1. Android cihazda platform'u aç
+2. Dokunmatik etkileşimleri test et
+3. Mobil özellikleri kontrol et",Platform Android cihazlarda tam çalışmalı,,Orta,Bekliyor,,
+TC133,Kullanılabilirlik,İlk Kullanım,Yeni kullanıcı deneyimi,"1. Hiç görmemiş gibi platform'u kullan
+2. İlk izlenimleri kaydet
+3. Zorluklarını not et",Platform yeni kullanıcılar için kolay anlaşılır olmalı,,Orta,Bekliyor,,
+TC134,Kullanılabilirlik,Help,Yardım sistemi,"1. Yardım linkine tıkla
+2. Yardım içeriğini kontrol et
+3. Email gönderme işlevini test et",Yardım sistemi çalışmalı ve faydalı olmalı,,Düşük,Bekliyor,,
+TC135,Kullanılabilirlik,Kısayol,Klavye kısayolları,"1. Klavye ile navigasyon dene
+2. Tab sıralamasını kontrol et
+3. Enter ile işlem yapma dene",Klavye ile platform kullanılabilir olmalı,,Düşük,Bekliyor,,
+TC136,Raporlama,Excel Export,Kampanya raporunu Excel'e aktarma,"1. Kampanya raporunu export et
+2. Excel dosyasını kontrol et
+3. Veri doğruluğunu kontrol et",Kampanya verileri doğru şekilde Excel'e aktarılmalı,,Orta,Bekliyor,,
+TC137,Raporlama,PDF Export,Kampanya raporunu PDF'e aktarma,"1. Kampanya raporunu PDF olarak export et
+2. PDF içeriğini kontrol et",PDF raporu düzgün oluşturulmalı,,Düşük,Bekliyor,,
+TC138,Raporlama,Grafik Export,Grafikleri görsel olarak kaydetme,"1. Dashboard grafiklerini export et
+2. Görsel kalitesini kontrol et",Grafikler yüksek kalitede kaydedilmeli,,Düşük,Bekliyor,,
+TC139,Özelleşme,Dil,Platform dil ayarları,"1. Dil ayarlarını kontrol et
+2. Türkçe/İngilizce arasında geçiş yap
+3. Çevirileri kontrol et",Platform çoklu dil desteği sağlamalı,,Düşük,Bekliyor,,
+TC140,Özelleşme,Tema,Platform tema ayarları,"1. Farklı tema seçeneklerini dene
+2. Görsel değişiklikleri kontrol et",Tema değişiklikleri düzgün uygulanmalı,,Düşük,Bekliyor,,

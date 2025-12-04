@@ -1,0 +1,277 @@
+.email-editor-container {
+  width: 100%;
+  
+  .email-editor-toolbar-extra {
+    padding: 8px 12px;
+    background: #fafafa;
+    border: 1px solid #d9d9d9;
+    border-bottom: none;
+    border-radius: 6px 6px 0 0;
+  }
+
+  .email-editor-quill {
+    .ql-toolbar {
+      border-radius: 0;
+      background: #fff;
+      border-color: #d9d9d9;
+      
+      .ql-picker-label {
+        color: #333;
+      }
+      
+      button {
+        &:hover {
+          color: #1890ff;
+        }
+        
+        &.ql-active {
+          color: #1890ff;
+        }
+      }
+      
+      .ql-picker {
+        &:hover .ql-picker-label {
+          color: #1890ff;
+        }
+      }
+    }
+    
+    .ql-container {
+      border-color: #d9d9d9;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      font-size: 14px;
+      
+      .ql-editor {
+        min-height: 300px;
+        
+        &.ql-blank::before {
+          color: #bfbfbf;
+          font-style: normal;
+        }
+        
+        p {
+          margin-bottom: 0.5em;
+        }
+        
+        h1, h2, h3, h4, h5, h6 {
+          margin-top: 0.5em;
+          margin-bottom: 0.5em;
+        }
+        
+        ul, ol {
+          padding-left: 1.5em;
+        }
+        
+        blockquote {
+          border-left: 4px solid #1890ff;
+          padding-left: 16px;
+          margin-left: 0;
+          color: #666;
+        }
+        
+        a {
+          color: #1890ff;
+          text-decoration: underline;
+        }
+        
+        img {
+          max-width: 100%;
+          height: auto;
+        }
+      }
+    }
+  }
+
+  .email-editor-drop-zone {
+    position: relative;
+    
+    &.drag-over {
+      .ql-editor {
+        background-color: rgba(24, 144, 255, 0.05);
+        outline: 2px dashed #1890ff;
+      }
+    }
+  }
+  
+  .email-editor-variables-panel {
+    margin-top: 12px;
+    background: linear-gradient(135deg, #f0f5ff 0%, #e6f7ff 100%);
+    border: 1px dashed #91d5ff;
+    border-radius: 8px;
+    
+    .ant-card-body {
+      padding: 12px 16px;
+    }
+  }
+
+  .email-variable-tag {
+    cursor: grab !important;
+    transition: all 0.2s ease;
+    border-radius: 4px;
+    
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(24, 144, 255, 0.3);
+    }
+    
+    &:active {
+      cursor: grabbing !important;
+      transform: scale(0.95);
+    }
+  }
+}
+
+// Outlook benzeri stiller
+.ql-snow {
+  .ql-tooltip {
+    z-index: 1000;
+    background-color: #fff;
+    border: 1px solid #d9d9d9;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    border-radius: 4px;
+    padding: 8px 12px;
+    
+    input[type="text"] {
+      border: 1px solid #d9d9d9;
+      border-radius: 4px;
+      padding: 4px 8px;
+      
+      &:focus {
+        border-color: #1890ff;
+        outline: none;
+      }
+    }
+    
+    a.ql-action::after {
+      content: 'Düzenle';
+    }
+    
+    a.ql-remove::before {
+      content: 'Kaldır';
+    }
+    
+    &.ql-editing {
+      a.ql-action::after {
+        content: 'Kaydet';
+      }
+    }
+  }
+  
+  .ql-picker {
+    &.ql-header {
+      .ql-picker-label::before,
+      .ql-picker-item::before {
+        content: 'Normal';
+      }
+      
+      .ql-picker-label[data-value="1"]::before,
+      .ql-picker-item[data-value="1"]::before {
+        content: 'Başlık 1';
+      }
+      
+      .ql-picker-label[data-value="2"]::before,
+      .ql-picker-item[data-value="2"]::before {
+        content: 'Başlık 2';
+      }
+      
+      .ql-picker-label[data-value="3"]::before,
+      .ql-picker-item[data-value="3"]::before {
+        content: 'Başlık 3';
+      }
+      
+      .ql-picker-label[data-value="4"]::before,
+      .ql-picker-item[data-value="4"]::before {
+        content: 'Başlık 4';
+      }
+      
+      .ql-picker-label[data-value="5"]::before,
+      .ql-picker-item[data-value="5"]::before {
+        content: 'Başlık 5';
+      }
+      
+      .ql-picker-label[data-value="6"]::before,
+      .ql-picker-item[data-value="6"]::before {
+        content: 'Başlık 6';
+      }
+    }
+    
+    &.ql-size {
+      .ql-picker-label::before,
+      .ql-picker-item::before {
+        content: 'Normal';
+      }
+      
+      .ql-picker-label[data-value="small"]::before,
+      .ql-picker-item[data-value="small"]::before {
+        content: 'Küçük';
+      }
+      
+      .ql-picker-label[data-value="large"]::before,
+      .ql-picker-item[data-value="large"]::before {
+        content: 'Büyük';
+      }
+      
+      .ql-picker-label[data-value="huge"]::before,
+      .ql-picker-item[data-value="huge"]::before {
+        content: 'Çok Büyük';
+      }
+    }
+    
+    &.ql-font {
+      .ql-picker-label::before,
+      .ql-picker-item::before {
+        content: 'Sans Serif';
+      }
+      
+      .ql-picker-label[data-value="serif"]::before,
+      .ql-picker-item[data-value="serif"]::before {
+        content: 'Serif';
+      }
+      
+      .ql-picker-label[data-value="monospace"]::before,
+      .ql-picker-item[data-value="monospace"]::before {
+        content: 'Monospace';
+      }
+    }
+  }
+}
+
+// Renk seçici
+.ql-snow .ql-color-picker,
+.ql-snow .ql-icon-picker {
+  .ql-picker-options {
+    padding: 8px;
+    background: #fff;
+    border: 1px solid #d9d9d9;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+}
+
+// Responsive
+@media screen and (max-width: 768px) {
+  .email-editor-container {
+    .email-editor-quill {
+      .ql-toolbar {
+        flex-wrap: wrap;
+        
+        .ql-formats {
+          margin-right: 8px;
+          margin-bottom: 4px;
+        }
+      }
+      
+      .ql-container .ql-editor {
+        min-height: 200px;
+      }
+    }
+    
+    .email-editor-variables-panel {
+      .ant-btn {
+        font-size: 10px;
+        padding: 0 6px;
+        height: 24px;
+      }
+    }
+  }
+}

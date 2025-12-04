@@ -8,8 +8,6 @@ import {
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import {
   ModalForm,
-  ProFormDateTimePicker,
-  ProFormDigit,
   ProFormSelect,
   ProFormSwitch,
   ProFormText,
@@ -23,9 +21,9 @@ import {
   Badge,
   Button,
   Card,
-  DatePicker,
   Descriptions,
   Divider,
+  Form,
   Modal,
   message,
   Select,
@@ -35,7 +33,7 @@ import {
   Typography,
 } from 'antd';
 import moment from 'moment';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import {
   createCampaign,
   getCampaign,
@@ -43,9 +41,11 @@ import {
 } from '@/services/campaigns';
 import { getContact, getContacts } from '@/services/contacts';
 import { createTemplate, getTemplates } from '@/services/templates';
-import type { TemplateInSequence } from '@/types/campaign';
+import type { TemplateInSequence, ScheduleType, RecurrenceConfig, SpecialDayConfig } from '@/types/campaign';
 import type { Contact, ContactResponse } from '@/types/contact';
 import type { EmailTemplate } from '@/types/template';
+import SchedulePicker from '@/components/SchedulePicker';
+import EmailEditor from '@/components/EmailEditor';
 import './Create.less';
 
 const { Text } = Typography;
@@ -133,19 +133,10 @@ const CampaignCreateNew: React.FC = () => {
         if (contactCount <= 100) {
           // 100'den az kişi varsa otomatik yükle
           try {
-            console.log(
-              "Yüklenen contact ID'leri:",
-              campaign.target_contact_ids,
-            );
             const contactPromises = campaign.target_contact_ids.map(
-              (contactId) =>
-                getContact(contactId).catch((err) => {
-                  console.error(`Contact ${contactId} yüklenemedi:`, err);
-                  return null;
-                }),
+              (contactId) => getContact(contactId).catch(() => null),
             );
             const contactsResults = await Promise.all(contactPromises);
-            console.log('Contact results:', contactsResults);
             const contacts = contactsResults
               .filter(
                 (result): result is ContactResponse =>
@@ -153,15 +144,13 @@ const CampaignCreateNew: React.FC = () => {
               )
               .map((result) => result.data)
               .filter((contact): contact is Contact => contact !== undefined);
-            console.log('Başarıyla yüklenen contacts:', contacts.length);
             setSelectedContactDetails(contacts);
             if (contacts.length < contactCount) {
               message.warning(
                 `${contactCount} kişiden ${contacts.length} tanesi yüklenebildi`,
               );
             }
-          } catch (error) {
-            console.error('Kişiler yüklenirken hata:', error);
+          } catch (_error) {
             message.warning(
               `${contactCount} kişi ID'si yüklendi, ancak detaylar getirilemedi`,
             );
@@ -206,16 +195,11 @@ const CampaignCreateNew: React.FC = () => {
 
     setLoadingContacts(true);
     try {
-      console.log("Manuel yükleme - Contact ID'leri:", selectedContacts);
       // Promise.all ile paralel yükleme
       const contactPromises = selectedContacts.map((contactId) =>
-        getContact(contactId).catch((err) => {
-          console.error(`Contact ${contactId} yüklenemedi:`, err);
-          return null;
-        }),
+        getContact(contactId).catch(() => null),
       );
       const contactsResults = await Promise.all(contactPromises);
-      console.log('Manuel yükleme - Contact results:', contactsResults);
       const contacts = contactsResults
         .filter(
           (result): result is ContactResponse =>
@@ -224,10 +208,6 @@ const CampaignCreateNew: React.FC = () => {
         .map((result) => result.data)
         .filter((contact): contact is Contact => contact !== undefined);
 
-      console.log(
-        'Manuel yükleme - Başarıyla yüklenen contacts:',
-        contacts.length,
-      );
       setSelectedContactDetails(contacts);
 
       if (contacts.length < selectedContacts.length) {
@@ -238,7 +218,6 @@ const CampaignCreateNew: React.FC = () => {
         message.success(`${contacts.length} kişi detayı başarıyla yüklendi`);
       }
     } catch (error) {
-      console.error('Kişiler yüklenirken hata:', error);
       message.error('Kişi detayları yüklenirken hata oluştu');
     } finally {
       setLoadingContacts(false);
@@ -717,41 +696,28 @@ const CampaignCreateNew: React.FC = () => {
   ];
 
   // Şablon ekleme
-  const addTemplate = () => {
+  const addTemplate = useCallback(() => {
     if (!selectedTemplate) {
       message.warning('Lütfen bir şablon seçin');
       return;
     }
 
-    const lastDelay =
-      templateSequence.length > 0
-        ? templateSequence[templateSequence.length - 1].send_delay_days +
-          intervalDays
-        : 0;
+    const newTemplate = {
+      template_id: selectedTemplate,
+      send_delay_days: 0,
+      schedule_type: 'custom_date' as ScheduleType,
+      scheduled_date: undefined,
+    };
 
-    const scheduledDate = firstSendDate
-      ? moment(firstSendDate)
-          .add(lastDelay, 'days')
-          .format('YYYY-MM-DD HH:mm:ss')
-      : '';
-
-    setTemplateSequence([
-      ...templateSequence,
-      {
-        template_id: selectedTemplate,
-        send_delay_days: lastDelay,
-        scheduled_date: scheduledDate,
-      },
-    ]);
-
+    setTemplateSequence(prev => [...prev, newTemplate]);
     setTemplateModalVisible(false);
     setSelectedTemplate(undefined);
-  };
+    message.success('Şablon eklendi');
+  }, [selectedTemplate]);
 
-  const removeTemplate = (index: number) => {
-    const newSequence = templateSequence.filter((_, i) => i !== index);
-    recalculateDates(newSequence);
-  };
+  const removeTemplate = useCallback((index: number) => {
+    setTemplateSequence(prev => prev.filter((_, i) => i !== index));
+  }, []);
 
   const recalculateDates = (sequence: TemplateInSequence[]) => {
     const updated = sequence.map((item, index) => {
@@ -794,27 +760,60 @@ const CampaignCreateNew: React.FC = () => {
     setTemplateSequence(updated);
   };
 
-  const handleIntervalChange = (value: number | null) => {
+  // Tek bir şablon için schedule config'i güncelle
+  const handleTemplateScheduleChange = useCallback((
+    index: number,
+    scheduleData: {
+      schedule_type: ScheduleType;
+      scheduled_date?: string;
+      recurrence_config?: RecurrenceConfig;
+      special_day_config?: SpecialDayConfig;
+    },
+  ) => {
+    setTemplateSequence(prev => {
+      const updated = [...prev];
+      updated[index] = {
+        ...updated[index],
+        schedule_type: scheduleData.schedule_type,
+        scheduled_date: scheduleData.scheduled_date,
+        recurrence_config: scheduleData.recurrence_config,
+        special_day_config: scheduleData.special_day_config,
+      };
+      return updated;
+    });
+  }, []);
+
+  const handleIntervalChange = useCallback((value: number | null) => {
     if (value) {
       setIntervalDays(value);
       // Interval değiştiğinde tarihleri otomatik yeniden hesapla
-      if (templateSequence.length > 0 && firstSendDate) {
-        const updated = templateSequence.map((item, index) => {
-          const delay = index === 0 ? 0 : index * value; // Her şablon için index * interval
-          const scheduled = moment(firstSendDate)
-            .add(delay, 'days')
-            .format('YYYY-MM-DD HH:mm:ss');
-          return {
-            ...item,
-            send_delay_days: delay,
-            scheduled_date: scheduled,
-          };
-        });
-        setTemplateSequence(updated);
-        message.success(`Tarihler ${value} gün aralığa göre güncellendi`);
-      }
+      setTemplateSequence(prev => {
+        if (prev.length > 0 && firstSendDate) {
+          const updated = prev.map((item, index) => {
+            const delay = index === 0 ? 0 : index * value;
+            const scheduled = moment(firstSendDate)
+              .add(delay, 'days')
+              .format('YYYY-MM-DD HH:mm:ss');
+            return {
+              ...item,
+              send_delay_days: delay,
+              scheduled_date: scheduled,
+            };
+          });
+          message.success(`Tarihler ${value} gün aralığa göre güncellendi`);
+          return updated;
+        }
+        return prev;
+      });
     }
-  };
+  }, [firstSendDate]);
+
+  // Template seçeneklerini memoize et
+  const templateOptions = useMemo(() => 
+    templates.map((t) => ({
+      label: `${t.name} (${t.category})`,
+      value: t.id,
+    })), [templates]);
 
   return (
     <Card
@@ -840,14 +839,22 @@ const CampaignCreateNew: React.FC = () => {
         formRef={formRef}
         onFinish={async (values) => {
           try {
+            // İlk şablonun tarihini first_send_date olarak kullan
+            const calculatedFirstSendDate = templateSequence.length > 0 
+              ? templateSequence[0].scheduled_date 
+              : undefined;
+            
+            // Birden fazla şablon varsa tekrarlayan olarak işaretle
+            const calculatedIsRecurring = templateSequence.length > 1;
+
             const campaignData = {
               name: values.name,
               description: values.description,
               target_contact_ids: selectedContacts,
-              is_recurring: isRecurring,
+              is_recurring: calculatedIsRecurring,
               template_sequence: templateSequence,
-              first_send_date: firstSendDate,
-              recurrence_interval_days: isRecurring ? intervalDays : undefined,
+              first_send_date: calculatedFirstSendDate,
+              recurrence_interval_days: calculatedIsRecurring ? intervalDays : undefined,
               stop_on_reply: values.stop_on_reply,
               reply_notification_email: values.reply_notification_email,
               status: values.status || 'draft',
@@ -1142,71 +1149,17 @@ const CampaignCreateNew: React.FC = () => {
               message.error('Lütfen en az bir şablon seçin');
               return false;
             }
-            if (!firstSendDate) {
-              message.error('Lütfen gönderim tarihi seçin');
+            // Her şablonun bir tarihi olmalı
+            const hasInvalidSchedule = templateSequence.some(
+              (item) => !item.scheduled_date && item.schedule_type === 'custom_date'
+            );
+            if (hasInvalidSchedule) {
+              message.error('Lütfen tüm şablonlar için gönderim tarihi seçin');
               return false;
             }
             return true;
           }}
         >
-          <ProFormSwitch
-            name="is_recurring"
-            label="Tekrarlayan Email"
-            fieldProps={{
-              onChange: (checked) => {
-                // Tekrarlayan email kapatıldığında sadece ilk şablonu bırak
-                if (!checked && templateSequence.length > 1) {
-                  Modal.confirm({
-                    title: 'Şablonları Temizle',
-                    content: `Tekrarlayan email kapatıldı. Sadece ilk şablon kalacak, diğer ${templateSequence.length - 1} şablon silinecek. Devam edilsin mi?`,
-                    okText: 'Evet, Temizle',
-                    cancelText: 'İptal',
-                    onOk: () => {
-                      setTemplateSequence([templateSequence[0]]);
-                      setIsRecurring(false);
-                      message.success('Sadece ilk şablon kaldı');
-                    },
-                    onCancel: () => {
-                      // Kullanıcı iptal ederse, switch'i geri aç
-                      setIsRecurring(true);
-                      // Form değerini de geri döndür
-                      formRef.current?.setFieldsValue({
-                        is_recurring: true,
-                      });
-                    },
-                  });
-                } else {
-                  setIsRecurring(checked);
-                }
-              },
-            }}
-          />
-
-          <ProFormDateTimePicker
-            name="first_send_date"
-            label={isRecurring ? 'İlk Gönderim Tarihi' : 'Gönderim Tarihi'}
-            rules={[{ required: true }]}
-            fieldProps={{
-              style: { width: '100%' },
-              showTime: { format: 'HH:mm' },
-              format: 'YYYY-MM-DD HH:mm',
-              onChange: (_, dateString) =>
-                handleFirstSendDateChange(dateString as string),
-            }}
-          />
-
-          {isRecurring && (
-            <ProFormDigit
-              name="interval_days"
-              label="Kaç Günde Bir Tekrarlansın?"
-              min={1}
-              max={365}
-              fieldProps={{
-                onChange: handleIntervalChange,
-              }}
-            />
-          )}
-
           <Card
             title="Şablonlar"
             style={{
@@ -1244,42 +1197,22 @@ const CampaignCreateNew: React.FC = () => {
                       style={{ width: '100%' }}
                       size={12}
                     >
-                      <div
-                        style={{
-                          display: 'grid',
-                          gridTemplateColumns: '1fr 1fr',
-                          gap: 16,
-                        }}
-                      >
-                        <div>
-                          <strong>Şablon:</strong> {template?.name}
-                        </div>
-                        <div>
-                          <strong>Gönderim Gecikmesi:</strong>{' '}
-                          {item.send_delay_days === 0
-                            ? 'Hemen'
-                            : `${item.send_delay_days} gün sonra`}
-                        </div>
+                      <div>
+                        <strong>Şablon:</strong> {template?.name}
                       </div>
 
                       <div>
-                        <strong>Gönderim Tarihi:</strong>
-                        <DatePicker
-                          showTime={{ format: 'HH:mm' }}
-                          format="YYYY-MM-DD HH:mm"
-                          value={
-                            item.scheduled_date
-                              ? moment(item.scheduled_date)
-                              : null
-                          }
-                          onChange={(_date, dateString) => {
-                            handleTemplateDateChange(
-                              index,
-                              dateString as string,
-                            );
+                        <strong>Gönderim Programı:</strong>
+                        <SchedulePicker
+                          value={{
+                            schedule_type: item.schedule_type || 'custom_date',
+                            scheduled_date: item.scheduled_date,
+                            recurrence_config: item.recurrence_config,
+                            special_day_config: item.special_day_config,
                           }}
-                          style={{ marginLeft: 8, width: 250 }}
-                          placeholder="Tarih seçin"
+                          onChange={(scheduleData) => {
+                            handleTemplateScheduleChange(index, scheduleData);
+                          }}
                         />
                       </div>
                     </Space>
@@ -1291,19 +1224,7 @@ const CampaignCreateNew: React.FC = () => {
                 type="dashed"
                 icon={<PlusOutlined />}
                 block
-                disabled={!isRecurring && templateSequence.length >= 1}
                 onClick={() => {
-                  if (!firstSendDate) {
-                    message.warning('Önce gönderim tarihi seçmelisiniz');
-                    return;
-                  }
-                  // Tekrarlayan email kapalıysa ve zaten 1 şablon varsa ekleme yapma
-                  if (!isRecurring && templateSequence.length >= 1) {
-                    message.warning(
-                      'Tekrarlayan email kapalıyken sadece 1 şablon ekleyebilirsiniz',
-                    );
-                    return;
-                  }
                   setTemplateModalVisible(true);
                 }}
               >
@@ -1311,17 +1232,6 @@ const CampaignCreateNew: React.FC = () => {
                   ? 'İlk Şablonu Ekle'
                   : 'Yeni Şablon Ekle'}
               </Button>
-
-              {!isRecurring && templateSequence.length >= 1 && (
-                <Tag
-                  color="orange"
-                  icon={<PlusOutlined />}
-                  style={{ marginTop: 8 }}
-                >
-                  Tekrarlayan email açık olmalı - Birden fazla şablon eklemek
-                  için yukarıdan açın
-                </Tag>
-              )}
             </Space>
           </Card>
 
@@ -1356,7 +1266,12 @@ const CampaignCreateNew: React.FC = () => {
               >
                 İptal
               </Button>,
-              <Button key="ok" type="primary" onClick={addTemplate}>
+              <Button 
+                key="ok" 
+                type="primary" 
+                onClick={addTemplate}
+                disabled={!selectedTemplate}
+              >
                 Ekle
               </Button>,
             ]}
@@ -1366,10 +1281,7 @@ const CampaignCreateNew: React.FC = () => {
               placeholder="Bir şablon seçin"
               value={selectedTemplate}
               onChange={setSelectedTemplate}
-              options={templates.map((t) => ({
-                label: `${t.name} (${t.category})`,
-                value: t.id,
-              }))}
+              options={templateOptions}
             />
           </Modal>
 
@@ -1402,22 +1314,11 @@ const CampaignCreateNew: React.FC = () => {
                   setCreateTemplateModalVisible(false);
 
                   // Template'i sequence'e ekle
-                  const lastDelay =
-                    templateSequence.length > 0
-                      ? templateSequence[templateSequence.length - 1]
-                          .send_delay_days + intervalDays
-                      : 0;
-
-                  const scheduledDate = firstSendDate
-                    ? moment(firstSendDate)
-                        .add(lastDelay, 'days')
-                        .format('YYYY-MM-DD HH:mm:ss')
-                    : '';
-
                   const newSequence: TemplateInSequence = {
                     template_id: newTemplateId,
-                    send_delay_days: lastDelay,
-                    scheduled_date: scheduledDate,
+                    send_delay_days: 0,
+                    schedule_type: 'custom_date' as ScheduleType,
+                    scheduled_date: undefined,
                   };
                   setTemplateSequence([...templateSequence, newSequence]);
                   message.success('Şablon kampanyaya eklendi');
@@ -1547,20 +1448,22 @@ const CampaignCreateNew: React.FC = () => {
               label="Preheader (Önizleme Metni)"
               placeholder="Inbox'ta gösterilecek kısa açıklama..."
             />
-            <ProFormTextArea
+            <Form.Item
               name="body_html"
-              label="HTML İçerik"
-              rules={[{ required: true, message: 'Lütfen HTML içerik girin' }]}
-              fieldProps={{ rows: 8 }}
-              placeholder="<html>...</html>"
-              tooltip="HTML içerikte de {{first_name}}, {{company}} gibi değişkenler kullanabilirsiniz"
-            />
+              label="Email İçeriği"
+              rules={[{ required: true, message: 'Lütfen email içeriği girin' }]}
+            >
+              <EmailEditor 
+                placeholder="Email içeriğinizi buraya yazın..."
+                height={350}
+                showVariables={true}
+              />
+            </Form.Item>
             <ProFormTextArea
               name="body_text"
-              label="Plain Text İçerik"
-              fieldProps={{ rows: 4 }}
+              label="Plain Text İçerik (Opsiyonel)"
+              fieldProps={{ rows: 3 }}
               placeholder="HTML desteklemeyen emailler için alternatif metin..."
-              tooltip="Plain text içerikte de kişiselleştirme değişkenleri kullanabilirsiniz"
             />
             <ProFormText
               name="from_name"
@@ -1666,10 +1569,14 @@ const CampaignCreateNew: React.FC = () => {
               <Tag color="green">{templateSequence.length} email</Tag>
             </Descriptions.Item>
             <Descriptions.Item label="İlk Gönderim">
-              {firstSendDate || 'Belirlenmedi'}
+              {templateSequence.length > 0 && templateSequence[0].scheduled_date 
+                ? templateSequence[0].scheduled_date 
+                : 'Belirlenmedi'}
             </Descriptions.Item>
-            <Descriptions.Item label="Tekrarlayan Email">
-              {isRecurring ? `Evet (${intervalDays} günde bir)` : 'Hayır'}
+            <Descriptions.Item label="Email Silsilesi">
+              {templateSequence.length > 1 
+                ? `Evet (${templateSequence.length} email sıralı gönderilecek)` 
+                : 'Tek email'}
             </Descriptions.Item>
             <Descriptions.Item label="Kampanya Durumu">
               <Tag color={campaignStatus === 'active' ? 'green' : 'default'}>

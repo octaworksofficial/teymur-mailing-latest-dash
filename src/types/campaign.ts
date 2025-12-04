@@ -1,9 +1,79 @@
 // Email Campaign Types
 
+// Zamanlama türleri
+export type ScheduleType = 'custom_date' | 'recurring' | 'special_day';
+
+// Tekrarlama konfigürasyonu
+export interface RecurrenceConfig {
+  type: 'daily' | 'weekly' | 'monthly';
+  // Günlük: her X günde bir
+  interval?: number;
+  // Haftalık: hangi günler (0=Pazar, 1=Pazartesi, ..., 6=Cumartesi)
+  weekdays?: number[];
+  // Aylık: ayın hangi günü (1-31) veya "last" son gün için
+  day_of_month?: number | 'last';
+  // Saat (HH:mm formatında)
+  time: string;
+  // Bitiş tarihi (opsiyonel)
+  end_date?: string;
+}
+
+// Özel günler
+export type SpecialDayType = 
+  // Dini Bayramlar
+  | 'ramazan_bayrami_1'
+  | 'ramazan_bayrami_2' 
+  | 'ramazan_bayrami_3'
+  | 'kurban_bayrami_1'
+  | 'kurban_bayrami_2'
+  | 'kurban_bayrami_3'
+  | 'kurban_bayrami_4'
+  | 'kandil_mevlid'
+  | 'kandil_regaip'
+  | 'kandil_mirac'
+  | 'kandil_berat'
+  | 'kandil_kadir'
+  // Milli Bayramlar
+  | 'yilbasi'
+  | 'ulusal_egemenlik' // 23 Nisan
+  | 'isci_bayrami' // 1 Mayıs
+  | 'genclik_bayrami' // 19 Mayıs
+  | 'demokrasi_bayrami' // 15 Temmuz
+  | 'zafer_bayrami' // 30 Ağustos
+  | 'cumhuriyet_bayrami' // 29 Ekim
+  // Özel Günler
+  | 'anneler_gunu'
+  | 'babalar_gunu'
+  | 'sevgililer_gunu'
+  | 'kadinlar_gunu'
+  | 'ogretmenler_gunu'
+  // Özel (kullanıcı tanımlı)
+  | 'custom';
+
+export interface SpecialDayConfig {
+  day_type: SpecialDayType;
+  // Özel gün için custom tarih (sadece 'custom' tipi için)
+  custom_date?: string;
+  custom_name?: string;
+  // Günün kaçıncı günü gönderilecek (örn: -1 = bir gün önce, 0 = aynı gün, 1 = bir gün sonra)
+  day_offset: number;
+  // Saat
+  time: string;
+  // Yıllık tekrar
+  yearly_repeat: boolean;
+}
+
 export interface TemplateInSequence {
   template_id: number;
   send_delay_days: number;
-  scheduled_date: string;
+  // Zamanlama türü (opsiyonel - varsayılan custom_date)
+  schedule_type?: ScheduleType;
+  // Özel tarih için (mevcut yapı)
+  scheduled_date?: string;
+  // Tekrarlama için
+  recurrence_config?: RecurrenceConfig;
+  // Özel günler için
+  special_day_config?: SpecialDayConfig;
 }
 
 export interface TargetFilters {

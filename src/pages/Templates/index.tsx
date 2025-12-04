@@ -16,6 +16,7 @@ import {
 import {
   Alert,
   Button,
+  Form,
   Modal,
   message,
   Space,
@@ -33,6 +34,7 @@ import {
   updateTemplate,
 } from '@/services/templates';
 import type { EmailTemplate } from '@/types/template';
+import EmailEditor from '@/components/EmailEditor';
 
 const { confirm } = Modal;
 const { Text } = Typography;
@@ -440,17 +442,21 @@ const Templates: React.FC = () => {
           label="Preheader (Önizleme Metni)"
           placeholder="Inbox'ta gösterilecek kısa açıklama..."
         />
-        <ProFormTextArea
+        <Form.Item
           name="body_html"
-          label="HTML İçerik"
-          rules={[{ required: true, message: 'Lütfen HTML içerik girin' }]}
-          fieldProps={{ rows: 8 }}
-          placeholder="<html>...</html>"
-        />
+          label="Email İçeriği"
+          rules={[{ required: true, message: 'Lütfen email içeriği girin' }]}
+        >
+          <EmailEditor 
+            placeholder="Email içeriğinizi buraya yazın..."
+            height={350}
+            showVariables={true}
+          />
+        </Form.Item>
         <ProFormTextArea
           name="body_text"
-          label="Plain Text İçerik"
-          fieldProps={{ rows: 4 }}
+          label="Plain Text İçerik (Opsiyonel)"
+          fieldProps={{ rows: 3 }}
           placeholder="HTML desteklemeyen emailler için alternatif metin..."
         />
         <ProFormText
@@ -558,17 +564,21 @@ const Templates: React.FC = () => {
           label="Preheader (Önizleme Metni)"
           placeholder="Inbox'ta gösterilecek kısa açıklama..."
         />
-        <ProFormTextArea
+        <Form.Item
           name="body_html"
-          label="HTML İçerik"
-          rules={[{ required: true, message: 'Lütfen HTML içerik girin' }]}
-          fieldProps={{ rows: 8 }}
-          placeholder="<html>...</html>"
-        />
+          label="Email İçeriği"
+          rules={[{ required: true, message: 'Lütfen email içeriği girin' }]}
+        >
+          <EmailEditor 
+            placeholder="Email içeriğinizi buraya yazın..."
+            height={350}
+            showVariables={true}
+          />
+        </Form.Item>
         <ProFormTextArea
           name="body_text"
-          label="Plain Text İçerik"
-          fieldProps={{ rows: 4 }}
+          label="Plain Text İçerik (Opsiyonel)"
+          fieldProps={{ rows: 3 }}
           placeholder="HTML desteklemeyen emailler için alternatif metin..."
         />
         <ProFormText
