@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import {
@@ -11,7 +11,16 @@ import {
   UserOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
-import { Button, Card, Divider, Dropdown, Space, Tag, Typography } from 'antd';
+import {
+  Button,
+  Card,
+  Divider,
+  Dropdown,
+  message,
+  Space,
+  Tag,
+  Typography,
+} from 'antd';
 import './index.less';
 
 const { Text } = Typography;
@@ -38,7 +47,11 @@ const EMAIL_VARIABLES = [
   { key: '{{country}}', label: 'Ülke', icon: <HomeOutlined /> },
   { key: '{{custom_field_1}}', label: 'Özel Alan 1', icon: <TagOutlined /> },
   { key: '{{custom_field_2}}', label: 'Özel Alan 2', icon: <TagOutlined /> },
-  { key: '{{unsubscribe_link}}', label: 'Abonelikten Çık', icon: <LinkOutlined /> },
+  {
+    key: '{{unsubscribe_link}}',
+    label: 'Abonelikten Çık',
+    icon: <LinkOutlined />,
+  },
 ];
 
 const EmailEditor: React.FC<EmailEditorProps> = ({
@@ -50,6 +63,212 @@ const EmailEditor: React.FC<EmailEditorProps> = ({
   readOnly = false,
 }) => {
   const quillRef = useRef<ReactQuill>(null);
+
+  // Görsel yükleme fonksiyonu
+  const uploadImageToServer = useCallback(
+    async (file: File): Promise<string | null> => {
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const response = await fetch('/api/uploads', {
+          method: 'POST',
+          body: formData,
+        });
+
+        const data = await response.json();
+        if (data.success && data.data?.url) {
+          return data.data.url;
+        }
+        return null;
+      } catch (error) {
+        console.error('Görsel yükleme hatası:', error);
+        return null;
+      }
+    },
+    [],
+  );
+
+  // Base64 görselini File'a dönüştür
+  const base64ToFile = useCallback(
+    (base64: string, filename: string): File | null => {
+      try {
+        const arr = base64.split(',');
+        const mimeMatch = arr[0].match(/:(.*?);/);
+        if (!mimeMatch) return null;
+
+        const mime = mimeMatch[1];
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+
+        while (n--) {
+          u8arr[n] = bstr.charCodeAt(n);
+        }
+
+        return new File([u8arr], filename, { type: mime });
+      } catch {
+        return null;
+      }
+    },
+    [],
+  );
+
+  // Paste olayını dinle
+  useEffect(() => {
+    const quill = quillRef.current?.getEditor();
+    if (!quill || readOnly) return;
+
+    const handlePaste = async (e: ClipboardEvent) => {
+      const clipboardData = e.clipboardData;
+      if (!clipboardData) return;
+
+      // Pano'dan görselleri kontrol et
+      const items = clipboardData.items;
+      const imageItems: DataTransferItem[] = [];
+
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
+          imageItems.push(items[i]);
+        }
+      }
+
+      // Eğer doğrudan görsel dosyası yapıştırılıyorsa
+      if (imageItems.length > 0) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        for (const item of imageItems) {
+          const file = item.getAsFile();
+          if (file) {
+            message.loading({
+              content: 'Görsel yükleniyor...',
+              key: 'imageUpload',
+            });
+            const url = await uploadImageToServer(file);
+            if (url) {
+              const range = quill.getSelection(true);
+              quill.insertEmbed(range.index, 'image', url, 'user');
+              quill.setSelection(range.index + 1, 0);
+              message.success({
+                content: 'Görsel yüklendi',
+                key: 'imageUpload',
+              });
+            } else {
+              message.error({
+                content: 'Görsel yüklenemedi',
+                key: 'imageUpload',
+              });
+            }
+          }
+        }
+        return;
+      }
+
+      // HTML içinde görseller varsa işle (base64 veya harici URL)
+      const html = clipboardData.getData('text/html');
+      if (html && (html.includes('data:image') || html.includes('<img'))) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        let processedHtml = html;
+
+        // Base64 görselleri bul ve yükle
+        const base64Regex = /data:image\/[^;]+;base64,[^"'\s]+/g;
+        const base64Images = html.match(base64Regex) || [];
+
+        // Harici URL görselleri bul
+        const imgSrcRegex = /<img[^>]+src=["']([^"']+)["'][^>]*>/gi;
+        const externalUrls: string[] = [];
+        let match: RegExpExecArray | null = imgSrcRegex.exec(html);
+        while (match !== null) {
+          const src = match[1];
+          // Base64 olmayan ve http/https ile başlayan URL'leri al
+          if (
+            !src.startsWith('data:') &&
+            (src.startsWith('http://') || src.startsWith('https://'))
+          ) {
+            externalUrls.push(src);
+          }
+          match = imgSrcRegex.exec(html);
+        }
+
+        const totalImages = base64Images.length + externalUrls.length;
+
+        if (totalImages > 0) {
+          message.loading({
+            content: `${totalImages} görsel işleniyor...`,
+            key: 'imageUpload',
+          });
+
+          // Base64 görselleri yükle
+          for (let i = 0; i < base64Images.length; i++) {
+            const base64 = base64Images[i];
+            const file = base64ToFile(
+              base64,
+              `pasted-image-${Date.now()}-${i}.png`,
+            );
+
+            if (file) {
+              const url = await uploadImageToServer(file);
+              if (url) {
+                processedHtml = processedHtml.replace(base64, url);
+              }
+            }
+          }
+
+          // Harici URL'leri proxy üzerinden indir ve yükle
+          for (let i = 0; i < externalUrls.length; i++) {
+            const externalUrl = externalUrls[i];
+            try {
+              // Harici görseli sunucu üzerinden indir
+              const response = await fetch('/api/uploads/proxy-image', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: externalUrl }),
+              });
+              const data = await response.json();
+              if (data.success && data.data?.url) {
+                processedHtml = processedHtml
+                  .split(externalUrl)
+                  .join(data.data.url);
+              }
+            } catch (err) {
+              console.warn('Harici görsel yüklenemedi:', externalUrl, err);
+              // Hata durumunda orijinal URL'i koru
+            }
+          }
+
+          message.success({
+            content: 'Görseller yüklendi',
+            key: 'imageUpload',
+          });
+        }
+
+        // İşlenmiş HTML'i ekle
+        const range = quill.getSelection(true);
+        quill.clipboard.dangerouslyPasteHTML(
+          range.index,
+          processedHtml,
+          'user',
+        );
+        return;
+      }
+    };
+
+    const editorElement = quill.root;
+    editorElement.addEventListener(
+      'paste',
+      handlePaste as unknown as EventListener,
+    );
+
+    return () => {
+      editorElement.removeEventListener(
+        'paste',
+        handlePaste as unknown as EventListener,
+      );
+    };
+  }, [readOnly, uploadImageToServer, base64ToFile]);
 
   // Quill editör modülleri
   const modules = useMemo(
@@ -118,23 +337,27 @@ const EmailEditor: React.FC<EmailEditorProps> = ({
   );
 
   // Sürükle başlat
-  const handleDragStart = useCallback((e: React.DragEvent, variable: string) => {
-    e.dataTransfer.setData('text/plain', variable);
-    e.dataTransfer.effectAllowed = 'copy';
-    // Drag görselini özelleştir
-    const dragImage = document.createElement('div');
-    dragImage.textContent = variable;
-    dragImage.style.cssText = 'position: absolute; top: -1000px; background: #1890ff; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;';
-    document.body.appendChild(dragImage);
-    e.dataTransfer.setDragImage(dragImage, 0, 0);
-    setTimeout(() => document.body.removeChild(dragImage), 0);
-  }, []);
+  const handleDragStart = useCallback(
+    (e: React.DragEvent, variable: string) => {
+      e.dataTransfer.setData('text/plain', variable);
+      e.dataTransfer.effectAllowed = 'copy';
+      // Drag görselini özelleştir
+      const dragImage = document.createElement('div');
+      dragImage.textContent = variable;
+      dragImage.style.cssText =
+        'position: absolute; top: -1000px; background: #1890ff; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;';
+      document.body.appendChild(dragImage);
+      e.dataTransfer.setDragImage(dragImage, 0, 0);
+      setTimeout(() => document.body.removeChild(dragImage), 0);
+    },
+    [],
+  );
 
   // Drop olayını işle - editöre bırakıldığında
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     const variable = e.dataTransfer.getData('text/plain');
     if (!variable || !variable.startsWith('{{')) return;
 
@@ -146,11 +369,11 @@ const EmailEditor: React.FC<EmailEditorProps> = ({
     if (range) {
       const selection = quill.getSelection();
       let index = quill.getLength() - 1;
-      
+
       // Range'den editördeki pozisyonu hesapla
       const node = range.startContainer;
       const offset = range.startOffset;
-      
+
       // Blot'u bul ve indeksini al
       const blot = quill.scroll.find(node, true);
       if (blot && Array.isArray(blot) && blot[0]) {
@@ -160,7 +383,7 @@ const EmailEditor: React.FC<EmailEditorProps> = ({
       } else if (selection) {
         index = selection.index;
       }
-      
+
       // Değişkeni ekle
       quill.insertText(index, variable, 'user');
       quill.setSelection(index + variable.length, 0);
@@ -177,16 +400,21 @@ const EmailEditor: React.FC<EmailEditorProps> = ({
   }, []);
 
   // Değişken menü öğeleri
-  const variableMenuItems: MenuProps['items'] = EMAIL_VARIABLES.map((variable) => ({
-    key: variable.key,
-    icon: variable.icon,
-    label: (
-      <span>
-        {variable.label} <Text type="secondary" style={{ fontSize: 11 }}>({variable.key})</Text>
-      </span>
-    ),
-    onClick: () => insertVariable(variable.key),
-  }));
+  const variableMenuItems: MenuProps['items'] = EMAIL_VARIABLES.map(
+    (variable) => ({
+      key: variable.key,
+      icon: variable.icon,
+      label: (
+        <span>
+          {variable.label}{' '}
+          <Text type="secondary" style={{ fontSize: 11 }}>
+            ({variable.key})
+          </Text>
+        </span>
+      ),
+      onClick: () => insertVariable(variable.key),
+    }),
+  );
 
   const handleChange = useCallback(
     (content: string) => {
@@ -218,9 +446,9 @@ const EmailEditor: React.FC<EmailEditorProps> = ({
           </Space>
         </div>
       )}
-      
-      <div 
-        onDrop={handleDrop} 
+
+      <div
+        onDrop={handleDrop}
         onDragOver={handleDragOver}
         className="email-editor-drop-zone"
       >
@@ -233,14 +461,19 @@ const EmailEditor: React.FC<EmailEditorProps> = ({
           formats={formats}
           placeholder={placeholder}
           readOnly={readOnly}
-          style={{ height: typeof height === 'number' ? `${height}px` : height }}
+          style={{
+            height: typeof height === 'number' ? `${height}px` : height,
+          }}
           className="email-editor-quill"
         />
       </div>
 
       {showVariables && !readOnly && (
         <Card size="small" className="email-editor-variables-panel">
-          <Text strong style={{ fontSize: 12, marginBottom: 8, display: 'block' }}>
+          <Text
+            strong
+            style={{ fontSize: 12, marginBottom: 8, display: 'block' }}
+          >
             <HolderOutlined style={{ marginRight: 4 }} />
             Sürükle & Bırak Değişkenler:
           </Text>
@@ -253,7 +486,7 @@ const EmailEditor: React.FC<EmailEditorProps> = ({
                 className="email-variable-tag"
                 icon={variable.icon}
                 color="blue"
-                style={{ 
+                style={{
                   cursor: 'grab',
                   userSelect: 'none',
                   padding: '4px 8px',

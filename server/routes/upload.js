@@ -303,14 +303,14 @@ router.delete('/:filename', (req, res) => {
       });
     }
 
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({
-        success: false,
-        message: 'Dosya bulunamadı',
-      });
+    // Dosya varsa sil, yoksa da başarılı dön
+    // (Google Drive'a yüklenmiş dosyalar yerel olarak silinmiş olabilir)
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+      console.log(`🗑️ Dosya silindi: ${filename}`);
+    } else {
+      console.log(`ℹ️ Dosya zaten mevcut değil (muhtemelen Google Drive'da): ${filename}`);
     }
-
-    fs.unlinkSync(filePath);
 
     res.json({
       success: true,
@@ -321,6 +321,111 @@ router.delete('/:filename', (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Dosya silinirken hata oluştu',
+      error: error.message,
+    });
+  }
+});
+
+// Harici görsel proxy - URL'den görsel indir ve yükle
+router.post('/proxy-image', async (req, res) => {
+  try {
+    const { url } = req.body;
+    
+    if (!url || typeof url !== 'string') {
+      return res.status(400).json({
+        success: false,
+        message: 'Geçerli bir URL gerekli',
+      });
+    }
+
+    // URL güvenlik kontrolü
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      return res.status(400).json({
+        success: false,
+        message: 'Sadece HTTP/HTTPS URL desteklenir',
+      });
+    }
+
+    console.log(`📥 Harici görsel indiriliyor: ${url}`);
+
+    // Görseli indir
+    const response = await axios.get(url, {
+      responseType: 'arraybuffer',
+      timeout: 30000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'image/*,*/*',
+      },
+    });
+
+    // Content-Type'ı al
+    const contentType = response.headers['content-type'] || 'image/png';
+    
+    // Dosya uzantısını belirle
+    let ext = '.png';
+    if (contentType.includes('jpeg') || contentType.includes('jpg')) ext = '.jpg';
+    else if (contentType.includes('gif')) ext = '.gif';
+    else if (contentType.includes('webp')) ext = '.webp';
+    else if (contentType.includes('svg')) ext = '.svg';
+
+    // Benzersiz dosya adı oluştur
+    const uniqueId = crypto.randomBytes(8).toString('hex');
+    const timestamp = Date.now();
+    const filename = `${timestamp}-${uniqueId}${ext}`;
+    const filePath = path.join(UPLOADS_DIR, filename);
+
+    // Dosyayı kaydet
+    fs.writeFileSync(filePath, response.data);
+
+    console.log(`✅ Harici görsel kaydedildi: ${filename}`);
+
+    // Google Drive'a yükle (opsiyonel)
+    let finalUrl = `/api/uploads/${filename}`;
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', fs.createReadStream(filePath), {
+        filename: filename,
+        contentType: contentType,
+      });
+
+      const driveResponse = await axios.post(N8N_UPLOAD_WEBHOOK_URL, formData, {
+        headers: formData.getHeaders(),
+        timeout: 60000,
+      });
+
+      if (driveResponse.data && driveResponse.data.fileUrl) {
+        finalUrl = driveResponse.data.fileUrl;
+        console.log(`☁️ Görsel Google Drive'a yüklendi: ${finalUrl}`);
+        
+        // Yerel dosyayı sil
+        try {
+          fs.unlinkSync(filePath);
+        } catch (e) {
+          console.warn('Yerel dosya silinemedi:', e.message);
+        }
+      }
+    } catch (driveError) {
+      console.warn('Google Drive yükleme başarısız, yerel URL kullanılacak:', driveError.message);
+    }
+
+    res.json({
+      success: true,
+      message: 'Görsel başarıyla yüklendi',
+      data: {
+        id: uniqueId,
+        name: filename,
+        filename: filename,
+        url: finalUrl,
+        size: response.data.length,
+        type: contentType,
+      },
+    });
+  } catch (error) {
+    console.error('Harici görsel proxy hatası:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Görsel indirilemedi',
       error: error.message,
     });
   }
