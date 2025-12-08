@@ -1,0 +1,184 @@
+Test ID,Modül,Özellik,Test Senaryosu Açıklaması,Test Adımları,Beklenen Sonuç,Test Verisi,Öncelik,Durum,Tester Notları,Hata Açıklaması
+TC001,Kimlik Doğrulama,Giriş,Geçerli kimlik bilgileri ile başarılı giriş,"1. /user/login sayfasına git
+2. Geçerli email adresini gir
+3. Geçerli şifreyi gir
+4. Giriş butonuna tıkla",Kullanıcı başarıyla giriş yapmalı ve dashboard'a yönlendirilmeli,Email: test@example.com / Şifre: validpassword,Yüksek,Bekliyor,,
+TC002,Kimlik Doğrulama,Giriş,Yanlış kimlik bilgileri ile başarısız giriş,"1. /user/login sayfasına git
+2. Yanlış email veya şifre gir
+3. Giriş butonuna tıkla",Hata mesajı gösterilmeli ve giriş başarısız olmalı,Email: wrong@test.com / Şifre: wrongpass,Yüksek,Bekliyor,,
+TC003,Authentication,Login,Empty fields validation,"1. Navigate to /user/login
+2. Leave email and password empty
+3. Click Login button",Validation errors should be shown for required fields,,High,Pending,,
+TC004,Authentication,Logout,User logout functionality,"1. Login to system
+2. Click user menu
+3. Click logout",User should be logged out and redirected to login page,,Medium,Pending,,
+TC005,Dashboard,Overview,Dashboard data display,"1. Login to system
+2. Navigate to /dashboard",Dashboard should display email statistics and charts,,High,Pending,,
+TC006,Dashboard,Statistics,Email statistics accuracy,"1. Check total emails sent
+2. Check open rates
+3. Check reply rates
+4. Verify with actual data",Statistics should match actual campaign data,,High,Pending,,
+TC007,Contacts,Contact List,View contacts list,"1. Navigate to /contacts
+2. Check contact list display",All contacts should be displayed in table format,,High,Pending,,
+TC008,Contacts,Add Contact,Add single contact manually,"1. Navigate to /contacts
+2. Click Add Contact
+3. Fill contact form
+4. Save contact","Contact should be added successfully with all fields","Name: John Doe
+Email: john@test.com
+Company: Test Corp",High,Pending,,
+TC009,Contacts,Edit Contact,Edit existing contact,"1. Navigate to /contacts
+2. Select a contact
+3. Click edit
+4. Modify contact details
+5. Save changes",Contact details should be updated successfully,,High,Pending,,
+TC010,Contacts,Delete Contact,Delete contact,"1. Navigate to /contacts
+2. Select a contact
+3. Click delete
+4. Confirm deletion",Contact should be removed from the list,,High,Pending,,
+TC011,Contacts,Import Excel,Import contacts from Excel file,"1. Navigate to /contacts
+2. Click Import Excel
+3. Upload valid Excel file
+4. Map columns
+5. Import contacts",All valid contacts from Excel should be imported successfully,Excel file with Name/Email/Company columns,High,Pending,,
+TC012,Contacts,Import Excel,Import with invalid Excel format,"1. Navigate to /contacts
+2. Click Import Excel
+3. Upload invalid Excel file",Error message should be displayed for invalid format,Invalid Excel file or unsupported format,Medium,Pending,,
+TC013,Contacts,Export,Export contacts to Excel,"1. Navigate to /contacts
+2. Select contacts or all
+3. Click export",Excel file should be downloaded with selected contacts,,Medium,Pending,,
+TC014,Contacts,Search,Search contacts by name,"1. Navigate to /contacts
+2. Enter name in search box
+3. Press enter or search button",Filtered results should show matching contacts,Search term: existing contact name,Medium,Pending,,
+TC015,Contacts,Search,Search contacts by email,"1. Navigate to /contacts
+2. Enter email in search boxss
+3. Press enter or search button",Filtered results should show matching contacts,Search term: existing contact email,Medium,Pending,,
+TC016,Contacts,Pagination,Contacts list pagination,"1. Navigate to /contacts
+2. Check if pagination exists for large lists
+3. Navigate between pages",Pagination should work correctly and show appropriate contacts,,Medium,Pending,,
+TC017,Templates,Template List,View email templates,"1. Navigate to /templates
+2. Check template list",All created templates should be displayed in list format,,High,Pending,,
+TC018,Templates,Create Template,Create new email template,"1. Navigate to /templates
+2. Click Create Template
+3. Fill template form (name, subject, content)
+4. Save template","Template should be created and appear in template list","Name: Welcome Template
+Subject: Welcome to CERILAS
+Content: HTML/Text content",High,Pending,,
+TC019,Templates,Edit Template,Edit existing template,"1. Navigate to /templates
+2. Select template
+3. Click edit
+4. Modify template
+5. Save changes",Template should be updated successfully,,High,Pending,,
+TC020,Templates,Delete Template,Delete template,"1. Navigate to /templates
+2. Select template
+3. Click delete
+4. Confirm deletion",Template should be removed from list,,High,Pending,,
+TC021,Templates,Template Variables,Use template variables,"1. Create/edit template
+2. Add variables like {{name}}, {{company}}
+3. Save template
+4. Use in campaign",Variables should be properly replaced in sent emails,,High,Pending,,
+TC022,Templates,Preview,Template preview functionality,"1. Navigate to /templates
+2. Select template
+3. Click preview",Template should be displayed as it would appear in email,,Medium,Pending,,
+TC023,Campaigns,Campaign List,View campaigns list,"1. Navigate to /campaigns
+2. Check campaign list display",All campaigns should be displayed with status and statistics,,High,Pending,,
+TC024,Campaigns,Create Campaign,Create new campaign with single template,"1. Navigate to /campaigns/create
+2. Fill campaign details
+3. Select template
+4. Select contacts
+5. Set schedule
+6. Save campaign","Campaign should be created successfully","Name: Test Campaign
+Template: Existing template
+Contacts: Selected contacts
+Schedule: Future date/time",High,Pending,,
+TC025,Campaigns,Create Campaign,Create sequence campaign with multiple templates,"1. Navigate to /campaigns/create
+2. Enable sequence mode
+3. Add multiple templates with delays
+4. Select contacts
+5. Set schedule
+6. Save campaign",Sequence campaign should be created with proper template order,,High,Pending,,
+TC026,Campaigns,Edit Campaign,Edit draft campaign,"1. Navigate to /campaigns
+2. Select draft campaign
+3. Click edit
+4. Modify campaign details
+5. Save changes",Draft campaign should be updated successfully,,High,Pending,,
+TC027,Campaigns,Campaign Status,Change campaign status,"1. Navigate to /campaigns
+2. Select campaign
+3. Change status (Draft/Active/Paused)
+4. Save changes",Campaign status should be updated and affect sending behavior,,High,Pending,,
+TC028,Campaigns,Delete Campaign,Delete campaign,"1. Navigate to /campaigns
+2. Select campaign
+3. Click delete
+4. Confirm deletion",Campaign should be removed from list,,Medium,Pending,,
+TC029,Campaigns,Send Test,Send test email,"1. Create/edit campaign
+2. Click Send Test Email
+3. Enter test email address
+4. Send test",Test email should be received at specified address,Test email address: tester@example.com,High,Pending,,
+TC030,Campaigns,Campaign Scheduling,Schedule campaign for future,"1. Create campaign
+2. Set future date/time for sending
+3. Set status to Active
+4. Save campaign",Campaign should be scheduled and start sending at specified time,,High,Pending,,
+TC031,Campaigns,Stop on Reply,Test stop on reply functionality,"1. Create campaign with 'Stop on Reply' enabled
+2. Start campaign
+3. Reply to one of the emails
+4. Check if further emails stop for that contact",No more emails should be sent to contacts who replied,,High,Pending,,
+TC032,Campaigns,Campaign Analytics,View campaign statistics,"1. Navigate to /campaigns
+2. Select sent campaign
+3. View analytics/statistics","Should show sent count, open rate, reply rate, etc.",,High,Pending,,
+TC033,Company Info,Company Details,View company information,"1. Navigate to /company-info
+2. Check displayed information",Company details should be properly displayed,,Medium,Pending,,
+TC034,Company Info,Edit Company,Edit company information,"1. Navigate to /company-info
+2. Click edit
+3. Modify company details
+4. Save changes",Company information should be updated successfully,,Medium,Pending,,
+TC035,Company Info,SMTP Settings,Configure SMTP settings,"1. Navigate to /company-info
+2. Configure SMTP settings
+3. Test SMTP connection
+4. Save settings",SMTP settings should be saved and emails should send properly,,High,Pending,,
+TC036,Scheduler Logs,View Logs,Access scheduler logs,"1. Click Scheduler Logs link in footer
+2. Check log display",Scheduler logs should be displayed with email sending history,,Medium,Pending,,
+TC037,Scheduler Logs,Filter Logs,Filter logs by date/status,"1. Navigate to /scheduler-logs
+2. Apply date filters
+3. Apply status filters
+4. Check results",Logs should be filtered according to applied criteria,,Medium,Pending,,
+TC038,Email Tracking,Email Opens,Track email opens,"1. Send campaign email
+2. Open email in recipient inbox
+3. Check tracking in dashboard",Email open should be tracked and displayed in analytics,,High,Pending,,
+TC039,Email Tracking,Email Replies,Track email replies,"1. Send campaign email  
+2. Reply to the email
+3. Check reply tracking",Email reply should be tracked and campaign should stop if configured,,High,Pending,,
+TC040,Navigation,Menu Navigation,Navigate through all menu items,"1. Login to system
+2. Click each menu item
+3. Verify page loads correctly",All menu items should navigate to correct pages without errors,,Medium,Pending,,
+TC041,Navigation,Breadcrumbs,Breadcrumb navigation,"1. Navigate to sub-pages
+2. Check breadcrumb display
+3. Click breadcrumb links",Breadcrumbs should show correct path and navigate properly,,Low,Pending,,
+TC042,UI/UX,Responsive Design,Test on different screen sizes,"1. Access platform on desktop
+2. Access on tablet
+3. Access on mobile
+4. Check layout adaptation",Platform should be responsive and functional on all devices,,Medium,Pending,,
+TC043,UI/UX,Loading States,Check loading indicators,"1. Perform actions that require loading
+2. Check loading indicators
+3. Verify completion states",Loading indicators should appear and disappear appropriately,,Low,Pending,,
+TC044,UI/UX,Error Handling,Test error message display,"1. Trigger various errors (network, validation)
+2. Check error message display
+3. Verify error recovery",Error messages should be clear and helpful,,Medium,Pending,,
+TC045,Performance,Page Load Times,Measure page load performance,"1. Clear browser cache
+2. Navigate to each page
+3. Measure load times",Pages should load within acceptable time limits (< 3 seconds),,Medium,Pending,,
+TC046,Performance,Large Data Sets,Test with large contact lists,"1. Import large number of contacts (1000+)
+2. Test list performance
+3. Test campaign creation with many contacts",System should handle large data sets without performance issues,Large contact list (1000+ contacts),Medium,Pending,,
+TC047,Security,Input Validation,Test input field validation,"1. Try SQL injection in forms
+2. Try XSS attacks
+3. Test with special characters
+4. Test with extremely long inputs",System should properly validate and sanitize all inputs,,High,Pending,,
+TC048,Security,Session Management,Test session timeout,"1. Login to system
+2. Leave idle for extended period
+3. Try to perform actions",Session should timeout and require re-authentication,,Medium,Pending,,
+TC049,Integration,Email Delivery,End-to-end email delivery test,"1. Create campaign
+2. Send to real email addresses
+3. Check delivery in recipient inboxes
+4. Verify tracking works",Emails should be delivered successfully and tracking should work,Real email addresses for testing,High,Pending,,
+TC050,Integration,Database Consistency,Verify data consistency,"1. Perform various operations
+2. Check database records
+3. Verify data integrity",All operations should maintain data consistency in database,,High,Pending,,

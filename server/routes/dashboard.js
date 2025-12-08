@@ -187,40 +187,59 @@ router.get('/', async (req, res) => {
           ec.total_sent,
           ec.total_opened,
           ec.total_clicked,
+          ec.total_replied,
           COALESCE(array_length(ec.target_contact_ids, 1), 0) as recipient_count,
-          COALESCE(
-            (SELECT COUNT(*) 
-             FROM campaign_sends cs 
-             WHERE cs.campaign_id = ec.id AND cs.is_sent = true), 
-            0
-          ) as emails_sent
+          t.name as template_name
         FROM email_campaigns ec
+        LEFT JOIN LATERAL (
+          SELECT et.name 
+          FROM email_templates et 
+          WHERE et.id = (ec.template_sequence->0->>'template_id')::integer
+        ) t ON true
         WHERE ec.status IN ('active', 'running', 'scheduled', 'draft')
         ORDER BY ec.created_at DESC
-        LIMIT 5
+        LIMIT 10
       `;
       const campaignsQueryResult = await pool.query(campaignsQuery);
       
-      activeCampaignsData = await Promise.all(campaignsQueryResult.rows.map(async campaign => {
+      activeCampaignsData = campaignsQueryResult.rows.map(campaign => {
         const recipientCount = parseInt(campaign.recipient_count) || 0;
-        const emailsSent = parseInt(campaign.emails_sent) || 0;
         const totalSent = parseInt(campaign.total_sent) || 0;
+        const totalOpened = parseInt(campaign.total_opened) || 0;
+        const totalClicked = parseInt(campaign.total_clicked) || 0;
+        const totalReplied = parseInt(campaign.total_replied) || 0;
         
-        // Progress hesapla: Kaç kişiye email gönderildiği / Toplam alıcı sayısı
+        // Açılma ve tıklama oranları hesapla
+        const openRate = totalSent > 0 ? ((totalOpened / totalSent) * 100).toFixed(1) : '0.0';
+        const clickRate = totalSent > 0 ? ((totalClicked / totalSent) * 100).toFixed(1) : '0.0';
+        
+        // İlerleme durumu
         let progress = 0;
         if (recipientCount > 0) {
-          progress = Math.min(100, Math.round((emailsSent / recipientCount) * 100));
+          progress = Math.min(100, Math.round((totalSent / recipientCount) * 100));
         }
+        
+        // Sonraki gönderim zamanı
+        const nextSendDate = campaign.first_send_date;
         
         return {
           id: campaign.id,
+          key: campaign.id.toString(),
           name: campaign.name,
+          templateName: campaign.template_name || '-',
           status: campaign.status,
           recipients: recipientCount,
-          emails: emailsSent,
+          sent: totalSent,
+          opened: totalOpened,
+          clicked: totalClicked,
+          replied: totalReplied,
+          openRate: `${openRate}%`,
+          clickRate: `${clickRate}%`,
           progress: progress,
+          nextSendDate: nextSendDate,
+          createdAt: campaign.created_at,
         };
-      }));
+      });
     } catch (campaignError) {
       console.log('Aktif kampanyalar getirilemedi:', campaignError.message);
       console.error('Campaign error stack:', campaignError.stack);

@@ -9,6 +9,7 @@ router.get('/', async (req, res) => {
       page = 1,
       pageSize = 10,
       email,
+      salutation,
       status,
       subscription_status,
       tags,
@@ -19,12 +20,21 @@ router.get('/', async (req, res) => {
       state,
       district,
       importance_level,
+      company,
+      position,
     } = req.query;
 
     const offset = (page - 1) * pageSize;
     let query = 'SELECT * FROM contacts WHERE 1=1';
     const params = [];
     let paramIndex = 1;
+
+    // Helper: Virgülle ayrılmış string veya array'i array'e çevir
+    const toArray = (val) => {
+      if (!val) return null;
+      if (Array.isArray(val)) return val;
+      return val.includes(',') ? val.split(',').map(v => v.trim()) : [val];
+    };
 
     // Filtreleme
     if (email) {
@@ -33,21 +43,48 @@ router.get('/', async (req, res) => {
       paramIndex++;
     }
 
-    if (status) {
-      query += ` AND status = $${paramIndex}`;
-      params.push(status);
+    // Salutation - multiple selection destekli
+    if (salutation) {
+      const salArr = toArray(salutation);
+      if (salArr.length === 1) {
+        query += ` AND salutation = $${paramIndex}`;
+        params.push(salArr[0]);
+      } else {
+        query += ` AND salutation = ANY($${paramIndex})`;
+        params.push(salArr);
+      }
       paramIndex++;
     }
 
+    // Status - multiple selection destekli
+    if (status) {
+      const statusArr = toArray(status);
+      if (statusArr.length === 1) {
+        query += ` AND status = $${paramIndex}`;
+        params.push(statusArr[0]);
+      } else {
+        query += ` AND status = ANY($${paramIndex})`;
+        params.push(statusArr);
+      }
+      paramIndex++;
+    }
+
+    // Subscription Status - multiple selection destekli
     if (subscription_status) {
-      query += ` AND subscription_status = $${paramIndex}`;
-      params.push(subscription_status);
+      const subArr = toArray(subscription_status);
+      if (subArr.length === 1) {
+        query += ` AND subscription_status = $${paramIndex}`;
+        params.push(subArr[0]);
+      } else {
+        query += ` AND subscription_status = ANY($${paramIndex})`;
+        params.push(subArr);
+      }
       paramIndex++;
     }
 
     if (tags) {
       // Tags string olarak gelirse virgülle ayır
-      const tagArray = tags.includes(',') ? tags.split(',').map(t => t.trim()) : [tags];
+      const tagArray = toArray(tags);
       query += ` AND tags && $${paramIndex}`;
       params.push(tagArray);
       paramIndex++;
@@ -70,34 +107,94 @@ router.get('/', async (req, res) => {
       paramIndex++;
     }
 
-    // Yeni filtreleme alanları
+    // Customer Representative - multiple selection destekli
     if (customer_representative) {
-      query += ` AND customer_representative ILIKE $${paramIndex}`;
-      params.push(`%${customer_representative}%`);
+      const repArr = toArray(customer_representative);
+      if (repArr.length === 1) {
+        query += ` AND customer_representative ILIKE $${paramIndex}`;
+        params.push(`%${repArr[0]}%`);
+      } else {
+        query += ` AND customer_representative = ANY($${paramIndex})`;
+        params.push(repArr);
+      }
       paramIndex++;
     }
 
+    // Country - multiple selection destekli
     if (country) {
-      query += ` AND country ILIKE $${paramIndex}`;
-      params.push(`%${country}%`);
+      const countryArr = toArray(country);
+      if (countryArr.length === 1) {
+        query += ` AND country ILIKE $${paramIndex}`;
+        params.push(`%${countryArr[0]}%`);
+      } else {
+        query += ` AND country = ANY($${paramIndex})`;
+        params.push(countryArr);
+      }
       paramIndex++;
     }
 
+    // State - multiple selection destekli
     if (state) {
-      query += ` AND state ILIKE $${paramIndex}`;
-      params.push(`%${state}%`);
+      const stateArr = toArray(state);
+      if (stateArr.length === 1) {
+        query += ` AND state ILIKE $${paramIndex}`;
+        params.push(`%${stateArr[0]}%`);
+      } else {
+        query += ` AND state = ANY($${paramIndex})`;
+        params.push(stateArr);
+      }
       paramIndex++;
     }
 
+    // District - multiple selection destekli
     if (district) {
-      query += ` AND district ILIKE $${paramIndex}`;
-      params.push(`%${district}%`);
+      const districtArr = toArray(district);
+      if (districtArr.length === 1) {
+        query += ` AND district ILIKE $${paramIndex}`;
+        params.push(`%${districtArr[0]}%`);
+      } else {
+        query += ` AND district = ANY($${paramIndex})`;
+        params.push(districtArr);
+      }
       paramIndex++;
     }
 
+    // Importance Level - multiple selection destekli
     if (importance_level) {
-      query += ` AND importance_level = $${paramIndex}`;
-      params.push(parseInt(importance_level));
+      const impArr = toArray(importance_level).map(v => parseInt(v));
+      if (impArr.length === 1) {
+        query += ` AND importance_level = $${paramIndex}`;
+        params.push(impArr[0]);
+      } else {
+        query += ` AND importance_level = ANY($${paramIndex})`;
+        params.push(impArr);
+      }
+      paramIndex++;
+    }
+
+    // Company - multiple selection destekli
+    if (company) {
+      const companyArr = toArray(company);
+      if (companyArr.length === 1) {
+        query += ` AND company ILIKE $${paramIndex}`;
+        params.push(`%${companyArr[0]}%`);
+      } else {
+        query += ` AND company = ANY($${paramIndex})`;
+        params.push(companyArr);
+      }
+      paramIndex++;
+    }
+
+    // Position - multiple selection destekli
+    if (position) {
+      const positionArr = toArray(position);
+      if (positionArr.length === 1) {
+        query += ` AND position ILIKE $${paramIndex}`;
+        params.push(`%${positionArr[0]}%`);
+      } else {
+        query += ` AND position = ANY($${paramIndex})`;
+        params.push(positionArr);
+      }
       paramIndex++;
     }
 
@@ -124,6 +221,61 @@ router.get('/', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Müşteriler listelenirken hata oluştu',
+      error: error.message,
+    });
+  }
+});
+
+// GET /api/contacts/filter-options - Filtreleme için benzersiz değerleri getir
+router.get('/filter-options', async (req, res) => {
+  try {
+    // Tüm filtrelenebilir alanlar için benzersiz değerleri al
+    // Not: importance_level integer olabilir, bu yüzden boş string kontrolü yapmıyoruz
+    const queries = {
+      salutation: `SELECT DISTINCT salutation FROM contacts WHERE salutation IS NOT NULL AND salutation != '' ORDER BY salutation`,
+      status: `SELECT DISTINCT status FROM contacts WHERE status IS NOT NULL AND status != '' ORDER BY status`,
+      subscription_status: `SELECT DISTINCT subscription_status FROM contacts WHERE subscription_status IS NOT NULL AND subscription_status != '' ORDER BY subscription_status`,
+      importance_level: `SELECT DISTINCT importance_level FROM contacts WHERE importance_level IS NOT NULL ORDER BY importance_level`,
+      customer_representative: `SELECT DISTINCT customer_representative FROM contacts WHERE customer_representative IS NOT NULL AND customer_representative != '' ORDER BY customer_representative`,
+      country: `SELECT DISTINCT country FROM contacts WHERE country IS NOT NULL AND country != '' ORDER BY country`,
+      state: `SELECT DISTINCT state FROM contacts WHERE state IS NOT NULL AND state != '' ORDER BY state`,
+      district: `SELECT DISTINCT district FROM contacts WHERE district IS NOT NULL AND district != '' ORDER BY district`,
+      company: `SELECT DISTINCT company FROM contacts WHERE company IS NOT NULL AND company != '' ORDER BY company LIMIT 100`,
+      position: `SELECT DISTINCT position FROM contacts WHERE position IS NOT NULL AND position != '' ORDER BY position LIMIT 100`,
+      source: `SELECT DISTINCT source FROM contacts WHERE source IS NOT NULL AND source != '' ORDER BY source`,
+    };
+
+    const results = {};
+    
+    for (const [field, query] of Object.entries(queries)) {
+      const result = await pool.query(query);
+      results[field] = result.rows.map(row => row[field]).filter(v => v);
+    }
+
+    // Tags için özel işlem - JSONB array'den unique değerleri al
+    const tagsQuery = `
+      SELECT DISTINCT unnest(tags) as tag 
+      FROM contacts 
+      WHERE tags IS NOT NULL AND array_length(tags, 1) > 0 
+      ORDER BY tag 
+      LIMIT 100
+    `;
+    try {
+      const tagsResult = await pool.query(tagsQuery);
+      results.tags = tagsResult.rows.map(row => row.tag).filter(v => v);
+    } catch (e) {
+      results.tags = [];
+    }
+
+    res.json({
+      success: true,
+      data: results,
+    });
+  } catch (error) {
+    console.error('Filter options error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Filtre seçenekleri alınırken hata oluştu',
       error: error.message,
     });
   }
@@ -165,6 +317,7 @@ router.post('/', async (req, res) => {
   try {
     const {
       email,
+      salutation,
       first_name,
       last_name,
       phone,
@@ -212,15 +365,16 @@ router.post('/', async (req, res) => {
 
     const query = `
       INSERT INTO contacts (
-        email, first_name, last_name, phone, mobile_phone, company, company_title, position,
+        email, salutation, first_name, last_name, phone, mobile_phone, company, company_title, position,
         status, subscription_status, source, tags, custom_fields,
         customer_representative, country, state, district, address_1, address_2, importance_level, notes
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
       RETURNING *
     `;
 
     const values = [
       email,
+      salutation,
       first_name,
       last_name,
       phone,
@@ -283,6 +437,7 @@ router.put('/:id', async (req, res) => {
     const { id } = req.params;
     const {
       email,
+      salutation,
       first_name,
       last_name,
       phone,
@@ -331,31 +486,33 @@ router.put('/:id', async (req, res) => {
     const query = `
       UPDATE contacts SET
         email = COALESCE($1, email),
-        first_name = COALESCE($2, first_name),
-        last_name = COALESCE($3, last_name),
-        phone = COALESCE($4, phone),
-        mobile_phone = COALESCE($5, mobile_phone),
-        company = COALESCE($6, company),
-        company_title = COALESCE($7, company_title),
-        position = COALESCE($8, position),
-        status = COALESCE($9, status),
-        subscription_status = COALESCE($10, subscription_status),
-        tags = COALESCE($11, tags),
-        custom_fields = COALESCE($12, custom_fields),
-        customer_representative = COALESCE($13, customer_representative),
-        country = COALESCE($14, country),
-        state = COALESCE($15, state),
-        district = COALESCE($16, district),
-        address_1 = COALESCE($17, address_1),
-        address_2 = COALESCE($18, address_2),
-        importance_level = COALESCE($19, importance_level),
-        notes = COALESCE($20, notes)
-      WHERE id = $21
+        salutation = COALESCE($2, salutation),
+        first_name = COALESCE($3, first_name),
+        last_name = COALESCE($4, last_name),
+        phone = COALESCE($5, phone),
+        mobile_phone = COALESCE($6, mobile_phone),
+        company = COALESCE($7, company),
+        company_title = COALESCE($8, company_title),
+        position = COALESCE($9, position),
+        status = COALESCE($10, status),
+        subscription_status = COALESCE($11, subscription_status),
+        tags = COALESCE($12, tags),
+        custom_fields = COALESCE($13, custom_fields),
+        customer_representative = COALESCE($14, customer_representative),
+        country = COALESCE($15, country),
+        state = COALESCE($16, state),
+        district = COALESCE($17, district),
+        address_1 = COALESCE($18, address_1),
+        address_2 = COALESCE($19, address_2),
+        importance_level = COALESCE($20, importance_level),
+        notes = COALESCE($21, notes)
+      WHERE id = $22
       RETURNING *
     `;
 
     const values = [
       email,
+      salutation,
       first_name,
       last_name,
       phone,

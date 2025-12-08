@@ -3,10 +3,15 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
+const FormData = require('form-data');
+const axios = require('axios');
 
 const router = express.Router();
 
-// Uploads klasörü
+// n8n Google Drive Webhook URL
+const N8N_UPLOAD_WEBHOOK_URL = 'https://n8n-production-14b9.up.railway.app/webhook/upload-file';
+
+// Uploads klasörü (geçici olarak kullanılacak)
 const UPLOADS_DIR = path.join(__dirname, '..', 'uploads');
 
 // Klasör yoksa oluştur
@@ -38,6 +43,16 @@ const ALLOWED_TYPES = [
   'application/zip',
   'application/x-rar-compressed',
   'application/x-7z-compressed',
+  // Fallback için
+  'application/octet-stream',
+];
+
+// İzin verilen uzantılar
+const ALLOWED_EXTENSIONS = [
+  '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
+  '.txt', '.csv', '.json', '.xml',
+  '.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg',
+  '.zip', '.rar', '.7z', '.tar', '.gz',
 ];
 
 // Dosya uzantıları mapping
@@ -77,10 +92,13 @@ const storage = multer.diskStorage({
 
 // Dosya filtresi
 const fileFilter = (req, file, cb) => {
-  if (ALLOWED_TYPES.includes(file.mimetype)) {
+  const ext = path.extname(file.originalname).toLowerCase();
+  
+  // Uzantı veya mime type kontrolü
+  if (ALLOWED_TYPES.includes(file.mimetype) || ALLOWED_EXTENSIONS.includes(ext)) {
     cb(null, true);
   } else {
-    cb(new Error(`Desteklenmeyen dosya türü: ${file.mimetype}`), false);
+    cb(new Error(`Desteklenmeyen dosya türü: ${file.mimetype} (${ext})`), false);
   }
 };
 
@@ -102,8 +120,52 @@ const formatFileSize = (bytes) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
-// Tek dosya yükleme
-router.post('/', upload.single('file'), (req, res) => {
+// Google Drive'a dosya yükle (n8n webhook üzerinden)
+const uploadToGoogleDrive = async (filePath, originalFilename, mimeType) => {
+  try {
+    const formData = new FormData();
+    formData.append('data', fs.createReadStream(filePath), {
+      filename: originalFilename,
+      contentType: mimeType,
+    });
+
+    const response = await axios.put(N8N_UPLOAD_WEBHOOK_URL, formData, {
+      headers: {
+        ...formData.getHeaders(),
+      },
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity,
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('Google Drive yükleme hatası:', error.message);
+    throw error;
+  }
+};
+
+// Google Drive response'unu frontend formatına dönüştür
+const formatGoogleDriveResponse = (driveFile, originalFile) => {
+  return {
+    id: driveFile.id,
+    name: driveFile.name || driveFile.originalFilename,
+    filename: driveFile.originalFilename || driveFile.name,
+    url: driveFile.webContentLink, // İndirme linki
+    viewUrl: driveFile.webViewLink, // Görüntüleme linki
+    driveId: driveFile.id,
+    size: parseInt(driveFile.size) || originalFile.size,
+    sizeFormatted: formatFileSize(parseInt(driveFile.size) || originalFile.size),
+    type: driveFile.mimeType || originalFile.mimetype,
+    uploadedAt: driveFile.createdTime || new Date().toISOString(),
+    // Ek Google Drive bilgileri
+    iconLink: driveFile.iconLink,
+    hasThumbnail: driveFile.hasThumbnail,
+    md5Checksum: driveFile.md5Checksum,
+  };
+};
+
+// Tek dosya yükleme - Google Drive'a
+router.post('/', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({
@@ -113,21 +175,36 @@ router.post('/', upload.single('file'), (req, res) => {
     }
 
     const file = req.file;
-    const fileUrl = `/api/uploads/${file.filename}`;
+    const localFilePath = path.join(UPLOADS_DIR, file.filename);
+
+    console.log(`📤 Dosya Google Drive'a yükleniyor: ${file.originalname}`);
+
+    // Google Drive'a yükle
+    const driveResponse = await uploadToGoogleDrive(localFilePath, file.originalname, file.mimetype);
+
+    // Yerel dosyayı sil (artık Google Drive'da)
+    try {
+      fs.unlinkSync(localFilePath);
+      console.log(`🗑️ Yerel dosya silindi: ${file.filename}`);
+    } catch (deleteError) {
+      console.warn('Yerel dosya silinemedi:', deleteError.message);
+    }
+
+    // Response array olarak geliyor, ilk elemanı al
+    const driveFile = Array.isArray(driveResponse) ? driveResponse[0] : driveResponse;
+
+    if (!driveFile || !driveFile.id) {
+      throw new Error('Google Drive\'dan geçerli yanıt alınamadı');
+    }
+
+    const formattedResponse = formatGoogleDriveResponse(driveFile, file);
+
+    console.log(`✅ Dosya Google Drive'a yüklendi: ${driveFile.id}`);
 
     res.json({
       success: true,
-      message: 'Dosya başarıyla yüklendi',
-      data: {
-        id: crypto.randomBytes(8).toString('hex'),
-        name: file.originalname,
-        filename: file.filename,
-        url: fileUrl,
-        size: file.size,
-        sizeFormatted: formatFileSize(file.size),
-        type: file.mimetype,
-        uploadedAt: new Date().toISOString(),
-      },
+      message: 'Dosya Google Drive\'a başarıyla yüklendi',
+      data: formattedResponse,
     });
   } catch (error) {
     console.error('Dosya yükleme hatası:', error);
@@ -139,8 +216,8 @@ router.post('/', upload.single('file'), (req, res) => {
   }
 });
 
-// Çoklu dosya yükleme
-router.post('/multiple', upload.array('files', 10), (req, res) => {
+// Çoklu dosya yükleme - Google Drive'a
+router.post('/multiple', upload.array('files', 10), async (req, res) => {
   try {
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({
@@ -149,21 +226,58 @@ router.post('/multiple', upload.array('files', 10), (req, res) => {
       });
     }
 
-    const uploadedFiles = req.files.map((file) => ({
-      id: crypto.randomBytes(8).toString('hex'),
-      name: file.originalname,
-      filename: file.filename,
-      url: `/api/uploads/${file.filename}`,
-      size: file.size,
-      sizeFormatted: formatFileSize(file.size),
-      type: file.mimetype,
-      uploadedAt: new Date().toISOString(),
-    }));
+    console.log(`📤 ${req.files.length} dosya Google Drive'a yükleniyor...`);
+
+    const uploadedFiles = [];
+    const errors = [];
+
+    // Her dosyayı sırayla Google Drive'a yükle
+    for (const file of req.files) {
+      try {
+        const localFilePath = path.join(UPLOADS_DIR, file.filename);
+        
+        // Google Drive'a yükle
+        const driveResponse = await uploadToGoogleDrive(localFilePath, file.originalname, file.mimetype);
+        
+        // Yerel dosyayı sil
+        try {
+          fs.unlinkSync(localFilePath);
+        } catch (deleteError) {
+          console.warn(`Yerel dosya silinemedi: ${file.filename}`, deleteError.message);
+        }
+
+        // Response array olarak geliyor
+        const driveFile = Array.isArray(driveResponse) ? driveResponse[0] : driveResponse;
+
+        if (driveFile && driveFile.id) {
+          const formattedResponse = formatGoogleDriveResponse(driveFile, file);
+          uploadedFiles.push(formattedResponse);
+          console.log(`✅ Dosya yüklendi: ${file.originalname} -> ${driveFile.id}`);
+        } else {
+          throw new Error('Google Drive\'dan geçerli yanıt alınamadı');
+        }
+      } catch (fileError) {
+        console.error(`❌ Dosya yüklenemedi: ${file.originalname}`, fileError.message);
+        errors.push({
+          filename: file.originalname,
+          error: fileError.message,
+        });
+      }
+    }
+
+    if (uploadedFiles.length === 0) {
+      return res.status(500).json({
+        success: false,
+        message: 'Hiçbir dosya yüklenemedi',
+        errors,
+      });
+    }
 
     res.json({
       success: true,
-      message: `${uploadedFiles.length} dosya başarıyla yüklendi`,
+      message: `${uploadedFiles.length} dosya Google Drive'a başarıyla yüklendi`,
       data: uploadedFiles,
+      errors: errors.length > 0 ? errors : undefined,
     });
   } catch (error) {
     console.error('Çoklu dosya yükleme hatası:', error);

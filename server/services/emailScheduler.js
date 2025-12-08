@@ -3,6 +3,7 @@ const axios = require('axios');
 const { pool } = require('../db');
 const logStream = require('./logStream');
 const { addTrackingToEmail, personalizeEmail } = require('../utils/emailTracking');
+const { getPendingSchedules, updateScheduleAfterSend } = require('../utils/scheduleUtils');
 
 // n8n webhook URL - .env'den alınacak
 const N8N_WEBHOOK_URL = process.env.N8N_WEBHOOK_URL || 'https://n8n-production-14b9.up.railway.app/webhook/send-email';
@@ -96,7 +97,7 @@ function replaceTemplateVariables(text, contact) {
  * n8n webhook ile email gönder
  * NOT: HTML artık tracking ve personalization ile geldiği için burada işleme yapmıyoruz
  */
-async function sendEmail(to, subject, htmlBody, contact, trackingId = null, campaignId = null, contactId = null) {
+async function sendEmail(to, subject, htmlBody, contact, trackingId = null, campaignId = null, contactId = null, attachments = null) {
   try {
     const payload = {
       to,
@@ -116,6 +117,17 @@ async function sendEmail(to, subject, htmlBody, contact, trackingId = null, camp
         campaign_id: campaignId,
         contact_id: contactId
       };
+    }
+    
+    // Attachments varsa ekle (Google Drive URL'leri)
+    if (attachments && Array.isArray(attachments) && attachments.length > 0) {
+      payload.attachments = attachments.map(att => ({
+        filename: att.name || att.filename,
+        url: att.url, // Google Drive download URL (webContentLink)
+        type: att.type || att.mimeType,
+        driveId: att.driveId || att.id
+      }));
+      console.log(`📎 ${attachments.length} ek dosya eklendi`);
     }
     
     console.log(`📧 Email gönderiliyor: ${to} - ${subject}${trackingId ? ` [Tracking: ${trackingId}]` : ''}`);
@@ -342,7 +354,7 @@ async function processScheduledEmails() {
         
         // Template'i getir
         const templateResult = await pool.query(
-          'SELECT id, name, subject, body_html, body_text, category FROM email_templates WHERE id = $1',
+          'SELECT id, name, subject, body_html, body_text, category, attachments FROM email_templates WHERE id = $1',
           [template_id]
         );
         
@@ -462,7 +474,7 @@ async function processScheduledEmails() {
           // Subject'i de personalize et
           const personalizedSubject = replaceTemplateVariables(template.subject, contact);
           
-          // Email'i gönder (tracking bilgileriyle birlikte)
+          // Email'i gönder (tracking bilgileriyle birlikte + attachments)
           const result = await sendEmail(
             contact.email,
             personalizedSubject,
@@ -470,7 +482,8 @@ async function processScheduledEmails() {
             contact,
             sendRecord.tracking_id,  // tracking_id ekle
             campaignId,              // campaign_id ekle
-            contactId                // contact_id ekle
+            contactId,               // contact_id ekle
+            template.attachments     // attachments ekle (Google Drive URL'leri)
           );
           
           if (result.success) {
@@ -551,14 +564,203 @@ async function processScheduledEmails() {
 }
 
 /**
+ * YENİ: Schedule tablosu tabanlı email işleme
+ * Recurring ve Special Day zamanlamalarını destekler
+ */
+async function processScheduledEmailsV2() {
+  try {
+    console.log('🔍 [V2] Schedule tabanlı email kontrolü...');
+    logStream.info('🔍 [V2] Schedule tabanlı email kontrolü başladı');
+    
+    // Gönderilmesi gereken schedule'ları al
+    const pendingSchedules = await getPendingSchedules(5); // 5 dakika tolerans
+    
+    if (pendingSchedules.length === 0) {
+      console.log('ℹ️  [V2] Gönderilecek schedule bulunamadı');
+      return;
+    }
+    
+    console.log(`📋 [V2] ${pendingSchedules.length} schedule bulundu`);
+    logStream.info(`📋 [V2] ${pendingSchedules.length} schedule bulundu`);
+    
+    let totalEmailsToSend = 0;
+    let totalEmailsSent = 0;
+    let totalEmailsFailed = 0;
+    
+    for (const schedule of pendingSchedules) {
+      const { 
+        id: scheduleId,
+        campaign_id: campaignId,
+        template_id: templateId,
+        sequence_index: sequenceIndex,
+        campaign_name: campaignName,
+        target_contact_ids: contactIds,
+        stop_on_reply: stopOnReply,
+        subject,
+        body_html: bodyHtml,
+        body_text: bodyText,
+        from_name: fromName,
+        from_email: fromEmail,
+        cc_emails: ccEmails,
+        bcc_emails: bccEmails,
+        schedule_type: scheduleType,
+        attachments
+      } = schedule;
+      
+      console.log(`🎯 [V2] Kampanya "${campaignName}" - ${scheduleType} schedule işleniyor`);
+      logStream.info(`🎯 [V2] Schedule işleniyor`, {
+        scheduleId,
+        campaignId,
+        campaignName,
+        scheduleType,
+        recipientCount: contactIds?.length || 0
+      });
+      
+      if (!contactIds || contactIds.length === 0) {
+        console.log(`⚠️  [V2] Hedef kişi yok, atlanıyor`);
+        continue;
+      }
+      
+      // Her kişi için email gönder
+      for (const contactId of contactIds) {
+        // Stop on reply kontrolü
+        if (stopOnReply) {
+          const replyCheck = await pool.query(
+            'SELECT id FROM campaign_sends WHERE campaign_id = $1 AND contact_id = $2 AND is_replied = true LIMIT 1',
+            [campaignId, contactId]
+          );
+          
+          if (replyCheck.rows.length > 0) {
+            console.log(`⏭️  [V2] Kişi ${contactId} yanıt vermiş, atlanıyor`);
+            continue;
+          }
+        }
+        
+        // Bu schedule için bu kişiye daha önce gönderilmiş mi?
+        // Recurring için: aynı next_send_date için kontrol
+        const alreadySentCheck = await pool.query(
+          `SELECT id FROM campaign_sends 
+           WHERE campaign_id = $1 AND contact_id = $2 AND sequence_index = $3 
+           AND is_sent = true 
+           AND DATE(sent_date) = DATE($4)
+           LIMIT 1`,
+          [campaignId, contactId, sequenceIndex, schedule.next_send_date]
+        );
+        
+        if (alreadySentCheck.rows.length > 0) {
+          continue; // Zaten gönderilmiş
+        }
+        
+        // Kişi bilgilerini getir
+        const contactResult = await pool.query(
+          'SELECT * FROM contacts WHERE id = $1 AND status = $2',
+          [contactId, 'active']
+        );
+        
+        if (contactResult.rows.length === 0) {
+          console.log(`⚠️  [V2] Aktif kişi bulunamadı (ID: ${contactId})`);
+          continue;
+        }
+        
+        const contact = contactResult.rows[0];
+        totalEmailsToSend++;
+        
+        // Campaign sends kaydı oluştur
+        const sendRecord = await logEmailSent(
+          campaignId,
+          contactId,
+          templateId,
+          contact.email,
+          subject,
+          bodyHtml,
+          schedule.next_send_date,
+          sequenceIndex,
+          'pending'
+        );
+        
+        if (!sendRecord || !sendRecord.tracking_id) {
+          logStream.error(`❌ [V2] Send kaydı oluşturulamadı: ${contact.email}`);
+          totalEmailsFailed++;
+          continue;
+        }
+        
+        // Template değişkenlerini uygula
+        const personalizedSubject = replaceTemplateVariables(subject, contact);
+        const personalizedHtml = personalizeEmail(bodyHtml, contact);
+        const trackedHtml = addTrackingToEmail(
+          personalizedHtml, 
+          sendRecord.tracking_id, 
+          campaignId, 
+          contactId
+        );
+        
+        // Email gönder
+        const result = await sendEmail(
+          contact.email,
+          personalizedSubject,
+          trackedHtml,
+          contact,
+          sendRecord.tracking_id,
+          campaignId,
+          contactId,
+          attachments  // Google Drive URL'leri ile attachments
+        );
+        
+        if (result.success) {
+          totalEmailsSent++;
+          await pool.query(
+            `UPDATE campaign_sends 
+             SET is_sent = true, sent_date = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP 
+             WHERE id = $1`,
+            [sendRecord.id]
+          );
+        } else {
+          totalEmailsFailed++;
+          await pool.query(
+            `UPDATE campaign_sends 
+             SET is_failed = true, failure_reason = $1, updated_at = CURRENT_TIMESTAMP 
+             WHERE id = $2`,
+            [result.error, sendRecord.id]
+          );
+        }
+        
+        // Rate limiting
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      
+      // Schedule'ı güncelle (bir sonraki tarihi hesapla)
+      await updateScheduleAfterSend(scheduleId);
+    }
+    
+    console.log(`\n📊 [V2] Özet:`);
+    console.log(`   Gönderilmesi gereken: ${totalEmailsToSend}`);
+    console.log(`   ✅ Başarılı: ${totalEmailsSent}`);
+    console.log(`   ❌ Başarısız: ${totalEmailsFailed}\n`);
+    
+    logStream.system(`📊 [V2] İşlem tamamlandı`, {
+      totalToSend: totalEmailsToSend,
+      totalSent: totalEmailsSent,
+      totalFailed: totalEmailsFailed
+    });
+    
+  } catch (error) {
+    console.error('❌ [V2] Email scheduler hatası:', error);
+    logStream.error('❌ [V2] Email scheduler hatası', { error: error.message, stack: error.stack });
+  }
+}
+
+/**
  * Scheduler'ı başlat
+ * Hem eski yöntemi (template_sequence.scheduled_date) hem de yeni yöntemi (schedule tablosu) çalıştırır
  */
 function startEmailScheduler() {
   console.log('🚀 Email Scheduler başlatıldı - Her 3 dakikada çalışacak');
+  console.log('   📌 V1: template_sequence.scheduled_date tabanlı (geriye uyumluluk)');
+  console.log('   📌 V2: email_campaign_schedules tabanlı (recurring/special_day)');
   logStream.system('🚀 Email Scheduler başlatıldı - Her 3 dakikada çalışacak');
   
   // Her 3 dakikada bir çalış
-  cron.schedule('*/3 * * * *', () => {
+  cron.schedule('*/3 * * * *', async () => {
     const now = new Date();
     const trTime = now.toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' });
     console.log(`\n⏰ [${trTime}] Scheduler çalışıyor...`);
@@ -566,16 +768,23 @@ function startEmailScheduler() {
       time: trTime,
       timestamp: now.toISOString() 
     });
-    processScheduledEmails();
+    
+    // Önce eski yöntemi çalıştır (geriye uyumluluk)
+    await processScheduledEmails();
+    
+    // Sonra yeni schedule tabanlı yöntemi çalıştır
+    await processScheduledEmailsV2();
   });
   
-  // İlk çalıştırmayı hemen yap (opsiyonel)
+  // İlk çalıştırmayı hemen yap
   console.log('🔄 İlk kontrol başlatılıyor...');
   processScheduledEmails();
+  processScheduledEmailsV2();
 }
 
 module.exports = {
   startEmailScheduler,
-  processScheduledEmails, // Manuel test için
+  processScheduledEmails, // V1 - geriye uyumluluk
+  processScheduledEmailsV2, // V2 - yeni schedule tabanlı
   sendEmail, // Test için
 };

@@ -2,6 +2,7 @@
 export interface Contact {
   id: number;
   email: string;
+  salutation?: string;
   first_name?: string;
   last_name?: string;
   phone?: string;
@@ -44,6 +45,7 @@ export interface ContactListParams {
   pageSize?: number;
   limit?: number;
   email?: string;
+  salutation?: string;
   status?: string;
   subscription_status?: string;
   tags?: string;

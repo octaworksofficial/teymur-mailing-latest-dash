@@ -83,6 +83,32 @@ export async function getContactStats(): Promise<ContactStatsResponse> {
 }
 
 /**
+ * Filtre seçeneklerini getir - her alan için benzersiz değerler
+ */
+export interface FilterOptionsResponse {
+  success: boolean;
+  data: {
+    status: string[];
+    subscription_status: string[];
+    importance_level: string[];
+    customer_representative: string[];
+    country: string[];
+    state: string[];
+    district: string[];
+    company: string[];
+    position: string[];
+    source: string[];
+    tags: string[];
+  };
+}
+
+export async function getFilterOptions(): Promise<FilterOptionsResponse> {
+  return request(`${API_BASE_URL}/contacts/filter-options`, {
+    method: 'GET',
+  });
+}
+
+/**
  * Excel şablonu indir
  * Kullanıcıların import için kullanabileceği örnek dosya
  */
@@ -90,6 +116,7 @@ export function downloadExcelTemplate() {
   const templateData = [
     {
       email: 'ornek@email.com',
+      salutation: 'Bay',
       first_name: 'Ahmet',
       last_name: 'Yılmaz',
       phone: '+90 555 123 4567',
@@ -118,6 +145,7 @@ export function downloadExcelTemplate() {
     },
     {
       email: 'test@example.com',
+      salutation: 'Bayan',
       first_name: 'Ayşe',
       last_name: 'Demir',
       phone: '+90 555 987 6543',
@@ -151,6 +179,7 @@ export function downloadExcelTemplate() {
   // Kolon genişliklerini ayarla
   ws['!cols'] = [
     { wch: 25 }, // email
+    { wch: 10 }, // salutation
     { wch: 15 }, // first_name
     { wch: 15 }, // last_name
     { wch: 18 }, // phone
@@ -240,6 +269,7 @@ export async function exportContactsToExcel(params: ContactListParams) {
     const excelData = contacts.map((contact) => {
       const row: any = {
         email: contact.email,
+        salutation: contact.salutation || '',
         first_name: contact.first_name || '',
         last_name: contact.last_name || '',
         phone: contact.phone || '',
@@ -373,6 +403,7 @@ export async function importContactsFromExcel(file: File): Promise<{
 
             const contactData: Partial<Contact> = {
               email: row.email.trim().toLowerCase(),
+              salutation: row.salutation || '',
               first_name: row.first_name || '',
               last_name: row.last_name || '',
               phone: row.phone || '',

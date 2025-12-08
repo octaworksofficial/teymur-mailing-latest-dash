@@ -1,9 +1,24 @@
 import {
   ArrowDownOutlined,
+  BellOutlined,
   CloseOutlined,
   DeleteOutlined,
+  EditOutlined,
+  FileTextOutlined,
+  GiftOutlined,
+  HeartOutlined,
+  Html5Outlined,
   InfoCircleOutlined,
+  LoadingOutlined,
+  MailOutlined,
+  NotificationOutlined,
+  PaperClipOutlined,
   PlusOutlined,
+  SendOutlined,
+  ShopOutlined,
+  SoundOutlined,
+  TeamOutlined,
+  ThunderboltOutlined,
 } from '@ant-design/icons';
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import {
@@ -32,20 +47,37 @@ import {
   Tag,
   Typography,
 } from 'antd';
+import axios from 'axios';
 import moment from 'moment';
-import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import AttachmentUploader from '@/components/AttachmentUploader';
+import EmailEditor from '@/components/EmailEditor';
+import SchedulePicker from '@/components/SchedulePicker';
 import {
   createCampaign,
   getCampaign,
   updateCampaign,
 } from '@/services/campaigns';
-import { getContact, getContacts } from '@/services/contacts';
-import { createTemplate, getTemplates } from '@/services/templates';
-import type { TemplateInSequence, ScheduleType, RecurrenceConfig, SpecialDayConfig } from '@/types/campaign';
+import { getContact, getContacts, getFilterOptions } from '@/services/contacts';
+import {
+  createTemplate,
+  getTemplates,
+  updateTemplate,
+} from '@/services/templates';
+import type {
+  RecurrenceConfig,
+  ScheduleType,
+  SpecialDayConfig,
+  TemplateInSequence,
+} from '@/types/campaign';
 import type { Contact, ContactResponse } from '@/types/contact';
 import type { EmailTemplate } from '@/types/template';
-import SchedulePicker from '@/components/SchedulePicker';
-import EmailEditor from '@/components/EmailEditor';
 import './Create.less';
 
 const { Text } = Typography;
@@ -69,12 +101,20 @@ const CampaignCreateNew: React.FC = () => {
   const [templateSequence, setTemplateSequence] = useState<
     TemplateInSequence[]
   >([]);
-  const [isRecurring, setIsRecurring] = useState(false);
+  const [_isRecurring, setIsRecurring] = useState(false);
   const [firstSendDate, setFirstSendDate] = useState<string>('');
   const [intervalDays, setIntervalDays] = useState<number>(3);
   const [templateModalVisible, setTemplateModalVisible] = useState(false);
   const [createTemplateModalVisible, setCreateTemplateModalVisible] =
     useState(false);
+  const [editTemplateModalVisible, setEditTemplateModalVisible] =
+    useState(false);
+  const [editingTemplateIndex, setEditingTemplateIndex] = useState<
+    number | null
+  >(null);
+  const [editingTemplate, setEditingTemplate] = useState<EmailTemplate | null>(
+    null,
+  );
   const [selectedTemplate, setSelectedTemplate] = useState<number | undefined>(
     undefined,
   );
@@ -82,9 +122,41 @@ const CampaignCreateNew: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [loadingContacts, setLoadingContacts] = useState(false);
   const [campaignStatus, setCampaignStatus] = useState<string>('draft');
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [createTemplateForm] = Form.useForm();
+
+  // Filtre seçenekleri - dinamik olarak yüklenir
+  const [filterOptions, setFilterOptions] = useState<{
+    status: string[];
+    subscription_status: string[];
+    importance_level: string[];
+    customer_representative: string[];
+    country: string[];
+    state: string[];
+    district: string[];
+    company: string[];
+    position: string[];
+    source: string[];
+    tags: string[];
+    salutation: string[];
+  }>({
+    status: [],
+    subscription_status: [],
+    importance_level: [],
+    customer_representative: [],
+    country: [],
+    state: [],
+    district: [],
+    company: [],
+    position: [],
+    source: [],
+    tags: [],
+    salutation: [],
+  });
 
   useEffect(() => {
     loadTemplates();
+    loadFilterOptions();
     if (isEditMode && id) {
       loadCampaign(Number(id));
     }
@@ -186,6 +258,75 @@ const CampaignCreateNew: React.FC = () => {
     }
   };
 
+  // AI ile şablon oluşturma
+  const handleAiGenerateTemplate = async (params: {
+    purpose: string;
+    email_type: string;
+    format?: string;
+  }) => {
+    setAiGenerating(true);
+    try {
+      const response = await axios.post(
+        'https://n8n-production-14b9.up.railway.app/webhook/ai-generate-template',
+        {
+          purpose: params.purpose,
+          email_type: params.email_type,
+          format: params.format || 'html',
+          language: 'Turkish',
+        },
+        {
+          headers: { 'Content-Type': 'application/json' },
+          timeout: 60000,
+        },
+      );
+
+      let responseData = response.data;
+      if (Array.isArray(responseData)) {
+        responseData = responseData[0];
+      }
+
+      if (responseData) {
+        createTemplateForm.setFieldsValue({
+          name: responseData.name || responseData.template_name || '',
+          description: responseData.description || '',
+          subject: responseData.subject || '',
+          body_html:
+            responseData.body_html ||
+            responseData.html_body ||
+            responseData.content ||
+            '',
+          category: responseData.category || params.email_type || 'other',
+          preheader: responseData.preheader || '',
+        });
+        message.success('AI şablonu başarıyla oluşturdu! Alanlar dolduruldu.');
+      } else {
+        message.warning('AI yanıt döndü ancak içerik boş');
+      }
+    } catch (error: any) {
+      console.error('AI generate error:', error);
+      message.error(
+        `AI şablon oluşturma başarısız: ${error.message || 'Bilinmeyen hata'}`,
+      );
+    } finally {
+      setAiGenerating(false);
+    }
+  };
+
+  // Filtre seçeneklerini yükle
+  const loadFilterOptions = async () => {
+    try {
+      const response = await getFilterOptions();
+      if (response.success) {
+        setFilterOptions({
+          ...response.data,
+          salutation: (response.data as any).salutation || [],
+        });
+      }
+    } catch (error) {
+      console.error('Filtre seçenekleri yüklenemedi:', error);
+    }
+  };
+
   // Seçili kişi detaylarını manuel yükle (büyük listeler için)
   const loadSelectedContactDetails = async () => {
     if (selectedContacts.length === 0) {
@@ -217,7 +358,7 @@ const CampaignCreateNew: React.FC = () => {
       } else {
         message.success(`${contacts.length} kişi detayı başarıyla yüklendi`);
       }
-    } catch (error) {
+    } catch (_error) {
       message.error('Kişi detayları yüklenirken hata oluştu');
     } finally {
       setLoadingContacts(false);
@@ -310,6 +451,19 @@ const CampaignCreateNew: React.FC = () => {
       copyable: true,
     },
     {
+      title: 'Hitap',
+      dataIndex: 'salutation',
+      width: 80,
+      valueType: 'select',
+      fieldProps: {
+        showSearch: true,
+        allowClear: true,
+        mode: 'multiple',
+        placeholder: 'Hitap seçin',
+        options: filterOptions.salutation.map((v) => ({ label: v, value: v })),
+      },
+    },
+    {
       title: 'Ad',
       dataIndex: 'first_name',
       ellipsis: true,
@@ -338,6 +492,14 @@ const CampaignCreateNew: React.FC = () => {
       dataIndex: 'company',
       ellipsis: true,
       width: 150,
+      valueType: 'select',
+      fieldProps: {
+        showSearch: true,
+        allowClear: true,
+        mode: 'multiple',
+        placeholder: 'Şirket seçin',
+        options: filterOptions.company.map((v) => ({ label: v, value: v })),
+      },
     },
     {
       title: 'Firma Ünvan',
@@ -351,27 +513,70 @@ const CampaignCreateNew: React.FC = () => {
       dataIndex: 'position',
       ellipsis: true,
       width: 120,
+      valueType: 'select',
+      fieldProps: {
+        showSearch: true,
+        allowClear: true,
+        mode: 'multiple',
+        placeholder: 'Pozisyon seçin',
+        options: filterOptions.position.map((v) => ({ label: v, value: v })),
+      },
     },
     {
       title: 'Müşteri Temsilcisi',
       dataIndex: 'customer_representative',
       ellipsis: true,
       width: 150,
+      valueType: 'select',
+      fieldProps: {
+        showSearch: true,
+        allowClear: true,
+        mode: 'multiple',
+        placeholder: 'Temsilci seçin',
+        options: filterOptions.customer_representative.map((v) => ({
+          label: v,
+          value: v,
+        })),
+      },
     },
     {
       title: 'Ülke',
       dataIndex: 'country',
       width: 120,
+      valueType: 'select',
+      fieldProps: {
+        showSearch: true,
+        allowClear: true,
+        mode: 'multiple',
+        placeholder: 'Ülke seçin',
+        options: filterOptions.country.map((v) => ({ label: v, value: v })),
+      },
     },
     {
       title: 'İl',
       dataIndex: 'state',
       width: 120,
+      valueType: 'select',
+      fieldProps: {
+        showSearch: true,
+        allowClear: true,
+        mode: 'multiple',
+        placeholder: 'İl seçin',
+        options: filterOptions.state.map((v) => ({ label: v, value: v })),
+      },
     },
     {
       title: 'İlçe',
       dataIndex: 'district',
       width: 120,
+      valueType: 'select',
+      fieldProps: {
+        showSearch: true,
+        allowClear: true,
+        mode: 'multiple',
+        placeholder: 'İlçe seçin',
+        options: filterOptions.district.map((v) => ({ label: v, value: v })),
+      },
     },
     {
       title: 'Adres 1',
@@ -392,17 +597,24 @@ const CampaignCreateNew: React.FC = () => {
       dataIndex: 'importance_level',
       width: 130,
       valueType: 'select',
-      valueEnum: {
-        1: { text: '1 - Düşük', status: 'Default' },
-        2: { text: '2', status: 'Default' },
-        3: { text: '3', status: 'Default' },
-        4: { text: '4', status: 'Default' },
-        5: { text: '5 - Orta', status: 'Processing' },
-        6: { text: '6', status: 'Processing' },
-        7: { text: '7', status: 'Processing' },
-        8: { text: '8 - Yüksek', status: 'Warning' },
-        9: { text: '9', status: 'Warning' },
-        10: { text: '10 - Kritik', status: 'Error' },
+      fieldProps: {
+        showSearch: true,
+        allowClear: true,
+        mode: 'multiple',
+        placeholder: 'Önem seçin',
+        options: filterOptions.importance_level.map((v) => ({
+          label:
+            v === '1'
+              ? '1 - Düşük'
+              : v === '5'
+                ? '5 - Orta'
+                : v === '8'
+                  ? '8 - Yüksek'
+                  : v === '10'
+                    ? '10 - Kritik'
+                    : v,
+          value: v,
+        })),
       },
       render: (_: any, record: Contact) => {
         if (!record.importance_level) return '-';
@@ -444,8 +656,13 @@ const CampaignCreateNew: React.FC = () => {
       title: 'Etiketler',
       dataIndex: 'tags',
       width: 150,
+      valueType: 'select',
       fieldProps: {
-        placeholder: 'Etiket ara (virgülle ayırın)',
+        showSearch: true,
+        allowClear: true,
+        mode: 'multiple',
+        placeholder: 'Etiket seçin',
+        options: filterOptions.tags.map((v) => ({ label: v, value: v })),
       },
       render: (_, record) => (
         <Space size={[0, 4]} wrap>
@@ -496,11 +713,24 @@ const CampaignCreateNew: React.FC = () => {
       dataIndex: 'status',
       width: 100,
       valueType: 'select',
-      valueEnum: {
-        active: { text: 'Aktif', status: 'Success' },
-        unsubscribed: { text: 'Abonelik İptal', status: 'Default' },
-        bounced: { text: 'Bounce', status: 'Error' },
-        complained: { text: 'Şikayet', status: 'Warning' },
+      fieldProps: {
+        showSearch: true,
+        allowClear: true,
+        mode: 'multiple',
+        placeholder: 'Durum seçin',
+        options: filterOptions.status.map((v) => ({
+          label:
+            v === 'active'
+              ? 'Aktif'
+              : v === 'unsubscribed'
+                ? 'Abonelik İptal'
+                : v === 'bounced'
+                  ? 'Bounce'
+                  : v === 'complained'
+                    ? 'Şikayet'
+                    : v,
+          value: v,
+        })),
       },
       render: (_, record) => {
         const colors = {
@@ -523,10 +753,22 @@ const CampaignCreateNew: React.FC = () => {
       dataIndex: 'subscription_status',
       width: 100,
       valueType: 'select',
-      valueEnum: {
-        subscribed: { text: 'Abone', status: 'Success' },
-        unsubscribed: { text: 'Değil', status: 'Default' },
-        pending: { text: 'Bekliyor', status: 'Processing' },
+      fieldProps: {
+        showSearch: true,
+        allowClear: true,
+        mode: 'multiple',
+        placeholder: 'Abonelik seçin',
+        options: filterOptions.subscription_status.map((v) => ({
+          label:
+            v === 'subscribed'
+              ? 'Abone'
+              : v === 'unsubscribed'
+                ? 'Değil'
+                : v === 'pending'
+                  ? 'Bekliyor'
+                  : v,
+          value: v,
+        })),
       },
       render: (_, record) => {
         const colors = {
@@ -709,17 +951,85 @@ const CampaignCreateNew: React.FC = () => {
       scheduled_date: undefined,
     };
 
-    setTemplateSequence(prev => [...prev, newTemplate]);
+    setTemplateSequence((prev) => [...prev, newTemplate]);
     setTemplateModalVisible(false);
     setSelectedTemplate(undefined);
     message.success('Şablon eklendi');
   }, [selectedTemplate]);
 
   const removeTemplate = useCallback((index: number) => {
-    setTemplateSequence(prev => prev.filter((_, i) => i !== index));
+    setTemplateSequence((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
-  const recalculateDates = (sequence: TemplateInSequence[]) => {
+  // Şablon düzenleme modalını aç
+  const openEditTemplate = useCallback(
+    (index: number) => {
+      const templateInSequence = templateSequence[index];
+      const template = templates.find(
+        (t) => t.id === templateInSequence.template_id,
+      );
+      if (template) {
+        setEditingTemplateIndex(index);
+        setEditingTemplate(template);
+        setEditTemplateModalVisible(true);
+      }
+    },
+    [templateSequence, templates],
+  );
+
+  // Şablonu güncelle
+  const handleUpdateTemplate = async (values: any) => {
+    if (editingTemplate === null || editingTemplateIndex === null) return false;
+
+    try {
+      // Tags string'i array'e çevir
+      if (values.tags && typeof values.tags === 'string') {
+        values.tags = values.tags
+          .split(',')
+          .map((tag: string) => tag.trim())
+          .filter(Boolean);
+      }
+
+      const response = await updateTemplate(editingTemplate.id, {
+        name: values.name,
+        subject: values.subject,
+        body_html: values.body_html,
+        cc_emails: values.cc
+          ? values.cc
+              .split(',')
+              .map((e: string) => e.trim())
+              .filter(Boolean)
+          : undefined,
+        bcc_emails: values.bcc
+          ? values.bcc
+              .split(',')
+              .map((e: string) => e.trim())
+              .filter(Boolean)
+          : undefined,
+        tags: values.tags,
+        status: values.status || 'active',
+      });
+
+      if (response.success) {
+        message.success('Şablon güncellendi');
+        // Şablonları yeniden yükle
+        await loadTemplates();
+        setEditTemplateModalVisible(false);
+        setEditingTemplate(null);
+        setEditingTemplateIndex(null);
+        return true;
+      } else {
+        message.error('Şablon güncellenemedi');
+        return false;
+      }
+    } catch (error) {
+      console.error('Şablon güncelleme hatası:', error);
+      message.error('Şablon güncellenirken hata oluştu');
+      return false;
+    }
+  };
+
+  const _recalculateDates = (sequence: TemplateInSequence[]) => {
     const updated = sequence.map((item, index) => {
       const delay =
         index === 0 ? 0 : sequence[index - 1].send_delay_days + intervalDays;
@@ -735,7 +1045,7 @@ const CampaignCreateNew: React.FC = () => {
     setTemplateSequence(updated);
   };
 
-  const handleFirstSendDateChange = (dateString: string) => {
+  const _handleFirstSendDateChange = (dateString: string) => {
     setFirstSendDate(dateString);
     if (templateSequence.length > 0) {
       const updated = templateSequence.map((item) => ({
@@ -751,7 +1061,7 @@ const CampaignCreateNew: React.FC = () => {
   };
 
   // Tek bir şablon için tarihi değiştir
-  const handleTemplateDateChange = (index: number, dateString: string) => {
+  const _handleTemplateDateChange = (index: number, dateString: string) => {
     const updated = [...templateSequence];
     updated[index] = {
       ...updated[index],
@@ -761,59 +1071,68 @@ const CampaignCreateNew: React.FC = () => {
   };
 
   // Tek bir şablon için schedule config'i güncelle
-  const handleTemplateScheduleChange = useCallback((
-    index: number,
-    scheduleData: {
-      schedule_type: ScheduleType;
-      scheduled_date?: string;
-      recurrence_config?: RecurrenceConfig;
-      special_day_config?: SpecialDayConfig;
-    },
-  ) => {
-    setTemplateSequence(prev => {
-      const updated = [...prev];
-      updated[index] = {
-        ...updated[index],
-        schedule_type: scheduleData.schedule_type,
-        scheduled_date: scheduleData.scheduled_date,
-        recurrence_config: scheduleData.recurrence_config,
-        special_day_config: scheduleData.special_day_config,
-      };
-      return updated;
-    });
-  }, []);
-
-  const handleIntervalChange = useCallback((value: number | null) => {
-    if (value) {
-      setIntervalDays(value);
-      // Interval değiştiğinde tarihleri otomatik yeniden hesapla
-      setTemplateSequence(prev => {
-        if (prev.length > 0 && firstSendDate) {
-          const updated = prev.map((item, index) => {
-            const delay = index === 0 ? 0 : index * value;
-            const scheduled = moment(firstSendDate)
-              .add(delay, 'days')
-              .format('YYYY-MM-DD HH:mm:ss');
-            return {
-              ...item,
-              send_delay_days: delay,
-              scheduled_date: scheduled,
-            };
-          });
-          message.success(`Tarihler ${value} gün aralığa göre güncellendi`);
-          return updated;
-        }
-        return prev;
+  const handleTemplateScheduleChange = useCallback(
+    (
+      index: number,
+      scheduleData: {
+        schedule_type: ScheduleType;
+        scheduled_date?: string;
+        recurrence_config?: RecurrenceConfig;
+        special_day_config?: SpecialDayConfig;
+      },
+    ) => {
+      setTemplateSequence((prev) => {
+        const updated = [...prev];
+        updated[index] = {
+          ...updated[index],
+          schedule_type: scheduleData.schedule_type,
+          scheduled_date: scheduleData.scheduled_date,
+          recurrence_config: scheduleData.recurrence_config,
+          special_day_config: scheduleData.special_day_config,
+        };
+        return updated;
       });
-    }
-  }, [firstSendDate]);
+    },
+    [],
+  );
+
+  const _handleIntervalChange = useCallback(
+    (value: number | null) => {
+      if (value) {
+        setIntervalDays(value);
+        // Interval değiştiğinde tarihleri otomatik yeniden hesapla
+        setTemplateSequence((prev) => {
+          if (prev.length > 0 && firstSendDate) {
+            const updated = prev.map((item, index) => {
+              const delay = index === 0 ? 0 : index * value;
+              const scheduled = moment(firstSendDate)
+                .add(delay, 'days')
+                .format('YYYY-MM-DD HH:mm:ss');
+              return {
+                ...item,
+                send_delay_days: delay,
+                scheduled_date: scheduled,
+              };
+            });
+            message.success(`Tarihler ${value} gün aralığa göre güncellendi`);
+            return updated;
+          }
+          return prev;
+        });
+      }
+    },
+    [firstSendDate],
+  );
 
   // Template seçeneklerini memoize et
-  const templateOptions = useMemo(() => 
-    templates.map((t) => ({
-      label: `${t.name} (${t.category})`,
-      value: t.id,
-    })), [templates]);
+  const templateOptions = useMemo(
+    () =>
+      templates.map((t) => ({
+        label: `${t.name} (${t.category})`,
+        value: t.id,
+      })),
+    [templates],
+  );
 
   return (
     <Card
@@ -840,10 +1159,11 @@ const CampaignCreateNew: React.FC = () => {
         onFinish={async (values) => {
           try {
             // İlk şablonun tarihini first_send_date olarak kullan
-            const calculatedFirstSendDate = templateSequence.length > 0 
-              ? templateSequence[0].scheduled_date 
-              : undefined;
-            
+            const calculatedFirstSendDate =
+              templateSequence.length > 0
+                ? templateSequence[0].scheduled_date
+                : undefined;
+
             // Birden fazla şablon varsa tekrarlayan olarak işaretle
             const calculatedIsRecurring = templateSequence.length > 1;
 
@@ -854,7 +1174,9 @@ const CampaignCreateNew: React.FC = () => {
               is_recurring: calculatedIsRecurring,
               template_sequence: templateSequence,
               first_send_date: calculatedFirstSendDate,
-              recurrence_interval_days: calculatedIsRecurring ? intervalDays : undefined,
+              recurrence_interval_days: calculatedIsRecurring
+                ? intervalDays
+                : undefined,
               stop_on_reply: values.stop_on_reply,
               reply_notification_email: values.reply_notification_email,
               status: values.status || 'draft',
@@ -1030,6 +1352,22 @@ const CampaignCreateNew: React.FC = () => {
                 }
               }}
               columns={contactColumns}
+              columnsState={{
+                persistenceKey: 'campaign-contact-table-columns',
+                persistenceType: 'localStorage',
+                defaultValue: {
+                  id: { show: false },
+                  phone: { show: false },
+                  mobile_phone: { show: false },
+                  company_title: { show: false },
+                  address_1: { show: false },
+                  address_2: { show: false },
+                  notes: { show: false },
+                  source: { show: false },
+                  custom_fields: { show: false },
+                  engagement_score: { show: false },
+                },
+              }}
               pagination={{
                 defaultPageSize: 10,
                 showSizeChanger: true,
@@ -1046,7 +1384,18 @@ const CampaignCreateNew: React.FC = () => {
               tableAlertRender={false}
               tableAlertOptionRender={false}
               scroll={{ x: 1600 }}
-              toolBarRender={false}
+              options={{
+                setting: true,
+                density: true,
+                fullScreen: true,
+                reload: true,
+              }}
+              headerTitle={
+                <span style={{ color: '#888', fontSize: 12 }}>
+                  Tablonun sağ üst köşesindeki ⚙️ ikonundan sütunları
+                  gösterebilir/gizleyebilirsiniz
+                </span>
+              }
             />
           </Card>
 
@@ -1151,7 +1500,8 @@ const CampaignCreateNew: React.FC = () => {
             }
             // Her şablonun bir tarihi olmalı
             const hasInvalidSchedule = templateSequence.some(
-              (item) => !item.scheduled_date && item.schedule_type === 'custom_date'
+              (item) =>
+                !item.scheduled_date && item.schedule_type === 'custom_date',
             );
             if (hasInvalidSchedule) {
               message.error('Lütfen tüm şablonlar için gönderim tarihi seçin');
@@ -1164,7 +1514,8 @@ const CampaignCreateNew: React.FC = () => {
             title="Şablonlar"
             style={{
               marginTop: 16,
-              maxWidth: '100%',
+              width: '100%',
+              maxWidth: 850,
             }}
           >
             <Space direction="vertical" style={{ width: '100%', gap: 16 }}>
@@ -1180,16 +1531,27 @@ const CampaignCreateNew: React.FC = () => {
                     style={{
                       backgroundColor: '#fafafa',
                       border: '1px solid #d9d9d9',
+                      width: '100%',
+                      maxWidth: 800,
                     }}
                     extra={
-                      <Button
-                        type="text"
-                        danger
-                        icon={<DeleteOutlined />}
-                        onClick={() => removeTemplate(index)}
-                      >
-                        Sil
-                      </Button>
+                      <Space>
+                        <Button
+                          type="text"
+                          icon={<EditOutlined />}
+                          onClick={() => openEditTemplate(index)}
+                        >
+                          Düzenle
+                        </Button>
+                        <Button
+                          type="text"
+                          danger
+                          icon={<DeleteOutlined />}
+                          onClick={() => removeTemplate(index)}
+                        >
+                          Sil
+                        </Button>
+                      </Space>
                     }
                   >
                     <Space
@@ -1266,9 +1628,9 @@ const CampaignCreateNew: React.FC = () => {
               >
                 İptal
               </Button>,
-              <Button 
-                key="ok" 
-                type="primary" 
+              <Button
+                key="ok"
+                type="primary"
                 onClick={addTemplate}
                 disabled={!selectedTemplate}
               >
@@ -1290,7 +1652,25 @@ const CampaignCreateNew: React.FC = () => {
             title="Yeni Email Şablonu Oluştur"
             width={800}
             open={createTemplateModalVisible}
-            onOpenChange={setCreateTemplateModalVisible}
+            onOpenChange={(open) => {
+              setCreateTemplateModalVisible(open);
+              if (!open) {
+                setAiGenerating(false);
+                createTemplateForm.resetFields();
+              }
+            }}
+            form={createTemplateForm}
+            modalProps={{
+              destroyOnClose: true,
+              bodyStyle: {
+                maxHeight: 'calc(100vh - 200px)',
+                overflowY: 'auto',
+                paddingRight: 8,
+              },
+              onCancel: () => {
+                setCreateTemplateModalVisible(false);
+              },
+            }}
             onFinish={async (values) => {
               try {
                 // Tags string'i array'e çevir
@@ -1330,12 +1710,308 @@ const CampaignCreateNew: React.FC = () => {
                 return false;
               }
             }}
-            modalProps={{
-              onCancel: () => {
-                setCreateTemplateModalVisible(false);
-              },
-            }}
           >
+            {/* AI ile Şablon Oluşturma Bölümü */}
+            <div
+              style={{
+                background:
+                  'linear-gradient(135deg, #667eea08 0%, #764ba210 100%)',
+                border: '1px solid #667eea30',
+                borderRadius: 12,
+                padding: 20,
+                marginBottom: 24,
+                position: 'relative',
+                overflow: 'hidden',
+              }}
+            >
+              {/* Dekoratif arka plan */}
+              <div
+                style={{
+                  position: 'absolute',
+                  top: -20,
+                  right: -20,
+                  width: 120,
+                  height: 120,
+                  background:
+                    'linear-gradient(135deg, #667eea20 0%, #764ba220 100%)',
+                  borderRadius: '50%',
+                  filter: 'blur(40px)',
+                }}
+              />
+
+              <Space
+                direction="vertical"
+                size={16}
+                style={{ width: '100%', position: 'relative' }}
+              >
+                {/* Header */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    paddingBottom: 12,
+                    borderBottom: '1px solid #667eea20',
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 10,
+                      background:
+                        'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
+                    }}
+                  >
+                    <ThunderboltOutlined
+                      style={{ fontSize: 20, color: '#fff' }}
+                    />
+                  </div>
+                  <div>
+                    <Text
+                      strong
+                      style={{
+                        fontSize: 16,
+                        display: 'block',
+                        color: '#1a1a2e',
+                      }}
+                    >
+                      AI ile Otomatik Oluştur
+                    </Text>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      Yapay zeka ile profesyonel email şablonu oluşturun
+                    </Text>
+                  </div>
+                </div>
+
+                {/* Form alanları */}
+                <ProFormTextArea
+                  name="ai_purpose"
+                  label={
+                    <Text strong style={{ color: '#444' }}>
+                      Email Amacı
+                    </Text>
+                  }
+                  placeholder="Örn: Yeni müşterilere hoş geldin mesajı göndermek istiyorum. Şirketimiz yazılım hizmetleri sunuyor..."
+                  fieldProps={{
+                    rows: 3,
+                    showCount: true,
+                    maxLength: 500,
+                    style: {
+                      borderRadius: 8,
+                      resize: 'none',
+                    },
+                  }}
+                />
+
+                <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                  <div style={{ flex: 1, minWidth: 200 }}>
+                    <ProFormSelect
+                      name="ai_email_type"
+                      label={
+                        <Text strong style={{ color: '#444' }}>
+                          Email Türü
+                        </Text>
+                      }
+                      options={[
+                        {
+                          label: (
+                            <Space>
+                              <SendOutlined style={{ color: '#667eea' }} />{' '}
+                              Soğuk Erişim
+                            </Space>
+                          ),
+                          value: 'cold_outreach',
+                        },
+                        {
+                          label: (
+                            <Space>
+                              <MailOutlined style={{ color: '#52c41a' }} />{' '}
+                              Takip Maili
+                            </Space>
+                          ),
+                          value: 'follow_up',
+                        },
+                        {
+                          label: (
+                            <Space>
+                              <HeartOutlined style={{ color: '#eb2f96' }} /> Hoş
+                              Geldin
+                            </Space>
+                          ),
+                          value: 'welcome',
+                        },
+                        {
+                          label: (
+                            <Space>
+                              <NotificationOutlined
+                                style={{ color: '#1890ff' }}
+                              />{' '}
+                              Bülten
+                            </Space>
+                          ),
+                          value: 'newsletter',
+                        },
+                        {
+                          label: (
+                            <Space>
+                              <GiftOutlined style={{ color: '#fa8c16' }} />{' '}
+                              Promosyon
+                            </Space>
+                          ),
+                          value: 'promotional',
+                        },
+                        {
+                          label: (
+                            <Space>
+                              <BellOutlined style={{ color: '#faad14' }} />{' '}
+                              Hatırlatma
+                            </Space>
+                          ),
+                          value: 'reminder',
+                        },
+                        {
+                          label: (
+                            <Space>
+                              <SoundOutlined style={{ color: '#13c2c2' }} />{' '}
+                              Duyuru
+                            </Space>
+                          ),
+                          value: 'announcement',
+                        },
+                        {
+                          label: (
+                            <Space>
+                              <HeartOutlined style={{ color: '#f5222d' }} />{' '}
+                              Teşekkür
+                            </Space>
+                          ),
+                          value: 'thank_you',
+                        },
+                        {
+                          label: (
+                            <Space>
+                              <ShopOutlined style={{ color: '#722ed1' }} /> B2B
+                              Satış
+                            </Space>
+                          ),
+                          value: 'b2b_sales',
+                        },
+                        {
+                          label: (
+                            <Space>
+                              <TeamOutlined style={{ color: '#2f54eb' }} /> İş
+                              Ortaklığı
+                            </Space>
+                          ),
+                          value: 'partnership',
+                        },
+                      ]}
+                      placeholder="Email türünü seçin"
+                      fieldProps={{
+                        style: { borderRadius: 8 },
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ minWidth: 140 }}>
+                    <ProFormSelect
+                      name="ai_format"
+                      label={
+                        <Text strong style={{ color: '#444' }}>
+                          Format
+                        </Text>
+                      }
+                      options={[
+                        {
+                          label: (
+                            <Space>
+                              <Html5Outlined style={{ color: '#e34c26' }} />{' '}
+                              HTML
+                            </Space>
+                          ),
+                          value: 'html',
+                        },
+                        {
+                          label: (
+                            <Space>
+                              <FileTextOutlined style={{ color: '#666' }} /> Düz
+                              Metin
+                            </Space>
+                          ),
+                          value: 'plain_text',
+                        },
+                      ]}
+                      initialValue="html"
+                      fieldProps={{
+                        style: { borderRadius: 8 },
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <Button
+                  type="primary"
+                  size="large"
+                  icon={
+                    aiGenerating ? (
+                      <LoadingOutlined spin />
+                    ) : (
+                      <ThunderboltOutlined />
+                    )
+                  }
+                  loading={aiGenerating}
+                  disabled={aiGenerating}
+                  onClick={async () => {
+                    const values = createTemplateForm.getFieldsValue([
+                      'ai_purpose',
+                      'ai_email_type',
+                      'ai_format',
+                    ]);
+                    if (!values.ai_purpose || !values.ai_email_type) {
+                      message.warning('Lütfen email amacını ve türünü girin');
+                      return;
+                    }
+                    await handleAiGenerateTemplate({
+                      purpose: values.ai_purpose,
+                      email_type: values.ai_email_type,
+                      format: values.ai_format || 'html',
+                    });
+                  }}
+                  style={{
+                    background:
+                      'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    borderColor: 'transparent',
+                    width: '100%',
+                    height: 44,
+                    borderRadius: 8,
+                    fontWeight: 600,
+                    boxShadow: '0 4px 12px rgba(102, 126, 234, 0.35)',
+                  }}
+                >
+                  {aiGenerating
+                    ? 'AI Oluşturuyor...'
+                    : 'AI ile Şablonu Oluştur'}
+                </Button>
+              </Space>
+            </div>
+
+            <div
+              style={{
+                borderTop: '1px solid #f0f0f0',
+                paddingTop: 16,
+                marginBottom: 16,
+              }}
+            >
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                Veya aşağıdaki alanları manuel olarak doldurun:
+              </Text>
+            </div>
+
             <ProFormText
               name="name"
               label="Şablon Adı"
@@ -1357,14 +2033,12 @@ const CampaignCreateNew: React.FC = () => {
                   style={{ width: '100%' }}
                 >
                   <Text strong>
-                    <InfoCircleOutlined /> Kişiselleştirme Değişkenleri - Email
-                    İçeriğinizi Özelleştirin
+                    <InfoCircleOutlined /> Kişiselleştirme Değişkenleri
                   </Text>
                   <Text type="secondary" style={{ fontSize: '12px' }}>
-                    Email konusu ve içeriğinde her alıcıya özel bilgiler
-                    kullanarak daha etkili kampanyalar oluşturabilirsiniz.{' '}
-                    Değişkenler hem {'{field}'} hem de {'{{field}}'} formatında
-                    kullanılabilir.
+                    Email konusu ve içeriğinde kişiye özel bilgiler
+                    kullanabilirsiniz. Değişkenler hem {'{field}'} hem de{' '}
+                    {'{{field}}'} formatında kullanılabilir.
                   </Text>
                   <div style={{ marginTop: 8 }}>
                     <Text type="secondary" style={{ fontSize: '11px' }}>
@@ -1433,6 +2107,11 @@ const CampaignCreateNew: React.FC = () => {
                 { label: 'Duyuru', value: 'announcement' },
                 { label: 'Takip', value: 'follow-up' },
                 { label: 'Hatırlatma', value: 'reminder' },
+                { label: 'Soğuk Erişim', value: 'cold_outreach' },
+                { label: 'Teşekkür', value: 'thank_you' },
+                { label: 'İş Ortaklığı', value: 'partnership' },
+                { label: 'B2B Satış', value: 'b2b_sales' },
+                { label: 'Etkinlik Daveti', value: 'event_invitation' },
                 { label: 'Diğer', value: 'other' },
               ]}
             />
@@ -1451,9 +2130,11 @@ const CampaignCreateNew: React.FC = () => {
             <Form.Item
               name="body_html"
               label="Email İçeriği"
-              rules={[{ required: true, message: 'Lütfen email içeriği girin' }]}
+              rules={[
+                { required: true, message: 'Lütfen email içeriği girin' },
+              ]}
             >
-              <EmailEditor 
+              <EmailEditor
                 placeholder="Email içeriğinizi buraya yazın..."
                 height={350}
                 showVariables={true}
@@ -1476,9 +2157,16 @@ const CampaignCreateNew: React.FC = () => {
               placeholder="Örn: noreply@platform.com"
             />
             <ProFormText
-              name="reply_to"
-              label="Yanıt Email"
-              placeholder="Örn: destek@platform.com"
+              name="cc_emails"
+              label="CC (Karbon Kopya)"
+              placeholder="Örn: bilgi@firma.com, yonetim@firma.com"
+              tooltip="Virgülle ayırarak birden fazla email girebilirsiniz"
+            />
+            <ProFormText
+              name="bcc_emails"
+              label="BCC (Gizli Kopya)"
+              placeholder="Örn: arsiv@firma.com"
+              tooltip="Virgülle ayırarak birden fazla email girebilirsiniz. Alıcılar bu adresleri göremez."
             />
             <ProFormSelect
               name="priority"
@@ -1499,6 +2187,162 @@ const CampaignCreateNew: React.FC = () => {
                 { label: 'Arşiv', value: 'archived' },
               ]}
               initialValue="active"
+            />
+            <ProFormText
+              name="tags"
+              label="Etiketler"
+              placeholder="virgülle ayırın: welcome, onboarding"
+            />
+            <Form.Item
+              name="attachments"
+              label={
+                <Space>
+                  <PaperClipOutlined />
+                  Ek Dosyalar
+                </Space>
+              }
+            >
+              <AttachmentUploader maxCount={5} maxSize={10} />
+            </Form.Item>
+          </ModalForm>
+
+          {/* Şablon Düzenleme Modal */}
+          <ModalForm
+            title="Şablonu Düzenle"
+            width={800}
+            open={editTemplateModalVisible}
+            onOpenChange={(visible) => {
+              if (!visible) {
+                setEditTemplateModalVisible(false);
+                setEditingTemplate(null);
+                setEditingTemplateIndex(null);
+              }
+            }}
+            initialValues={
+              editingTemplate
+                ? {
+                    name: editingTemplate.name,
+                    description: editingTemplate.description,
+                    category: editingTemplate.category,
+                    subject: editingTemplate.subject,
+                    preheader: editingTemplate.preheader,
+                    body_html: editingTemplate.body_html,
+                    body_text: editingTemplate.body_text,
+                    from_name: editingTemplate.from_name,
+                    from_email: editingTemplate.from_email,
+                    cc_emails: editingTemplate.cc_emails?.join(', '),
+                    bcc_emails: editingTemplate.bcc_emails?.join(', '),
+                    priority: editingTemplate.priority,
+                    status: editingTemplate.status,
+                    tags: editingTemplate.tags?.join(', '),
+                  }
+                : {}
+            }
+            onFinish={handleUpdateTemplate}
+            modalProps={{
+              destroyOnClose: true,
+              onCancel: () => {
+                setEditTemplateModalVisible(false);
+                setEditingTemplate(null);
+                setEditingTemplateIndex(null);
+              },
+            }}
+          >
+            <ProFormText
+              name="name"
+              label="Şablon Adı"
+              rules={[{ required: true, message: 'Lütfen şablon adı girin' }]}
+              placeholder="Örn: Hoş Geldiniz Email"
+            />
+            <ProFormTextArea
+              name="description"
+              label="Açıklama"
+              placeholder="Şablon açıklaması..."
+            />
+            <ProFormSelect
+              name="category"
+              label="Kategori"
+              options={[
+                { label: 'Bülten', value: 'newsletter' },
+                { label: 'Promosyon', value: 'promotional' },
+                { label: 'İşlemsel', value: 'transactional' },
+                { label: 'Hoş Geldin', value: 'welcome' },
+                { label: 'Duyuru', value: 'announcement' },
+                { label: 'Takip', value: 'follow-up' },
+                { label: 'Hatırlatma', value: 'reminder' },
+                { label: 'Diğer', value: 'other' },
+              ]}
+            />
+            <ProFormText
+              name="subject"
+              label="Email Konusu"
+              rules={[{ required: true, message: 'Lütfen email konusu girin' }]}
+              placeholder="Örn: Hoş Geldiniz {{first_name}}!"
+              tooltip="Kişiselleştirme için {{first_name}}, {{company}} gibi değişkenler kullanabilirsiniz"
+            />
+            <ProFormTextArea
+              name="preheader"
+              label="Preheader (Önizleme Metni)"
+              placeholder="Inbox'ta gösterilecek kısa açıklama..."
+            />
+            <Form.Item
+              name="body_html"
+              label="Email İçeriği"
+              rules={[
+                { required: true, message: 'Lütfen email içeriği girin' },
+              ]}
+            >
+              <EmailEditor
+                placeholder="Email içeriğinizi buraya yazın..."
+                height={350}
+                showVariables={true}
+              />
+            </Form.Item>
+            <ProFormTextArea
+              name="body_text"
+              label="Plain Text İçerik (Opsiyonel)"
+              fieldProps={{ rows: 3 }}
+              placeholder="HTML desteklemeyen emailler için alternatif metin..."
+            />
+            <ProFormText
+              name="from_name"
+              label="Gönderen Adı"
+              placeholder="Örn: Email Otomasyon Platformu"
+            />
+            <ProFormText
+              name="from_email"
+              label="Gönderen Email"
+              placeholder="Örn: noreply@platform.com"
+            />
+            <ProFormText
+              name="cc_emails"
+              label="CC (Karbon Kopya)"
+              placeholder="Örn: bilgi@firma.com, yonetim@firma.com"
+              tooltip="Virgülle ayırarak birden fazla email girebilirsiniz"
+            />
+            <ProFormText
+              name="bcc_emails"
+              label="BCC (Gizli Kopya)"
+              placeholder="Örn: arsiv@firma.com"
+              tooltip="Virgülle ayırarak birden fazla email girebilirsiniz. Alıcılar bu adresleri göremez."
+            />
+            <ProFormSelect
+              name="priority"
+              label="Öncelik"
+              options={[
+                { label: 'Yüksek', value: 'high' },
+                { label: 'Normal', value: 'normal' },
+                { label: 'Düşük', value: 'low' },
+              ]}
+            />
+            <ProFormSelect
+              name="status"
+              label="Durum"
+              options={[
+                { label: 'Taslak', value: 'draft' },
+                { label: 'Aktif', value: 'active' },
+                { label: 'Arşiv', value: 'archived' },
+              ]}
             />
             <ProFormText
               name="tags"
@@ -1569,13 +2413,13 @@ const CampaignCreateNew: React.FC = () => {
               <Tag color="green">{templateSequence.length} email</Tag>
             </Descriptions.Item>
             <Descriptions.Item label="İlk Gönderim">
-              {templateSequence.length > 0 && templateSequence[0].scheduled_date 
-                ? templateSequence[0].scheduled_date 
+              {templateSequence.length > 0 && templateSequence[0].scheduled_date
+                ? templateSequence[0].scheduled_date
                 : 'Belirlenmedi'}
             </Descriptions.Item>
             <Descriptions.Item label="Email Silsilesi">
-              {templateSequence.length > 1 
-                ? `Evet (${templateSequence.length} email sıralı gönderilecek)` 
+              {templateSequence.length > 1
+                ? `Evet (${templateSequence.length} email sıralı gönderilecek)`
                 : 'Tek email'}
             </Descriptions.Item>
             <Descriptions.Item label="Kampanya Durumu">

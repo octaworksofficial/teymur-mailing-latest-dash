@@ -1,10 +1,23 @@
 import {
+  BellOutlined,
   CopyOutlined,
   DeleteOutlined,
   EyeOutlined,
+  FileTextOutlined,
+  GiftOutlined,
+  HeartOutlined,
+  Html5Outlined,
   InfoCircleOutlined,
+  LoadingOutlined,
+  MailOutlined,
+  NotificationOutlined,
   PaperClipOutlined,
   PlusOutlined,
+  SendOutlined,
+  ShopOutlined,
+  SoundOutlined,
+  TeamOutlined,
+  ThunderboltOutlined,
 } from '@ant-design/icons';
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import {
@@ -25,7 +38,10 @@ import {
   Tooltip,
   Typography,
 } from 'antd';
+import axios from 'axios';
 import React, { useRef, useState } from 'react';
+import AttachmentUploader from '@/components/AttachmentUploader';
+import EmailEditor from '@/components/EmailEditor';
 import {
   bulkDeleteTemplates,
   createTemplate,
@@ -35,8 +51,6 @@ import {
   updateTemplate,
 } from '@/services/templates';
 import type { EmailTemplate } from '@/types/template';
-import EmailEditor from '@/components/EmailEditor';
-import AttachmentUploader from '@/components/AttachmentUploader';
 
 const { confirm } = Modal;
 const { Text } = Typography;
@@ -48,6 +62,77 @@ const Templates: React.FC = () => {
   const [currentRow, setCurrentRow] = useState<EmailTemplate>();
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const actionRef = useRef<ActionType>(null);
+
+  // AI Generate States
+  const [aiGenerating, setAiGenerating] = useState<boolean>(false);
+  const [createForm] = Form.useForm();
+
+  // AI ile şablon oluştur
+  const handleAiGenerate = async (values: {
+    purpose: string;
+    email_type: string;
+    format: 'html' | 'plain_text';
+  }) => {
+    setAiGenerating(true);
+    try {
+      const response = await axios.post(
+        'https://n8n-production-14b9.up.railway.app/webhook/ai-generate-template',
+        {
+          purpose: values.purpose,
+          email_type: values.email_type,
+          format: values.format,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          timeout: 60000, // 60 saniye timeout (AI yanıtı uzun sürebilir)
+        },
+      );
+
+      const responseData = response.data;
+
+      // API array olarak dönüyor, ilk elemanı al
+      const aiResponse = Array.isArray(responseData)
+        ? responseData[0]
+        : responseData;
+
+      // AI yanıtını form alanlarına doldur
+      if (aiResponse) {
+        createForm.setFieldsValue({
+          name: aiResponse.name || '',
+          description: aiResponse.description || '',
+          category: aiResponse.category || 'other',
+          subject: aiResponse.subject || '',
+          preheader: aiResponse.preheader || '',
+          body_html: aiResponse.body_html || aiResponse.body || '',
+          body_text: aiResponse.body_text || '',
+          from_name: aiResponse.from_name || '',
+          from_email: aiResponse.from_email || '',
+          priority: aiResponse.priority || 'normal',
+          status: aiResponse.status || 'draft',
+          tags: aiResponse.tags
+            ? Array.isArray(aiResponse.tags)
+              ? aiResponse.tags.join(', ')
+              : aiResponse.tags
+            : '',
+        });
+
+        message.success(
+          'AI şablon başarıyla oluşturuldu! Aşağıdaki alanları kontrol edip kaydedebilirsiniz.',
+        );
+      }
+    } catch (error: any) {
+      console.error('AI Generate Error:', error);
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        'AI şablon oluşturma başarısız oldu';
+      message.error(errorMessage);
+    } finally {
+      setAiGenerating(false);
+    }
+  };
 
   // Bulk delete işlemi
   const handleBulkDelete = () => {
@@ -322,7 +407,21 @@ const Templates: React.FC = () => {
         title="Yeni Email Şablonu"
         width={800}
         open={createModalOpen}
-        onOpenChange={setCreateModalOpen}
+        onOpenChange={(open) => {
+          setCreateModalOpen(open);
+          if (!open) {
+            setAiGenerating(false);
+          }
+        }}
+        form={createForm}
+        modalProps={{
+          destroyOnClose: true,
+          bodyStyle: {
+            maxHeight: 'calc(100vh - 200px)',
+            overflowY: 'auto',
+            paddingRight: 8,
+          },
+        }}
         onFinish={async (values) => {
           try {
             // Tags string'i array'e çevir
@@ -332,6 +431,7 @@ const Templates: React.FC = () => {
             await createTemplate(values);
             message.success('Şablon başarıyla oluşturuldu');
             setCreateModalOpen(false);
+            createForm.resetFields();
             actionRef.current?.reload();
             return true;
           } catch (_error) {
@@ -340,6 +440,293 @@ const Templates: React.FC = () => {
           }
         }}
       >
+        {/* AI ile Şablon Oluşturma Bölümü */}
+        <div
+          style={{
+            background: 'linear-gradient(135deg, #667eea08 0%, #764ba210 100%)',
+            border: '1px solid #667eea30',
+            borderRadius: 12,
+            padding: 20,
+            marginBottom: 24,
+            position: 'relative',
+            overflow: 'hidden',
+          }}
+        >
+          {/* Dekoratif arka plan */}
+          <div
+            style={{
+              position: 'absolute',
+              top: -20,
+              right: -20,
+              width: 120,
+              height: 120,
+              background:
+                'linear-gradient(135deg, #667eea20 0%, #764ba220 100%)',
+              borderRadius: '50%',
+              filter: 'blur(40px)',
+            }}
+          />
+
+          <Space
+            direction="vertical"
+            size={16}
+            style={{ width: '100%', position: 'relative' }}
+          >
+            {/* Header */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                paddingBottom: 12,
+                borderBottom: '1px solid #667eea20',
+              }}
+            >
+              <div
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 10,
+                  background:
+                    'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
+                }}
+              >
+                <ThunderboltOutlined style={{ fontSize: 20, color: '#fff' }} />
+              </div>
+              <div>
+                <Text
+                  strong
+                  style={{ fontSize: 16, display: 'block', color: '#1a1a2e' }}
+                >
+                  AI ile Otomatik Oluştur
+                </Text>
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  Yapay zeka ile profesyonel email şablonu oluşturun
+                </Text>
+              </div>
+            </div>
+
+            {/* Form alanları */}
+            <ProFormTextArea
+              name="ai_purpose"
+              label={
+                <Text strong style={{ color: '#444' }}>
+                  Email Amacı
+                </Text>
+              }
+              placeholder="Örn: Yeni müşterilere hoş geldin mesajı göndermek istiyorum. Şirketimiz yazılım hizmetleri sunuyor..."
+              fieldProps={{
+                rows: 3,
+                showCount: true,
+                maxLength: 500,
+                style: {
+                  borderRadius: 8,
+                  resize: 'none',
+                },
+              }}
+            />
+
+            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <ProFormSelect
+                  name="ai_email_type"
+                  label={
+                    <Text strong style={{ color: '#444' }}>
+                      Email Türü
+                    </Text>
+                  }
+                  options={[
+                    {
+                      label: (
+                        <Space>
+                          <SendOutlined style={{ color: '#667eea' }} /> Soğuk
+                          Erişim
+                        </Space>
+                      ),
+                      value: 'cold_outreach',
+                    },
+                    {
+                      label: (
+                        <Space>
+                          <MailOutlined style={{ color: '#52c41a' }} /> Takip
+                          Maili
+                        </Space>
+                      ),
+                      value: 'follow_up',
+                    },
+                    {
+                      label: (
+                        <Space>
+                          <HeartOutlined style={{ color: '#eb2f96' }} /> Hoş
+                          Geldin
+                        </Space>
+                      ),
+                      value: 'welcome',
+                    },
+                    {
+                      label: (
+                        <Space>
+                          <NotificationOutlined style={{ color: '#1890ff' }} />{' '}
+                          Bülten
+                        </Space>
+                      ),
+                      value: 'newsletter',
+                    },
+                    {
+                      label: (
+                        <Space>
+                          <GiftOutlined style={{ color: '#fa8c16' }} />{' '}
+                          Promosyon
+                        </Space>
+                      ),
+                      value: 'promotional',
+                    },
+                    {
+                      label: (
+                        <Space>
+                          <BellOutlined style={{ color: '#faad14' }} />{' '}
+                          Hatırlatma
+                        </Space>
+                      ),
+                      value: 'reminder',
+                    },
+                    {
+                      label: (
+                        <Space>
+                          <SoundOutlined style={{ color: '#13c2c2' }} /> Duyuru
+                        </Space>
+                      ),
+                      value: 'announcement',
+                    },
+                    {
+                      label: (
+                        <Space>
+                          <HeartOutlined style={{ color: '#f5222d' }} />{' '}
+                          Teşekkür
+                        </Space>
+                      ),
+                      value: 'thank_you',
+                    },
+                    {
+                      label: (
+                        <Space>
+                          <ShopOutlined style={{ color: '#722ed1' }} /> B2B
+                          Satış
+                        </Space>
+                      ),
+                      value: 'b2b_sales',
+                    },
+                    {
+                      label: (
+                        <Space>
+                          <TeamOutlined style={{ color: '#2f54eb' }} /> İş
+                          Ortaklığı
+                        </Space>
+                      ),
+                      value: 'partnership',
+                    },
+                  ]}
+                  placeholder="Email türünü seçin"
+                  fieldProps={{
+                    style: { borderRadius: 8 },
+                  }}
+                />
+              </div>
+
+              <div style={{ minWidth: 140 }}>
+                <ProFormSelect
+                  name="ai_format"
+                  label={
+                    <Text strong style={{ color: '#444' }}>
+                      Format
+                    </Text>
+                  }
+                  options={[
+                    {
+                      label: (
+                        <Space>
+                          <Html5Outlined style={{ color: '#e34c26' }} /> HTML
+                        </Space>
+                      ),
+                      value: 'html',
+                    },
+                    {
+                      label: (
+                        <Space>
+                          <FileTextOutlined style={{ color: '#666' }} /> Düz
+                          Metin
+                        </Space>
+                      ),
+                      value: 'plain_text',
+                    },
+                  ]}
+                  initialValue="html"
+                  fieldProps={{
+                    style: { borderRadius: 8 },
+                  }}
+                />
+              </div>
+            </div>
+
+            <Button
+              type="primary"
+              size="large"
+              icon={
+                aiGenerating ? (
+                  <LoadingOutlined spin />
+                ) : (
+                  <ThunderboltOutlined />
+                )
+              }
+              loading={aiGenerating}
+              disabled={aiGenerating}
+              onClick={async () => {
+                const values = createForm.getFieldsValue([
+                  'ai_purpose',
+                  'ai_email_type',
+                  'ai_format',
+                ]);
+                if (!values.ai_purpose || !values.ai_email_type) {
+                  message.warning('Lütfen email amacını ve türünü girin');
+                  return;
+                }
+                await handleAiGenerate({
+                  purpose: values.ai_purpose,
+                  email_type: values.ai_email_type,
+                  format: values.ai_format || 'html',
+                });
+              }}
+              style={{
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                borderColor: 'transparent',
+                width: '100%',
+                height: 44,
+                borderRadius: 8,
+                fontWeight: 600,
+                boxShadow: '0 4px 12px rgba(102, 126, 234, 0.35)',
+              }}
+            >
+              {aiGenerating ? 'AI Oluşturuyor...' : 'AI ile Şablonu Oluştur'}
+            </Button>
+          </Space>
+        </div>
+
+        <div
+          style={{
+            borderTop: '1px solid #f0f0f0',
+            paddingTop: 16,
+            marginBottom: 16,
+          }}
+        >
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            Veya aşağıdaki alanları manuel olarak doldurun:
+          </Text>
+        </div>
+
         <ProFormText
           name="name"
           label="Şablon Adı"
@@ -430,6 +817,11 @@ const Templates: React.FC = () => {
             { label: 'Duyuru', value: 'announcement' },
             { label: 'Takip', value: 'follow-up' },
             { label: 'Hatırlatma', value: 'reminder' },
+            { label: 'Soğuk Erişim', value: 'cold_outreach' },
+            { label: 'Teşekkür', value: 'thank_you' },
+            { label: 'İş Ortaklığı', value: 'partnership' },
+            { label: 'B2B Satış', value: 'b2b_sales' },
+            { label: 'Etkinlik Daveti', value: 'event_invitation' },
             { label: 'Diğer', value: 'other' },
           ]}
         />
@@ -449,7 +841,7 @@ const Templates: React.FC = () => {
           label="Email İçeriği"
           rules={[{ required: true, message: 'Lütfen email içeriği girin' }]}
         >
-          <EmailEditor 
+          <EmailEditor
             placeholder="Email içeriğinizi buraya yazın..."
             height={350}
             showVariables={true}
@@ -472,9 +864,16 @@ const Templates: React.FC = () => {
           placeholder="Örn: noreply@platform.com"
         />
         <ProFormText
-          name="reply_to"
-          label="Yanıt Email"
-          placeholder="Örn: destek@platform.com"
+          name="cc_emails"
+          label="CC (Karbon Kopya)"
+          placeholder="Örn: bilgi@firma.com, yonetim@firma.com"
+          tooltip="Virgülle ayırarak birden fazla email girebilirsiniz"
+        />
+        <ProFormText
+          name="bcc_emails"
+          label="BCC (Gizli Kopya)"
+          placeholder="Örn: arsiv@firma.com"
+          tooltip="Virgülle ayırarak birden fazla email girebilirsiniz. Alıcılar bu adresleri göremez."
         />
         <ProFormSelect
           name="priority"
@@ -521,6 +920,14 @@ const Templates: React.FC = () => {
         open={updateModalOpen}
         onOpenChange={setUpdateModalOpen}
         initialValues={currentRow}
+        modalProps={{
+          destroyOnClose: true,
+          bodyStyle: {
+            maxHeight: 'calc(100vh - 200px)',
+            overflowY: 'auto',
+            paddingRight: 8,
+          },
+        }}
         onFinish={async (values) => {
           try {
             // Tags string'i array'e çevir
@@ -563,6 +970,11 @@ const Templates: React.FC = () => {
             { label: 'Duyuru', value: 'announcement' },
             { label: 'Takip', value: 'follow-up' },
             { label: 'Hatırlatma', value: 'reminder' },
+            { label: 'Soğuk Erişim', value: 'cold_outreach' },
+            { label: 'Teşekkür', value: 'thank_you' },
+            { label: 'İş Ortaklığı', value: 'partnership' },
+            { label: 'B2B Satış', value: 'b2b_sales' },
+            { label: 'Etkinlik Daveti', value: 'event_invitation' },
             { label: 'Diğer', value: 'other' },
           ]}
         />
@@ -582,7 +994,7 @@ const Templates: React.FC = () => {
           label="Email İçeriği"
           rules={[{ required: true, message: 'Lütfen email içeriği girin' }]}
         >
-          <EmailEditor 
+          <EmailEditor
             placeholder="Email içeriğinizi buraya yazın..."
             height={350}
             showVariables={true}
@@ -605,9 +1017,16 @@ const Templates: React.FC = () => {
           placeholder="Örn: noreply@platform.com"
         />
         <ProFormText
-          name="reply_to"
-          label="Yanıt Email"
-          placeholder="Örn: destek@platform.com"
+          name="cc_emails"
+          label="CC (Karbon Kopya)"
+          placeholder="Örn: bilgi@firma.com, yonetim@firma.com"
+          tooltip="Virgülle ayırarak birden fazla email girebilirsiniz"
+        />
+        <ProFormText
+          name="bcc_emails"
+          label="BCC (Gizli Kopya)"
+          placeholder="Örn: arsiv@firma.com"
+          tooltip="Virgülle ayırarak birden fazla email girebilirsiniz. Alıcılar bu adresleri göremez."
         />
         <ProFormSelect
           name="priority"
@@ -678,9 +1097,20 @@ const Templates: React.FC = () => {
                 <strong>Gönderen:</strong> {currentRow.from_name} &lt;
                 {currentRow.from_email}&gt;
               </p>
-              {currentRow.reply_to && (
+              {currentRow.cc_emails && currentRow.cc_emails.length > 0 && (
                 <p>
-                  <strong>Yanıt:</strong> {currentRow.reply_to}
+                  <strong>CC:</strong>{' '}
+                  {Array.isArray(currentRow.cc_emails)
+                    ? currentRow.cc_emails.join(', ')
+                    : currentRow.cc_emails}
+                </p>
+              )}
+              {currentRow.bcc_emails && currentRow.bcc_emails.length > 0 && (
+                <p>
+                  <strong>BCC:</strong>{' '}
+                  {Array.isArray(currentRow.bcc_emails)
+                    ? currentRow.bcc_emails.join(', ')
+                    : currentRow.bcc_emails}
                 </p>
               )}
             </div>

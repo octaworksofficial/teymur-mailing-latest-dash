@@ -30,7 +30,7 @@ import {
   Tag,
   Upload,
 } from 'antd';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import CustomFieldsEditor from '@/components/CustomFieldsEditor';
 import {
   bulkDeleteContacts,
@@ -40,6 +40,7 @@ import {
   exportContactsToExcel,
   getContactSentEmails,
   getContacts,
+  getFilterOptions,
   importContactsFromExcel,
   updateContact,
 } from '@/services/contacts';
@@ -52,6 +53,55 @@ const Contacts: React.FC = () => {
   const [currentContact, setCurrentContact] = useState<Contact | null>(null);
   const [customFields, setCustomFields] = useState<Record<string, string>>({});
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+
+  // Filtre seçenekleri - dinamik olarak yüklenir
+  const [filterOptions, setFilterOptions] = useState<{
+    salutation: string[];
+    status: string[];
+    subscription_status: string[];
+    importance_level: string[];
+    customer_representative: string[];
+    country: string[];
+    state: string[];
+    district: string[];
+    company: string[];
+    position: string[];
+    source: string[];
+    tags: string[];
+  }>({
+    salutation: [],
+    status: [],
+    subscription_status: [],
+    importance_level: [],
+    customer_representative: [],
+    country: [],
+    state: [],
+    district: [],
+    company: [],
+    position: [],
+    source: [],
+    tags: [],
+  });
+
+  // Filtre seçeneklerini yükle
+  useEffect(() => {
+    const loadFilterOptions = async () => {
+      try {
+        const response = await getFilterOptions();
+        if (response.success) {
+          const data = response.data as any;
+          setFilterOptions((prev) => ({
+            ...prev,
+            ...data,
+            salutation: data.salutation || [],
+          }));
+        }
+      } catch (error) {
+        console.error('Filtre seçenekleri yüklenemedi:', error);
+      }
+    };
+    loadFilterOptions();
+  }, []);
 
   // Sent emails modal
   const [sentEmailsModalVisible, setSentEmailsModalVisible] = useState(false);
@@ -76,6 +126,30 @@ const Contacts: React.FC = () => {
       copyable: true,
       ellipsis: true,
       width: 250,
+    },
+    {
+      title: 'Hitap',
+      dataIndex: 'salutation',
+      width: 80,
+      valueType: 'select',
+      fieldProps: {
+        showSearch: true,
+        allowClear: true,
+        mode: 'multiple',
+        placeholder: 'Hitap seçin',
+        options:
+          filterOptions.salutation.length > 0
+            ? filterOptions.salutation.map((v) => ({ label: v, value: v }))
+            : [
+                { label: 'Bay', value: 'Bay' },
+                { label: 'Bayan', value: 'Bayan' },
+                { label: 'Mr.', value: 'Mr.' },
+                { label: 'Mrs.', value: 'Mrs.' },
+                { label: 'Ms.', value: 'Ms.' },
+                { label: 'Dr.', value: 'Dr.' },
+                { label: 'Prof.', value: 'Prof.' },
+              ],
+      },
     },
     {
       title: 'Ad',
@@ -123,21 +197,56 @@ const Contacts: React.FC = () => {
       title: 'M. Temsilcisi',
       dataIndex: 'customer_representative',
       width: 180,
+      valueType: 'select',
+      fieldProps: {
+        showSearch: true,
+        allowClear: true,
+        mode: 'multiple',
+        placeholder: 'Temsilci seçin',
+        options: filterOptions.customer_representative.map((v) => ({
+          label: v,
+          value: v,
+        })),
+      },
     },
     {
       title: 'Ülke',
       dataIndex: 'country',
       width: 120,
+      valueType: 'select',
+      fieldProps: {
+        showSearch: true,
+        allowClear: true,
+        mode: 'multiple',
+        placeholder: 'Ülke seçin',
+        options: filterOptions.country.map((v) => ({ label: v, value: v })),
+      },
     },
     {
       title: 'İl',
       dataIndex: 'state',
       width: 120,
+      valueType: 'select',
+      fieldProps: {
+        showSearch: true,
+        allowClear: true,
+        mode: 'multiple',
+        placeholder: 'İl seçin',
+        options: filterOptions.state.map((v) => ({ label: v, value: v })),
+      },
     },
     {
       title: 'İlçe',
       dataIndex: 'district',
       width: 120,
+      valueType: 'select',
+      fieldProps: {
+        showSearch: true,
+        allowClear: true,
+        mode: 'multiple',
+        placeholder: 'İlçe seçin',
+        options: filterOptions.district.map((v) => ({ label: v, value: v })),
+      },
     },
     {
       title: 'Adres 1',
@@ -158,17 +267,24 @@ const Contacts: React.FC = () => {
       dataIndex: 'importance_level',
       width: 130,
       valueType: 'select',
-      valueEnum: {
-        1: { text: '1 - Düşük', status: 'Default' },
-        2: { text: '2', status: 'Default' },
-        3: { text: '3', status: 'Default' },
-        4: { text: '4', status: 'Default' },
-        5: { text: '5 - Orta', status: 'Processing' },
-        6: { text: '6', status: 'Processing' },
-        7: { text: '7', status: 'Processing' },
-        8: { text: '8 - Yüksek', status: 'Warning' },
-        9: { text: '9', status: 'Warning' },
-        10: { text: '10 - Kritik', status: 'Error' },
+      fieldProps: {
+        showSearch: true,
+        allowClear: true,
+        mode: 'multiple',
+        placeholder: 'Önem seçin',
+        options: filterOptions.importance_level.map((v) => ({
+          label:
+            v === '1'
+              ? '1 - Düşük'
+              : v === '5'
+                ? '5 - Orta'
+                : v === '8'
+                  ? '8 - Yüksek'
+                  : v === '10'
+                    ? '10 - Kritik'
+                    : v,
+          value: v,
+        })),
       },
       render: (_: any, record: Contact) => {
         if (!record.importance_level) return '-';
@@ -212,8 +328,13 @@ const Contacts: React.FC = () => {
         </>
       ),
       width: 200,
+      valueType: 'select',
       fieldProps: {
-        placeholder: 'Etiket ara (virgülle ayırın)',
+        showSearch: true,
+        allowClear: true,
+        mode: 'multiple',
+        placeholder: 'Etiket seçin',
+        options: filterOptions.tags.map((v) => ({ label: v, value: v })),
       },
     },
     {
@@ -269,11 +390,37 @@ const Contacts: React.FC = () => {
       title: 'Durum',
       dataIndex: 'status',
       valueType: 'select',
-      valueEnum: {
-        active: { text: 'Aktif', status: 'Success' },
-        unsubscribed: { text: 'Abonelikten Çıktı', status: 'Default' },
-        bounced: { text: 'Geri Döndü', status: 'Error' },
-        complained: { text: 'Şikayet', status: 'Warning' },
+      fieldProps: {
+        showSearch: true,
+        allowClear: true,
+        mode: 'multiple',
+        placeholder: 'Durum seçin',
+        options: filterOptions.status.map((v) => ({
+          label:
+            v === 'active'
+              ? 'Aktif'
+              : v === 'unsubscribed'
+                ? 'Abonelikten Çıktı'
+                : v === 'bounced'
+                  ? 'Geri Döndü'
+                  : v === 'complained'
+                    ? 'Şikayet'
+                    : v,
+          value: v,
+        })),
+      },
+      render: (_: any, record: Contact) => {
+        const statusMap: Record<string, { text: string; color: string }> = {
+          active: { text: 'Aktif', color: 'green' },
+          unsubscribed: { text: 'Abonelikten Çıktı', color: 'default' },
+          bounced: { text: 'Geri Döndü', color: 'red' },
+          complained: { text: 'Şikayet', color: 'orange' },
+        };
+        const status = statusMap[record.status] || {
+          text: record.status,
+          color: 'default',
+        };
+        return <Tag color={status.color}>{status.text}</Tag>;
       },
       width: 120,
     },
@@ -281,10 +428,34 @@ const Contacts: React.FC = () => {
       title: 'Abonelik',
       dataIndex: 'subscription_status',
       valueType: 'select',
-      valueEnum: {
-        subscribed: { text: 'Abone', status: 'Success' },
-        unsubscribed: { text: 'Değil', status: 'Default' },
-        pending: { text: 'Beklemede', status: 'Processing' },
+      fieldProps: {
+        showSearch: true,
+        allowClear: true,
+        mode: 'multiple',
+        placeholder: 'Abonelik seçin',
+        options: filterOptions.subscription_status.map((v) => ({
+          label:
+            v === 'subscribed'
+              ? 'Abone'
+              : v === 'unsubscribed'
+                ? 'Değil'
+                : v === 'pending'
+                  ? 'Beklemede'
+                  : v,
+          value: v,
+        })),
+      },
+      render: (_: any, record: Contact) => {
+        const statusMap: Record<string, { text: string; color: string }> = {
+          subscribed: { text: 'Abone', color: 'green' },
+          unsubscribed: { text: 'Değil', color: 'default' },
+          pending: { text: 'Beklemede', color: 'blue' },
+        };
+        const status = statusMap[record.subscription_status] || {
+          text: record.subscription_status,
+          color: 'default',
+        };
+        return <Tag color={status.color}>{status.text}</Tag>;
       },
       width: 120,
     },
@@ -617,6 +788,20 @@ const Contacts: React.FC = () => {
             { type: 'email', message: 'Geçerli bir email adresi girin' },
           ]}
         />
+        <ProFormSelect
+          name="salutation"
+          label="Hitap"
+          placeholder="Hitap seçin"
+          options={[
+            { label: 'Bay', value: 'Bay' },
+            { label: 'Bayan', value: 'Bayan' },
+            { label: 'Mr.', value: 'Mr.' },
+            { label: 'Mrs.', value: 'Mrs.' },
+            { label: 'Ms.', value: 'Ms.' },
+            { label: 'Dr.', value: 'Dr.' },
+            { label: 'Prof.', value: 'Prof.' },
+          ]}
+        />
         <ProFormText name="first_name" label="Ad" placeholder="Ad" />
         <ProFormText name="last_name" label="Soyad" placeholder="Soyad" />
         <ProFormText
@@ -739,6 +924,7 @@ const Contacts: React.FC = () => {
         width={600}
         initialValues={{
           email: currentContact?.email,
+          salutation: currentContact?.salutation,
           first_name: currentContact?.first_name,
           last_name: currentContact?.last_name,
           phone: currentContact?.phone,
@@ -767,6 +953,20 @@ const Contacts: React.FC = () => {
           rules={[
             { required: true, message: 'Email zorunludur' },
             { type: 'email', message: 'Geçerli bir email adresi girin' },
+          ]}
+        />
+        <ProFormSelect
+          name="salutation"
+          label="Hitap"
+          placeholder="Hitap seçin"
+          options={[
+            { label: 'Bay', value: 'Bay' },
+            { label: 'Bayan', value: 'Bayan' },
+            { label: 'Mr.', value: 'Mr.' },
+            { label: 'Mrs.', value: 'Mrs.' },
+            { label: 'Ms.', value: 'Ms.' },
+            { label: 'Dr.', value: 'Dr.' },
+            { label: 'Prof.', value: 'Prof.' },
           ]}
         />
         <ProFormText name="first_name" label="Ad" placeholder="Ad" />

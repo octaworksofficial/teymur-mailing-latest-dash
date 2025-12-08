@@ -168,16 +168,16 @@ router.post('/', async (req, res) => {
       from_name || 'Email Otomasyon Platformu',
       from_email || 'noreply@example.com',
       reply_to || null,
-      cc_emails || [],
-      bcc_emails || [],
+      cc_emails || null, // TEXT[] - PostgreSQL handles array directly
+      bcc_emails || null, // TEXT[] - PostgreSQL handles array directly
       priority || 'normal',
       track_opens !== undefined ? track_opens : true,
       track_clicks !== undefined ? track_clicks : true,
-      available_variables || [],
-      attachments || [],
-      design_json || null,
+      JSON.stringify(available_variables || []), // JSONB
+      JSON.stringify(attachments || []), // JSONB
+      design_json ? JSON.stringify(design_json) : null,
       thumbnail_url || null,
-      tags || [],
+      tags || null, // TEXT[] - PostgreSQL handles array directly
       language || 'tr',
       status || 'draft',
       is_default || false,
@@ -192,7 +192,41 @@ router.post('/', async (req, res) => {
     });
   } catch (error) {
     console.error('Create template error:', error);
-    res.status(500).json({ success: false, message: error.message });
+    
+    // Kullanıcı dostu hata mesajları
+    let userMessage = 'Şablon oluşturulurken bir hata oluştu';
+    
+    if (error.code === '23505') {
+      // Duplicate key hatası
+      if (error.constraint === 'email_templates_name_key') {
+        userMessage = 'Bu isimde bir şablon zaten mevcut. Lütfen farklı bir şablon adı girin.';
+      } else {
+        userMessage = 'Bu kayıt zaten mevcut.';
+      }
+    } else if (error.code === '23514') {
+      // Check constraint hatası
+      if (error.constraint === 'valid_category') {
+        userMessage = 'Geçersiz kategori seçildi. Lütfen listeden bir kategori seçin.';
+      } else if (error.constraint === 'valid_priority') {
+        userMessage = 'Geçersiz öncelik seçildi.';
+      } else if (error.constraint === 'valid_status') {
+        userMessage = 'Geçersiz durum seçildi.';
+      } else {
+        userMessage = 'Girilen veriler geçerli değil: ' + (error.constraint || '');
+      }
+    } else if (error.code === '23502') {
+      // Not null constraint hatası
+      userMessage = 'Zorunlu alanlar eksik. Lütfen tüm zorunlu alanları doldurun.';
+    } else if (error.code === '22001') {
+      // String too long
+      userMessage = 'Girilen metin çok uzun. Lütfen daha kısa bir değer girin.';
+    }
+    
+    res.status(400).json({ 
+      success: false, 
+      message: userMessage,
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 
@@ -267,16 +301,16 @@ router.put('/:id', async (req, res) => {
       from_name,
       from_email,
       reply_to,
-      cc_emails,
-      bcc_emails,
+      cc_emails || null,
+      bcc_emails || null,
       priority,
       track_opens,
       track_clicks,
-      available_variables,
-      attachments,
-      design_json,
+      available_variables ? JSON.stringify(available_variables) : null,
+      attachments ? JSON.stringify(attachments) : null,
+      design_json ? JSON.stringify(design_json) : null,
       thumbnail_url,
-      tags,
+      tags || null,
       language,
       status,
       is_default,
@@ -296,7 +330,37 @@ router.put('/:id', async (req, res) => {
     });
   } catch (error) {
     console.error('Update template error:', error);
-    res.status(500).json({ success: false, message: error.message });
+    
+    // Kullanıcı dostu hata mesajları
+    let userMessage = 'Şablon güncellenirken bir hata oluştu';
+    
+    if (error.code === '23505') {
+      if (error.constraint === 'email_templates_name_key') {
+        userMessage = 'Bu isimde bir şablon zaten mevcut. Lütfen farklı bir şablon adı girin.';
+      } else {
+        userMessage = 'Bu kayıt zaten mevcut.';
+      }
+    } else if (error.code === '23514') {
+      if (error.constraint === 'valid_category') {
+        userMessage = 'Geçersiz kategori seçildi. Lütfen listeden bir kategori seçin.';
+      } else if (error.constraint === 'valid_priority') {
+        userMessage = 'Geçersiz öncelik seçildi.';
+      } else if (error.constraint === 'valid_status') {
+        userMessage = 'Geçersiz durum seçildi.';
+      } else {
+        userMessage = 'Girilen veriler geçerli değil: ' + (error.constraint || '');
+      }
+    } else if (error.code === '23502') {
+      userMessage = 'Zorunlu alanlar eksik. Lütfen tüm zorunlu alanları doldurun.';
+    } else if (error.code === '22001') {
+      userMessage = 'Girilen metin çok uzun. Lütfen daha kısa bir değer girin.';
+    }
+    
+    res.status(400).json({ 
+      success: false, 
+      message: userMessage,
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 

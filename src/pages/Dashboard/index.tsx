@@ -2,16 +2,31 @@ import { Column } from '@ant-design/charts';
 import {
   ArrowDownOutlined,
   ArrowUpOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
   EyeOutlined,
   FileTextOutlined,
   MailOutlined,
+  PauseCircleOutlined,
+  PlayCircleOutlined,
   ReloadOutlined,
   SendOutlined,
   ThunderboltOutlined,
   UserOutlined,
 } from '@ant-design/icons';
 import { PageContainer } from '@ant-design/pro-components';
-import { Card, Col, Row, Spin, Statistic, Table, Tag } from 'antd';
+import {
+  Card,
+  Col,
+  Progress,
+  Row,
+  Spin,
+  Statistic,
+  Table,
+  Tag,
+  Tooltip,
+  Typography,
+} from 'antd';
 import React, { useEffect, useState } from 'react';
 import { getCampaignStats } from '@/services/campaigns';
 import { getContactStats } from '@/services/contacts';
@@ -107,41 +122,176 @@ const Dashboard: React.FC = () => {
     },
   };
 
+  // Durum renkleri ve ikonları
+  const getStatusConfig = (status: string) => {
+    const configs: Record<
+      string,
+      { color: string; icon: React.ReactNode; text: string }
+    > = {
+      active: { color: 'green', icon: <PlayCircleOutlined />, text: 'Aktif' },
+      running: {
+        color: 'green',
+        icon: <PlayCircleOutlined />,
+        text: 'Çalışıyor',
+      },
+      scheduled: {
+        color: 'blue',
+        icon: <ClockCircleOutlined />,
+        text: 'Zamanlanmış',
+      },
+      paused: {
+        color: 'orange',
+        icon: <PauseCircleOutlined />,
+        text: 'Duraklatıldı',
+      },
+      completed: {
+        color: 'default',
+        icon: <CheckCircleOutlined />,
+        text: 'Tamamlandı',
+      },
+      draft: { color: 'default', icon: <FileTextOutlined />, text: 'Taslak' },
+    };
+    return configs[status] || { color: 'default', icon: null, text: status };
+  };
+
   const columns = [
     {
-      title: 'Kampanya Adı',
+      title: 'Kampanya',
       dataIndex: 'name',
       key: 'name',
+      width: 200,
+      ellipsis: true,
+      render: (name: string, record: ActiveCampaign) => (
+        <div>
+          <Typography.Text
+            strong
+            ellipsis
+            style={{ display: 'block', maxWidth: 180 }}
+          >
+            {name}
+          </Typography.Text>
+          {record.templateName && record.templateName !== '-' && (
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              Şablon: {record.templateName}
+            </Typography.Text>
+          )}
+        </div>
+      ),
     },
     {
       title: 'Durum',
       dataIndex: 'status',
       key: 'status',
-      render: (status: string) => (
-        <Tag color={status === 'running' ? 'green' : 'blue'}>
-          {status === 'running' ? 'ÇALIŞIYOR' : 'ZAMANLANMIŞ'}
-        </Tag>
+      width: 120,
+      render: (status: string) => {
+        const config = getStatusConfig(status);
+        return (
+          <Tag icon={config.icon} color={config.color}>
+            {config.text}
+          </Tag>
+        );
+      },
+    },
+    {
+      title: 'Alıcılar',
+      dataIndex: 'recipients',
+      key: 'recipients',
+      width: 80,
+      align: 'center' as const,
+      render: (recipients: number) => (
+        <Tooltip title="Toplam alıcı sayısı">
+          <span>
+            <UserOutlined style={{ marginRight: 4 }} />
+            {recipients || 0}
+          </span>
+        </Tooltip>
       ),
     },
     {
       title: 'Gönderilen',
       dataIndex: 'sent',
       key: 'sent',
+      width: 90,
+      align: 'center' as const,
+      render: (sent: number) => (
+        <Tooltip title="Gönderilen email sayısı">
+          <span>
+            <SendOutlined style={{ marginRight: 4, color: '#52c41a' }} />
+            {sent || 0}
+          </span>
+        </Tooltip>
+      ),
     },
     {
       title: 'Açılan',
       dataIndex: 'opened',
       key: 'opened',
+      width: 80,
+      align: 'center' as const,
+      render: (opened: number) => (
+        <Tooltip title="Açılan email sayısı">
+          <span>
+            <EyeOutlined style={{ marginRight: 4, color: '#1890ff' }} />
+            {opened || 0}
+          </span>
+        </Tooltip>
+      ),
     },
     {
       title: 'Tıklanan',
       dataIndex: 'clicked',
       key: 'clicked',
+      width: 80,
+      align: 'center' as const,
+      render: (clicked: number) => (
+        <Tooltip title="Tıklanan link sayısı">
+          <span>
+            <MailOutlined style={{ marginRight: 4, color: '#faad14' }} />
+            {clicked || 0}
+          </span>
+        </Tooltip>
+      ),
     },
     {
       title: 'Açılma Oranı',
       dataIndex: 'openRate',
       key: 'openRate',
+      width: 100,
+      align: 'center' as const,
+      render: (rate: string) => {
+        const numRate = parseFloat(rate) || 0;
+        let color = '#ff4d4f';
+        if (numRate >= 30) color = '#52c41a';
+        else if (numRate >= 15) color = '#faad14';
+        return (
+          <Typography.Text style={{ color, fontWeight: 600 }}>
+            {rate || '0.0%'}
+          </Typography.Text>
+        );
+      },
+    },
+    {
+      title: 'İlerleme',
+      dataIndex: 'progress',
+      key: 'progress',
+      width: 140,
+      render: (progress: number, record: ActiveCampaign) => {
+        const sent = record.sent || 0;
+        const recipients = record.recipients || 0;
+        return (
+          <Tooltip title={`${sent} / ${recipients} alıcıya gönderildi`}>
+            <Progress
+              percent={progress || 0}
+              size="small"
+              status={progress >= 100 ? 'success' : 'active'}
+              strokeColor={{
+                '0%': '#108ee9',
+                '100%': '#87d068',
+              }}
+            />
+          </Tooltip>
+        );
+      },
     },
   ];
 

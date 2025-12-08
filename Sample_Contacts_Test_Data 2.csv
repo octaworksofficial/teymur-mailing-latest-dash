@@ -1,0 +1,13 @@
+Name,Email,Company,Phone,Position
+John Doe,john.doe@testcompany.com,Test Company Ltd,+90 555 123 4567,Marketing Manager
+Jane Smith,jane.smith@example.org,Example Organization,+90 555 234 5678,Sales Director
+Michael Johnson,m.johnson@techcorp.com,Tech Corporation,+90 555 345 6789,CTO
+Sarah Williams,sarah.w@startup.co,Startup Co,+90 555 456 7890,Founder
+David Brown,david.brown@enterprise.net,Enterprise Solutions,+90 555 567 8901,Product Manager
+Lisa Garcia,lisa.garcia@consulting.com,Garcia Consulting,+90 555 678 9012,Senior Consultant
+Robert Miller,robert@miller-law.com,Miller Law Firm,+90 555 789 0123,Partner
+Emma Davis,emma.davis@creative.agency,Creative Agency,+90 555 890 1234,Creative Director
+James Wilson,james.wilson@finance.co,Finance Corp,+90 555 901 2345,CFO
+Maria Rodriguez,maria@restaurant.com,Rodriguez Restaurant,+90 555 012 3456,Owner
+Test User,tester@cerilas.com,CERİLAS,+90 555 111 2222,QA Tester
+Invalid Email,invalid-email,Test Company,+90 555 999 8888,Test Position

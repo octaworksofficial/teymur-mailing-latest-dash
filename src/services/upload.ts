@@ -24,11 +24,7 @@ export async function uploadFile(file: File): Promise<UploadedFile> {
   const formData = new FormData();
   formData.append('file', file);
 
-  const response = await axios.post<UploadResponse>(API_URL, formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
+  const response = await axios.post<UploadResponse>(API_URL, formData);
 
   if (!response.data.success) {
     throw new Error(response.data.message);

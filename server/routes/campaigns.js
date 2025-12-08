@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../db');
+const { syncCampaignSchedules } = require('../utils/scheduleUtils');
 
 function normalizeTemplateSequence(sequence) {
   if (!sequence) {
@@ -231,14 +232,23 @@ router.post('/', async (req, res) => {
     ];
 
     const result = await pool.query(query, values);
+    const createdCampaign = result.rows[0];
 
     if (Object.keys(templateCounts).length > 0) {
       await applyTemplateUsageDiff(templateCounts);
     }
 
+    // Schedule tablosunu senkronize et (recurring/special_day için)
+    try {
+      await syncCampaignSchedules(createdCampaign.id, template_sequence);
+    } catch (syncError) {
+      console.warn('Schedule sync warning:', syncError.message);
+      // Schedule sync hatası kampanya oluşturmayı engellemez
+    }
+
     res.status(201).json({
       success: true,
-      data: result.rows[0],
+      data: createdCampaign,
       message: 'Kampanya başarıyla oluşturuldu',
     });
   } catch (error) {
@@ -341,6 +351,14 @@ router.put('/:id', async (req, res) => {
 
     if (Object.keys(usageDiff).length > 0) {
       await applyTemplateUsageDiff(usageDiff);
+    }
+
+    // Schedule tablosunu senkronize et (recurring/special_day için)
+    try {
+      await syncCampaignSchedules(parseInt(id), template_sequence);
+    } catch (syncError) {
+      console.warn('Schedule sync warning:', syncError.message);
+      // Schedule sync hatası kampanya güncellemeyi engellemez
     }
 
     res.json({

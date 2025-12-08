@@ -1,20 +1,28 @@
-import React, { useState } from 'react';
-import { Upload, Button, List, message, Progress, Typography, Space, Tooltip } from 'antd';
 import {
-  PaperClipOutlined,
   DeleteOutlined,
+  DownloadOutlined,
+  FileExcelOutlined,
+  FileImageOutlined,
   FileOutlined,
   FilePdfOutlined,
-  FileWordOutlined,
-  FileExcelOutlined,
   FilePptOutlined,
-  FileImageOutlined,
+  FileWordOutlined,
   FileZipOutlined,
-  DownloadOutlined,
+  PaperClipOutlined,
   UploadOutlined,
 } from '@ant-design/icons';
-import type { UploadFile, UploadProps } from 'antd/es/upload/interface';
-import { uploadFile, deleteFile, type UploadedFile } from '@/services/upload';
+import {
+  Button,
+  List,
+  message,
+  Progress,
+  Tooltip,
+  Typography,
+  Upload,
+} from 'antd';
+import type { UploadProps } from 'antd/es/upload/interface';
+import React, { useState } from 'react';
+import { deleteFile, type UploadedFile, uploadFile } from '@/services/upload';
 import './AttachmentUploader.less';
 
 const { Text } = Typography;
@@ -29,12 +37,18 @@ interface AttachmentUploaderProps {
 
 // Dosya türüne göre ikon seç
 const getFileIcon = (type: string) => {
-  if (type.includes('pdf')) return <FilePdfOutlined style={{ color: '#ff4d4f' }} />;
-  if (type.includes('word') || type.includes('document')) return <FileWordOutlined style={{ color: '#1890ff' }} />;
-  if (type.includes('excel') || type.includes('spreadsheet')) return <FileExcelOutlined style={{ color: '#52c41a' }} />;
-  if (type.includes('powerpoint') || type.includes('presentation')) return <FilePptOutlined style={{ color: '#fa8c16' }} />;
-  if (type.includes('image')) return <FileImageOutlined style={{ color: '#722ed1' }} />;
-  if (type.includes('zip') || type.includes('rar') || type.includes('7z')) return <FileZipOutlined style={{ color: '#faad14' }} />;
+  if (type.includes('pdf'))
+    return <FilePdfOutlined style={{ color: '#ff4d4f' }} />;
+  if (type.includes('word') || type.includes('document'))
+    return <FileWordOutlined style={{ color: '#1890ff' }} />;
+  if (type.includes('excel') || type.includes('spreadsheet'))
+    return <FileExcelOutlined style={{ color: '#52c41a' }} />;
+  if (type.includes('powerpoint') || type.includes('presentation'))
+    return <FilePptOutlined style={{ color: '#fa8c16' }} />;
+  if (type.includes('image'))
+    return <FileImageOutlined style={{ color: '#722ed1' }} />;
+  if (type.includes('zip') || type.includes('rar') || type.includes('7z'))
+    return <FileZipOutlined style={{ color: '#faad14' }} />;
   return <FileOutlined style={{ color: '#8c8c8c' }} />;
 };
 
@@ -49,7 +63,7 @@ const AttachmentUploader: React.FC<AttachmentUploaderProps> = ({
   const [uploadProgress, setUploadProgress] = useState(0);
 
   // value null veya undefined ise boş array kullan
-  const files = value || [];
+  const files = Array.isArray(value) ? value : [];
 
   const handleUpload: UploadProps['customRequest'] = async (options) => {
     const { file, onSuccess, onError } = options;
@@ -85,17 +99,21 @@ const AttachmentUploader: React.FC<AttachmentUploaderProps> = ({
       }, 100);
 
       const result = await uploadFile(uploadedFile);
-      
+
       clearInterval(progressInterval);
       setUploadProgress(100);
 
       const newFiles = [...files, result];
       onChange?.(newFiles);
-      
+
       message.success(`${uploadedFile.name} başarıyla yüklendi`);
       onSuccess?.(result);
     } catch (error: any) {
-      message.error(error.message || 'Dosya yüklenemedi');
+      console.error('Upload error:', error);
+      console.error('Error response:', error.response);
+      message.error(
+        error.response?.data?.message || error.message || 'Dosya yüklenemedi',
+      );
       onError?.(error);
     } finally {
       setUploading(false);
@@ -122,8 +140,8 @@ const AttachmentUploader: React.FC<AttachmentUploaderProps> = ({
         multiple
         disabled={disabled || files.length >= maxCount}
       >
-        <Button 
-          icon={<UploadOutlined />} 
+        <Button
+          icon={<UploadOutlined />}
           loading={uploading}
           disabled={disabled || files.length >= maxCount}
         >
@@ -133,10 +151,10 @@ const AttachmentUploader: React.FC<AttachmentUploaderProps> = ({
       </Upload>
 
       {uploading && uploadProgress > 0 && (
-        <Progress 
-          percent={uploadProgress} 
-          size="small" 
-          style={{ width: 200, marginLeft: 16, display: 'inline-block' }} 
+        <Progress
+          percent={uploadProgress}
+          size="small"
+          style={{ width: 200, marginLeft: 16, display: 'inline-block' }}
         />
       )}
 

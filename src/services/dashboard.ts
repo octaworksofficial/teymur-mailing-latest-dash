@@ -23,12 +23,20 @@ export interface WeeklyEmailData {
 
 export interface ActiveCampaign {
   id: number;
+  key: string;
   name: string;
+  templateName?: string;
   status: string;
+  recipients: number;
   sent: number;
   opened: number;
   clicked: number;
+  replied?: number;
   openRate: string;
+  clickRate?: string;
+  progress: number;
+  nextSendDate?: string;
+  createdAt?: string;
 }
 
 export interface DashboardData {
