@@ -123,15 +123,22 @@ const EmailEditor: React.FC<EmailEditorProps> = ({
       const clipboardData = e.clipboardData;
       if (!clipboardData) return;
 
+      // Debug: Clipboard'da ne var?
+      console.log('📋 Clipboard types:', Array.from(clipboardData.types));
+      
       // Pano'dan görselleri kontrol et
       const items = clipboardData.items;
       const imageItems: DataTransferItem[] = [];
+      const allItems: string[] = [];
 
       for (let i = 0; i < items.length; i++) {
+        allItems.push(`${items[i].kind}: ${items[i].type}`);
         if (items[i].type.indexOf('image') !== -1) {
           imageItems.push(items[i]);
         }
       }
+      
+      console.log('📋 Clipboard items:', allItems);
 
       // Eğer doğrudan görsel dosyası yapıştırılıyorsa
       if (imageItems.length > 0) {
@@ -167,6 +174,12 @@ const EmailEditor: React.FC<EmailEditorProps> = ({
 
       // HTML içinde görseller varsa işle (base64 veya harici URL)
       const html = clipboardData.getData('text/html');
+      
+      // Debug: Hangi HTML geldiğini logla
+      if (html && html.includes('<img')) {
+        console.log('📋 Paste HTML contains images');
+      }
+      
       if (html && (html.includes('data:image') || html.includes('<img'))) {
         e.preventDefault();
         e.stopPropagation();
@@ -177,23 +190,37 @@ const EmailEditor: React.FC<EmailEditorProps> = ({
         const base64Regex = /data:image\/[^;]+;base64,[^"'\s]+/g;
         const base64Images = html.match(base64Regex) || [];
 
-        // Harici URL görselleri bul
+        // Harici URL görselleri bul (http, https, cid hariç)
         const imgSrcRegex = /<img[^>]+src=["']([^"']+)["'][^>]*>/gi;
         const externalUrls: string[] = [];
+        const cidImages: string[] = [];
         let match: RegExpExecArray | null = imgSrcRegex.exec(html);
         while (match !== null) {
           const src = match[1];
-          // Base64 olmayan ve http/https ile başlayan URL'leri al
-          if (
-            !src.startsWith('data:') &&
-            (src.startsWith('http://') || src.startsWith('https://'))
-          ) {
-            externalUrls.push(src);
+          // Base64 olmayan URL'leri kategorize et
+          if (!src.startsWith('data:')) {
+            if (src.startsWith('http://') || src.startsWith('https://')) {
+              externalUrls.push(src);
+            } else if (src.startsWith('cid:')) {
+              // CID (Content-ID) görselleri - email embedded images
+              cidImages.push(src);
+              console.log('⚠️ CID image detected (embedded):', src);
+            } else if (src.startsWith('blob:')) {
+              console.log('⚠️ Blob URL detected:', src);
+            }
           }
           match = imgSrcRegex.exec(html);
         }
 
         const totalImages = base64Images.length + externalUrls.length;
+        
+        // CID görselleri için uyarı göster
+        if (cidImages.length > 0 && totalImages === 0) {
+          message.warning({
+            content: `${cidImages.length} gömülü görsel algılandı. Lütfen görselleri ayrı ayrı kopyalayıp yapıştırın.`,
+            duration: 5,
+          });
+        }
 
         if (totalImages > 0) {
           message.loading({
