@@ -4,6 +4,7 @@ const { pool } = require('../db');
 const logStream = require('./logStream');
 const { addTrackingToEmail, personalizeEmail } = require('../utils/emailTracking');
 const { getPendingSchedules, updateScheduleAfterSend } = require('../utils/scheduleUtils');
+const { makeOutlookCompatible } = require('../utils/vmlFallback');
 
 // n8n webhook URL - .env'den alınacak
 const N8N_WEBHOOK_URL = process.env.N8N_WEBHOOK_URL || 'https://n8n-production-14b9.up.railway.app/webhook/send-email';
@@ -95,14 +96,17 @@ function replaceTemplateVariables(text, contact) {
 
 /**
  * n8n webhook ile email gönder
- * NOT: HTML artık tracking ve personalization ile geldiği için burada işleme yapmıyoruz
+ * HTML'e Outlook VML fallback eklenir
  */
 async function sendEmail(to, subject, htmlBody, contact, trackingId = null, campaignId = null, contactId = null, attachments = null) {
   try {
+    // Outlook uyumluluğu için VML fallback ekle
+    const outlookCompatibleHtml = makeOutlookCompatible(htmlBody);
+    
     const payload = {
       to,
       subject,
-      html_body: htmlBody,
+      html_body: outlookCompatibleHtml,
       sender_name: SENDER_NAME,
     };
     

@@ -64,6 +64,67 @@ const EmailEditor: React.FC<EmailEditorProps> = ({
 }) => {
   const quillRef = useRef<ReactQuill>(null);
 
+  /**
+   * Outlook/Word HTML'ini temizler
+   * Office-specific tag'leri, class'ları ve conditional comment'leri kaldırır
+   */
+  const cleanOutlookHtml = useCallback((html: string): string => {
+    let cleaned = html;
+
+    // 1. MSO conditional comments'i kaldır
+    // <!--[if gte mso 9]>...<![endif]-->
+    cleaned = cleaned.replace(/<!--\[if[^\]]*\]>[\s\S]*?<!\[endif\]-->/gi, '');
+    cleaned = cleaned.replace(/<!--\[if[^\]]*\]>/gi, '');
+    cleaned = cleaned.replace(/<!\[endif\]-->/gi, '');
+
+    // 2. XML namespace declarations kaldır
+    cleaned = cleaned.replace(/<\?xml[^>]*>/gi, '');
+    cleaned = cleaned.replace(/<o:[^>]*>[\s\S]*?<\/o:[^>]*>/gi, '');
+    cleaned = cleaned.replace(/<v:[^>]*>[\s\S]*?<\/v:[^>]*>/gi, '');
+    cleaned = cleaned.replace(/<w:[^>]*>[\s\S]*?<\/w:[^>]*>/gi, '');
+
+    // 3. Office-specific style'ları kaldır
+    cleaned = cleaned.replace(/mso-[^;"'\s]+:[^;"']+;?/gi, '');
+    cleaned = cleaned.replace(/margin-bottom:\s*\.0001pt;?/gi, '');
+
+    // 4. Office class'larını kaldır (MsoNormal, MsoListParagraph vb.)
+    cleaned = cleaned.replace(/class="[^"]*Mso[^"]*"/gi, '');
+    cleaned = cleaned.replace(/class='[^']*Mso[^']*'/gi, '');
+
+    // 5. Boş style attribute'larını kaldır
+    cleaned = cleaned.replace(/style="\s*"/gi, '');
+    cleaned = cleaned.replace(/style='\s*'/gi, '');
+
+    // 6. Word Section div'lerini kaldır ama içeriği koru
+    cleaned = cleaned.replace(
+      /<div[^>]*class="?WordSection\d+"?[^>]*>/gi,
+      '<div>',
+    );
+
+    // 7. Gereksiz span'ları temizle (sadece boş olanları)
+    cleaned = cleaned.replace(/<span[^>]*>\s*<\/span>/gi, '');
+
+    // 8. Birden fazla boşluğu tek boşluğa indir
+    cleaned = cleaned.replace(/&nbsp;(&nbsp;)+/gi, '&nbsp;');
+
+    // 9. Boş paragrafları temizle
+    cleaned = cleaned.replace(/<p[^>]*>\s*<\/p>/gi, '');
+
+    // 10. HTML ve BODY tag'lerini kaldır (sadece içeriği al)
+    const bodyMatch = cleaned.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+    if (bodyMatch) {
+      cleaned = bodyMatch[1];
+    }
+
+    // 11. HEAD tag'ini tamamen kaldır
+    cleaned = cleaned.replace(/<head>[\s\S]*<\/head>/gi, '');
+
+    // 12. HTML tag'ini kaldır
+    cleaned = cleaned.replace(/<\/?html[^>]*>/gi, '');
+
+    return cleaned.trim();
+  }, []);
+
   // Görsel yükleme fonksiyonu
   const uploadImageToServer = useCallback(
     async (file: File): Promise<string | null> => {
@@ -212,7 +273,18 @@ const EmailEditor: React.FC<EmailEditorProps> = ({
       }
 
       // HTML içinde görseller varsa işle (base64 veya harici URL)
-      const html = clipboardData.getData('text/html');
+      let html = clipboardData.getData('text/html');
+
+      // Outlook/Word HTML'ini temizle
+      if (
+        html &&
+        (html.includes('mso-') ||
+          html.includes('MsoNormal') ||
+          html.includes('WordSection'))
+      ) {
+        console.log('📋 Outlook/Word HTML detected, cleaning...');
+        html = cleanOutlookHtml(html);
+      }
 
       // Debug: Hangi HTML geldiğini logla
       if (html && html.includes('<img')) {
@@ -320,6 +392,22 @@ const EmailEditor: React.FC<EmailEditorProps> = ({
         );
         return;
       }
+
+      // Görsel olmayan ama Outlook/Word HTML'i varsa temizle
+      if (
+        html &&
+        (html.includes('mso-') ||
+          html.includes('MsoNormal') ||
+          html.includes('WordSection'))
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('📋 Cleaning Outlook HTML (no images)');
+        const cleanedHtml = cleanOutlookHtml(html);
+        const range = quill.getSelection(true);
+        quill.clipboard.dangerouslyPasteHTML(range.index, cleanedHtml, 'user');
+        return;
+      }
     };
 
     const editorElement = quill.root;
@@ -334,7 +422,7 @@ const EmailEditor: React.FC<EmailEditorProps> = ({
         handlePaste as unknown as EventListener,
       );
     };
-  }, [readOnly, uploadImageToServer, base64ToFile]);
+  }, [readOnly, uploadImageToServer, base64ToFile, cleanOutlookHtml]);
 
   // Quill editör modülleri
   const modules = useMemo(
