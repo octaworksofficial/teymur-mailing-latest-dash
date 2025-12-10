@@ -7,5 +7,9 @@ export default function access(
   const { currentUser } = initialState ?? {};
   return {
     canAdmin: currentUser && currentUser.access === 'admin',
+    canSuperAdmin: currentUser && currentUser.role === 'super_admin',
+    canOrgAdmin:
+      currentUser &&
+      (currentUser.role === 'super_admin' || currentUser.role === 'org_admin'),
   };
 }

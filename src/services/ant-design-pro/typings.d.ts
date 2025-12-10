@@ -21,6 +21,12 @@ declare namespace API {
     };
     address?: string;
     phone?: string;
+    // JWT Auth fields
+    role?: 'super_admin' | 'org_admin' | 'user';
+    organizationId?: number;
+    organizationName?: string;
+    status?: 'active' | 'inactive' | 'suspended';
+    isVerified?: boolean;
   };
 
   type LoginResult = {

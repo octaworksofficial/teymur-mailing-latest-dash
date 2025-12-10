@@ -125,8 +125,47 @@ const EmailEditor: React.FC<EmailEditorProps> = ({
 
       // Debug: Clipboard'da ne var?
       console.log('📋 Clipboard types:', Array.from(clipboardData.types));
-      
-      // Pano'dan görselleri kontrol et
+
+      // Files kontrolü (Outlook bazen files olarak gönderir)
+      const files = clipboardData.files;
+      if (files && files.length > 0) {
+        console.log('📁 Clipboard files:', files.length);
+        const imageFiles: File[] = [];
+        for (let i = 0; i < files.length; i++) {
+          console.log(`  File ${i}: ${files[i].name} (${files[i].type})`);
+          if (files[i].type.startsWith('image/')) {
+            imageFiles.push(files[i]);
+          }
+        }
+
+        // Görsel dosyaları yükle
+        if (imageFiles.length > 0) {
+          e.preventDefault();
+          e.stopPropagation();
+
+          message.loading({
+            content: `${imageFiles.length} görsel yükleniyor...`,
+            key: 'imageUpload',
+          });
+
+          for (const file of imageFiles) {
+            const url = await uploadImageToServer(file);
+            if (url) {
+              const range = quill.getSelection(true);
+              quill.insertEmbed(range.index, 'image', url, 'user');
+              quill.setSelection(range.index + 1, 0);
+            }
+          }
+
+          message.success({
+            content: 'Görseller yüklendi',
+            key: 'imageUpload',
+          });
+          return;
+        }
+      }
+
+      // Pano'dan görselleri kontrol et (DataTransferItemList)
       const items = clipboardData.items;
       const imageItems: DataTransferItem[] = [];
       const allItems: string[] = [];
@@ -137,7 +176,7 @@ const EmailEditor: React.FC<EmailEditorProps> = ({
           imageItems.push(items[i]);
         }
       }
-      
+
       console.log('📋 Clipboard items:', allItems);
 
       // Eğer doğrudan görsel dosyası yapıştırılıyorsa
@@ -174,12 +213,12 @@ const EmailEditor: React.FC<EmailEditorProps> = ({
 
       // HTML içinde görseller varsa işle (base64 veya harici URL)
       const html = clipboardData.getData('text/html');
-      
+
       // Debug: Hangi HTML geldiğini logla
       if (html && html.includes('<img')) {
         console.log('📋 Paste HTML contains images');
       }
-      
+
       if (html && (html.includes('data:image') || html.includes('<img'))) {
         e.preventDefault();
         e.stopPropagation();
@@ -213,7 +252,7 @@ const EmailEditor: React.FC<EmailEditorProps> = ({
         }
 
         const totalImages = base64Images.length + externalUrls.length;
-        
+
         // CID görselleri için uyarı göster
         if (cidImages.length > 0 && totalImages === 0) {
           message.warning({

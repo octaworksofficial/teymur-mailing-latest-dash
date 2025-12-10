@@ -1,18 +1,30 @@
-import { LockOutlined, MobileOutlined, UserOutlined } from '@ant-design/icons';
+import {
+  LockOutlined,
+  MailOutlined,
+  MobileOutlined,
+  UserOutlined,
+} from '@ant-design/icons';
 import {
   LoginForm,
   ProFormCaptcha,
   ProFormCheckbox,
   ProFormText,
 } from '@ant-design/pro-components';
-import { FormattedMessage, Helmet, useIntl, useModel } from '@umijs/max';
+import {
+  FormattedMessage,
+  Helmet,
+  history,
+  useIntl,
+  useModel,
+} from '@umijs/max';
 import { Alert, App, Tabs } from 'antd';
 import { createStyles } from 'antd-style';
 import React, { useState } from 'react';
 import { flushSync } from 'react-dom';
 import { Footer } from '@/components';
-import { login } from '@/services/ant-design-pro/api';
+import { login as oldLogin } from '@/services/ant-design-pro/api';
 import { getFakeCaptcha } from '@/services/ant-design-pro/login';
+import { login as newLogin, setCurrentUser, setTokens } from '@/services/auth';
 import Settings from '../../../../config/defaultSettings';
 
 const useStyles = createStyles(({ token }) => {
@@ -92,26 +104,66 @@ const Login: React.FC = () => {
 
   const handleSubmit = async (values: API.LoginParams) => {
     try {
-      // 登录
-      const msg = await login({ ...values, type });
+      // Önce yeni JWT tabanlı login dene
+      if (type === 'account' && values.username?.includes('@')) {
+        // Email ile giriş - yeni sistem
+        const result = await newLogin({
+          email: values.username,
+          password: values.password || '',
+        });
+
+        if (result.success && result.data) {
+          const defaultLoginSuccessMessage = intl.formatMessage({
+            id: 'pages.login.success',
+            defaultMessage: 'Giriş başarılı!',
+          });
+          message.success(defaultLoginSuccessMessage);
+          await fetchUserInfo();
+          const urlParams = new URL(window.location.href).searchParams;
+          history.push(urlParams.get('redirect') || '/');
+          return;
+        }
+
+        // Hata durumu
+        setUserLoginState({
+          status: 'error',
+          type: 'account',
+        });
+        return;
+      }
+
+      // Eski sistem (username ile giriş veya mobile)
+      const msg = (await oldLogin({ ...values, type })) as API.LoginResult & {
+        accessToken?: string;
+        refreshToken?: string;
+        user?: { id: number; email: string; name: string; role: string };
+      };
       if (msg.status === 'ok') {
+        // Eğer eski login JWT token döndürdüyse kaydet
+        if (msg.accessToken && msg.refreshToken) {
+          setTokens(msg.accessToken, msg.refreshToken);
+          if (msg.user) {
+            setCurrentUser(msg.user as any);
+          }
+        }
+
         const defaultLoginSuccessMessage = intl.formatMessage({
           id: 'pages.login.success',
-          defaultMessage: '登录成功！',
+          defaultMessage: 'Giriş başarılı!',
         });
         message.success(defaultLoginSuccessMessage);
         await fetchUserInfo();
         const urlParams = new URL(window.location.href).searchParams;
-        window.location.href = urlParams.get('redirect') || '/';
+        history.push(urlParams.get('redirect') || '/');
         return;
       }
       console.log(msg);
-      // 如果失败去设置用户错误信息
+      // Hata durumunda kullanıcı hata bilgisi ayarla
       setUserLoginState(msg);
     } catch (error) {
       const defaultLoginFailureMessage = intl.formatMessage({
         id: 'pages.login.failure',
-        defaultMessage: '登录失败，请重试！',
+        defaultMessage: 'Giriş başarısız, lütfen tekrar deneyin!',
       });
       console.log(error);
       message.error(defaultLoginFailureMessage);
@@ -161,14 +213,14 @@ const Login: React.FC = () => {
                 key: 'account',
                 label: intl.formatMessage({
                   id: 'pages.login.accountLogin.tab',
-                  defaultMessage: '账户密码登录',
+                  defaultMessage: 'Email / Kullanıcı Adı ile Giriş',
                 }),
               },
               {
                 key: 'mobile',
                 label: intl.formatMessage({
                   id: 'pages.login.phoneLogin.tab',
-                  defaultMessage: '手机号登录',
+                  defaultMessage: 'Telefon ile Giriş',
                 }),
               },
             ]}
@@ -178,7 +230,7 @@ const Login: React.FC = () => {
             <LoginMessage
               content={intl.formatMessage({
                 id: 'pages.login.accountLogin.errorMessage',
-                defaultMessage: '账户或密码错误(admin/ant.design)',
+                defaultMessage: 'Email veya şifre hatalı',
               })}
             />
           )}
@@ -188,11 +240,11 @@ const Login: React.FC = () => {
                 name="username"
                 fieldProps={{
                   size: 'large',
-                  prefix: <UserOutlined />,
+                  prefix: <MailOutlined />,
                 }}
                 placeholder={intl.formatMessage({
                   id: 'pages.login.username.placeholder',
-                  defaultMessage: '用户名: admin or user',
+                  defaultMessage: 'Email adresi (örn: admin@cerilas.com)',
                 })}
                 rules={[
                   {
@@ -200,7 +252,7 @@ const Login: React.FC = () => {
                     message: (
                       <FormattedMessage
                         id="pages.login.username.required"
-                        defaultMessage="请输入用户名!"
+                        defaultMessage="Lütfen email adresinizi girin!"
                       />
                     ),
                   },
@@ -214,7 +266,7 @@ const Login: React.FC = () => {
                 }}
                 placeholder={intl.formatMessage({
                   id: 'pages.login.password.placeholder',
-                  defaultMessage: '密码: ant.design',
+                  defaultMessage: 'Şifre',
                 })}
                 rules={[
                   {
@@ -222,7 +274,7 @@ const Login: React.FC = () => {
                     message: (
                       <FormattedMessage
                         id="pages.login.password.required"
-                        defaultMessage="请输入密码！"
+                        defaultMessage="Lütfen şifrenizi girin!"
                       />
                     ),
                   },
@@ -232,7 +284,7 @@ const Login: React.FC = () => {
           )}
 
           {status === 'error' && loginType === 'mobile' && (
-            <LoginMessage content="验证码错误" />
+            <LoginMessage content="Doğrulama kodu hatalı" />
           )}
           {type === 'mobile' && (
             <>

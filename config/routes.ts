@@ -75,6 +75,28 @@
     hideInMenu: true,
   },
   {
+    path: '/admin',
+    name: 'admin',
+    icon: 'setting',
+    access: 'canSuperAdmin',
+    routes: [
+      {
+        path: '/admin',
+        redirect: '/admin/organizations',
+      },
+      {
+        path: '/admin/organizations',
+        name: 'organizations',
+        component: './Admin/Organizations',
+      },
+      {
+        path: '/admin/users',
+        name: 'users',
+        component: './Admin/Users',
+      },
+    ],
+  },
+  {
     path: '/',
     redirect: '/dashboard',
   },
