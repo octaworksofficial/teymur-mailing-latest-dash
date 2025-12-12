@@ -6,8 +6,8 @@ cmds = ["npm run build"]
 [phases.install]
 cmds = ["npm install --production=false"]
 
-[phases.start]
-cmd = "npm start"
+[start]
+cmd = "NODE_ENV=production node server/production.js"
 
 [variables]
 NODE_ENV = "production"
