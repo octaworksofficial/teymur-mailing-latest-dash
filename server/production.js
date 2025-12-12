@@ -8,32 +8,94 @@ require('dotenv').config();
 // Timezone'u Türkiye olarak ayarla
 process.env.TZ = 'Europe/Istanbul';
 
+console.log('========================================');
 console.log('🚀 Starting Teymur Mailing System...');
+console.log('========================================');
 console.log('📍 Environment:', process.env.NODE_ENV || 'development');
 console.log('🌍 Working Directory:', process.cwd());
+console.log('📂 __dirname:', __dirname);
+console.log('🔑 DATABASE_URL exists:', !!process.env.DATABASE_URL);
+console.log('🔑 JWT_SECRET exists:', !!process.env.JWT_SECRET);
+console.log('🔑 CORS_ORIGIN:', process.env.CORS_ORIGIN || 'not set');
 
 // Check if dist folder exists
 const distPath = path.join(__dirname, '../dist');
+console.log('📁 Checking dist path:', distPath);
+
 if (!fs.existsSync(distPath)) {
   console.error('❌ ERROR: dist/ folder not found!');
   console.error('📁 Expected path:', distPath);
   console.error('💡 Run "npm run build" first');
+  // List directory contents
+  try {
+    const parentDir = path.join(__dirname, '..');
+    console.log('📂 Parent directory contents:', fs.readdirSync(parentDir));
+  } catch (e) {
+    console.error('Could not list parent dir:', e.message);
+  }
   process.exit(1);
 } else {
   console.log('✅ dist/ folder found:', distPath);
+  try {
+    console.log('📂 dist/ contents:', fs.readdirSync(distPath).slice(0, 10), '...');
+  } catch (e) {}
 }
 
 // API Routes
-const authRouter = require('./routes/auth');
-const contactsRouter = require('./routes/contacts');
-const templatesRouter = require('./routes/templates');
-const campaignsRouter = require('./routes/campaigns');
-const dashboardRouter = require('./routes/dashboard');
-const logsRouter = require('./routes/logs');
-const companyInfoRouter = require('./routes/companyInfo');
-const trackingRouter = require('./routes/tracking');
-const uploadRouter = require('./routes/upload');
-const { startEmailScheduler } = require('./services/emailScheduler');
+console.log('📦 Loading API routes...');
+let authRouter, contactsRouter, templatesRouter, campaignsRouter;
+let dashboardRouter, logsRouter, companyInfoRouter, trackingRouter, uploadRouter;
+let startEmailScheduler;
+
+try {
+  console.log('  - Loading auth router...');
+  authRouter = require('./routes/auth');
+  console.log('  ✅ auth router loaded');
+  
+  console.log('  - Loading contacts router...');
+  contactsRouter = require('./routes/contacts');
+  console.log('  ✅ contacts router loaded');
+  
+  console.log('  - Loading templates router...');
+  templatesRouter = require('./routes/templates');
+  console.log('  ✅ templates router loaded');
+  
+  console.log('  - Loading campaigns router...');
+  campaignsRouter = require('./routes/campaigns');
+  console.log('  ✅ campaigns router loaded');
+  
+  console.log('  - Loading dashboard router...');
+  dashboardRouter = require('./routes/dashboard');
+  console.log('  ✅ dashboard router loaded');
+  
+  console.log('  - Loading logs router...');
+  logsRouter = require('./routes/logs');
+  console.log('  ✅ logs router loaded');
+  
+  console.log('  - Loading companyInfo router...');
+  companyInfoRouter = require('./routes/companyInfo');
+  console.log('  ✅ companyInfo router loaded');
+  
+  console.log('  - Loading tracking router...');
+  trackingRouter = require('./routes/tracking');
+  console.log('  ✅ tracking router loaded');
+  
+  console.log('  - Loading upload router...');
+  uploadRouter = require('./routes/upload');
+  console.log('  ✅ upload router loaded');
+  
+  console.log('  - Loading emailScheduler...');
+  const scheduler = require('./services/emailScheduler');
+  startEmailScheduler = scheduler.startEmailScheduler;
+  console.log('  ✅ emailScheduler loaded');
+  
+  console.log('✅ All routes loaded successfully!');
+} catch (error) {
+  console.error('❌ FATAL: Failed to load routes!');
+  console.error('Error:', error.message);
+  console.error('Stack:', error.stack);
+  process.exit(1);
+}
 
 const app = express();
 const PORT = process.env.PORT || 8080;
