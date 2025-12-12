@@ -36,7 +36,7 @@ export async function getInitialState(): Promise<{
     }
     return undefined;
   };
-  // 如果不是登录页面，执行
+  // Login sayfası değilse çalıştır
   const { location } = history;
   if (
     ![loginPath, '/user/register', '/user/register-result'].includes(
@@ -73,7 +73,7 @@ export const layout: RunTimeLayoutConfig = ({
     footerRender: () => <Footer />,
     onPageChange: () => {
       const { location } = history;
-      // 如果没有登录，重定向到 login
+      // Giriş yapılmamışsa login sayfasına yönlendir
       if (!initialState?.currentUser && location.pathname !== loginPath) {
         history.push(loginPath);
       }
@@ -105,9 +105,9 @@ export const layout: RunTimeLayoutConfig = ({
       </Link>,
     ],
     menuHeaderRender: undefined,
-    // 自定义 403 页面
+    // Özel 403 sayfası
     // unAccessible: <div>unAccessible</div>,
-    // 增加一个 loading 的状态
+    // Loading durumu
     childrenRender: (children) => {
       // if (initialState?.loading) return <PageLoading />;
       return (
@@ -134,8 +134,8 @@ export const layout: RunTimeLayoutConfig = ({
 };
 
 /**
- * @name request 配置，可以配置错误处理
- * 它基于 axios 和 ahooks 的 useRequest 提供了一套统一的网络请求和错误处理方案。
+ * Request yapılandırması - hata yönetimi dahil
+ * axios ve ahooks useRequest tabanlı ağ istekleri
  * @doc https://umijs.org/docs/max/request#配置
  */
 export const request: RequestConfig = {
