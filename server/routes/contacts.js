@@ -1,10 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../db');
+const { authenticateToken } = require('../middleware/auth');
 
-// GET /api/contacts - Tüm müşterileri listele (filtreleme ile)
+// Tüm contacts route'ları için authentication zorunlu
+router.use(authenticateToken);
+
+// GET /api/contacts - Tüm müşterileri listele (filtreleme ile) - SADECE KULLANICININ KENDİ VERİLERİ
 router.get('/', async (req, res) => {
   try {
+    const userId = req.user.id;
     const {
       page = 1,
       pageSize = 10,
@@ -25,9 +30,9 @@ router.get('/', async (req, res) => {
     } = req.query;
 
     const offset = (page - 1) * pageSize;
-    let query = 'SELECT * FROM contacts WHERE 1=1';
-    const params = [];
-    let paramIndex = 1;
+    let query = 'SELECT * FROM contacts WHERE user_id = $1';
+    const params = [userId];
+    let paramIndex = 2;
 
     // Helper: Virgülle ayrılmış string veya array'i array'e çevir
     const toArray = (val) => {
@@ -226,29 +231,30 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET /api/contacts/filter-options - Filtreleme için benzersiz değerleri getir
+// GET /api/contacts/filter-options - Filtreleme için benzersiz değerleri getir - SADECE KULLANICININ VERİLERİ
 router.get('/filter-options', async (req, res) => {
   try {
-    // Tüm filtrelenebilir alanlar için benzersiz değerleri al
-    // Not: importance_level integer olabilir, bu yüzden boş string kontrolü yapmıyoruz
+    const userId = req.user.id;
+    
+    // Tüm filtrelenebilir alanlar için benzersiz değerleri al - kullanıcıya özel
     const queries = {
-      salutation: `SELECT DISTINCT salutation FROM contacts WHERE salutation IS NOT NULL AND salutation != '' ORDER BY salutation`,
-      status: `SELECT DISTINCT status FROM contacts WHERE status IS NOT NULL AND status != '' ORDER BY status`,
-      subscription_status: `SELECT DISTINCT subscription_status FROM contacts WHERE subscription_status IS NOT NULL AND subscription_status != '' ORDER BY subscription_status`,
-      importance_level: `SELECT DISTINCT importance_level FROM contacts WHERE importance_level IS NOT NULL ORDER BY importance_level`,
-      customer_representative: `SELECT DISTINCT customer_representative FROM contacts WHERE customer_representative IS NOT NULL AND customer_representative != '' ORDER BY customer_representative`,
-      country: `SELECT DISTINCT country FROM contacts WHERE country IS NOT NULL AND country != '' ORDER BY country`,
-      state: `SELECT DISTINCT state FROM contacts WHERE state IS NOT NULL AND state != '' ORDER BY state`,
-      district: `SELECT DISTINCT district FROM contacts WHERE district IS NOT NULL AND district != '' ORDER BY district`,
-      company: `SELECT DISTINCT company FROM contacts WHERE company IS NOT NULL AND company != '' ORDER BY company LIMIT 100`,
-      position: `SELECT DISTINCT position FROM contacts WHERE position IS NOT NULL AND position != '' ORDER BY position LIMIT 100`,
-      source: `SELECT DISTINCT source FROM contacts WHERE source IS NOT NULL AND source != '' ORDER BY source`,
+      salutation: `SELECT DISTINCT salutation FROM contacts WHERE user_id = $1 AND salutation IS NOT NULL AND salutation != '' ORDER BY salutation`,
+      status: `SELECT DISTINCT status FROM contacts WHERE user_id = $1 AND status IS NOT NULL AND status != '' ORDER BY status`,
+      subscription_status: `SELECT DISTINCT subscription_status FROM contacts WHERE user_id = $1 AND subscription_status IS NOT NULL AND subscription_status != '' ORDER BY subscription_status`,
+      importance_level: `SELECT DISTINCT importance_level FROM contacts WHERE user_id = $1 AND importance_level IS NOT NULL ORDER BY importance_level`,
+      customer_representative: `SELECT DISTINCT customer_representative FROM contacts WHERE user_id = $1 AND customer_representative IS NOT NULL AND customer_representative != '' ORDER BY customer_representative`,
+      country: `SELECT DISTINCT country FROM contacts WHERE user_id = $1 AND country IS NOT NULL AND country != '' ORDER BY country`,
+      state: `SELECT DISTINCT state FROM contacts WHERE user_id = $1 AND state IS NOT NULL AND state != '' ORDER BY state`,
+      district: `SELECT DISTINCT district FROM contacts WHERE user_id = $1 AND district IS NOT NULL AND district != '' ORDER BY district`,
+      company: `SELECT DISTINCT company FROM contacts WHERE user_id = $1 AND company IS NOT NULL AND company != '' ORDER BY company LIMIT 100`,
+      position: `SELECT DISTINCT position FROM contacts WHERE user_id = $1 AND position IS NOT NULL AND position != '' ORDER BY position LIMIT 100`,
+      source: `SELECT DISTINCT source FROM contacts WHERE user_id = $1 AND source IS NOT NULL AND source != '' ORDER BY source`,
     };
 
     const results = {};
     
     for (const [field, query] of Object.entries(queries)) {
-      const result = await pool.query(query);
+      const result = await pool.query(query, [userId]);
       results[field] = result.rows.map(row => row[field]).filter(v => v);
     }
 
@@ -256,12 +262,12 @@ router.get('/filter-options', async (req, res) => {
     const tagsQuery = `
       SELECT DISTINCT unnest(tags) as tag 
       FROM contacts 
-      WHERE tags IS NOT NULL AND array_length(tags, 1) > 0 
+      WHERE user_id = $1 AND tags IS NOT NULL AND array_length(tags, 1) > 0 
       ORDER BY tag 
       LIMIT 100
     `;
     try {
-      const tagsResult = await pool.query(tagsQuery);
+      const tagsResult = await pool.query(tagsQuery, [userId]);
       results.tags = tagsResult.rows.map(row => row.tag).filter(v => v);
     } catch (e) {
       results.tags = [];
@@ -281,16 +287,17 @@ router.get('/filter-options', async (req, res) => {
   }
 });
 
-// GET /api/contacts/:id - Tek müşteriyi getir
+// GET /api/contacts/:id - Tek müşteriyi getir - SADECE KULLANICININ VERİSİ
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    console.log(`[GET /api/contacts/${id}] Müşteri detayı isteniyor...`);
+    const userId = req.user.id;
+    console.log(`[GET /api/contacts/${id}] Müşteri detayı isteniyor (user: ${userId})...`);
     
-    const result = await pool.query('SELECT * FROM contacts WHERE id = $1', [id]);
+    const result = await pool.query('SELECT * FROM contacts WHERE id = $1 AND user_id = $2', [id, userId]);
 
     if (result.rows.length === 0) {
-      console.log(`[GET /api/contacts/${id}] Müşteri bulunamadı - 404`);
+      console.log(`[GET /api/contacts/${id}] Müşteri bulunamadı veya erişim yok - 404`);
       return res.status(404).json({
         success: false,
         message: 'Müşteri bulunamadı',
@@ -312,9 +319,11 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// POST /api/contacts - Yeni müşteri ekle
+// POST /api/contacts - Yeni müşteri ekle - KULLANICIYA AİT
 router.post('/', async (req, res) => {
   try {
+    const userId = req.user.id;
+    const organizationId = req.user.organizationId;
     const {
       email,
       salutation,
@@ -367,8 +376,9 @@ router.post('/', async (req, res) => {
       INSERT INTO contacts (
         email, salutation, first_name, last_name, phone, mobile_phone, company, company_title, position,
         status, subscription_status, source, tags, custom_fields,
-        customer_representative, country, state, district, address_1, address_2, importance_level, notes
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
+        customer_representative, country, state, district, address_1, address_2, importance_level, notes,
+        user_id, organization_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
       RETURNING *
     `;
 
@@ -395,6 +405,8 @@ router.post('/', async (req, res) => {
       address_2,
       validatedImportanceLevel,
       notes,
+      userId,
+      organizationId,
     ];
 
     const result = await pool.query(query, values);
@@ -431,10 +443,11 @@ router.post('/', async (req, res) => {
   }
 });
 
-// PUT /api/contacts/:id - Müşteri güncelle
+// PUT /api/contacts/:id - Müşteri güncelle - SADECE KULLANICININ VERİSİ
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user.id;
     const {
       email,
       salutation,
@@ -474,8 +487,8 @@ router.put('/:id', async (req, res) => {
       validatedImportanceLevel = null;
     }
 
-    // Önce müşterinin var olup olmadığını kontrol et
-    const checkResult = await pool.query('SELECT * FROM contacts WHERE id = $1', [id]);
+    // Önce müşterinin var olup olmadığını ve kullanıcıya ait olup olmadığını kontrol et
+    const checkResult = await pool.query('SELECT * FROM contacts WHERE id = $1 AND user_id = $2', [id, userId]);
     if (checkResult.rows.length === 0) {
       return res.status(404).json({
         success: false,
@@ -506,7 +519,7 @@ router.put('/:id', async (req, res) => {
         address_2 = COALESCE($19, address_2),
         importance_level = COALESCE($20, importance_level),
         notes = COALESCE($21, notes)
-      WHERE id = $22
+      WHERE id = $22 AND user_id = $23
       RETURNING *
     `;
 
@@ -533,6 +546,7 @@ router.put('/:id', async (req, res) => {
       validatedImportanceLevel,
       notes,
       id,
+      userId,
     ];
 
     const result = await pool.query(query, values);
@@ -567,12 +581,13 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// DELETE /api/contacts/:id - Müşteri sil
+// DELETE /api/contacts/:id - Müşteri sil - SADECE KULLANICININ VERİSİ
 router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user.id;
 
-    const result = await pool.query('DELETE FROM contacts WHERE id = $1 RETURNING *', [id]);
+    const result = await pool.query('DELETE FROM contacts WHERE id = $1 AND user_id = $2 RETURNING *', [id, userId]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({
@@ -596,10 +611,11 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-// POST /api/contacts/bulk-delete - Toplu silme
+// POST /api/contacts/bulk-delete - Toplu silme - SADECE KULLANICININ VERİLERİ
 router.post('/bulk-delete', async (req, res) => {
   try {
     const { ids } = req.body;
+    const userId = req.user.id;
 
     if (!Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({
@@ -609,8 +625,8 @@ router.post('/bulk-delete', async (req, res) => {
     }
 
     const result = await pool.query(
-      'DELETE FROM contacts WHERE id = ANY($1) RETURNING id',
-      [ids]
+      'DELETE FROM contacts WHERE id = ANY($1) AND user_id = $2 RETURNING id',
+      [ids, userId]
     );
 
     res.json({
@@ -628,9 +644,10 @@ router.post('/bulk-delete', async (req, res) => {
   }
 });
 
-// GET /api/contacts/stats/summary - İstatistikler
+// GET /api/contacts/stats/summary - İstatistikler - SADECE KULLANICININ VERİLERİ
 router.get('/stats/summary', async (req, res) => {
   try {
+    const userId = req.user.id;
     const statsQuery = `
       SELECT
         COUNT(*) as total_contacts,
@@ -638,9 +655,10 @@ router.get('/stats/summary', async (req, res) => {
         COUNT(*) FILTER (WHERE subscription_status = 'subscribed') as subscribed_contacts,
         COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '30 days') as new_this_month
       FROM contacts
+      WHERE user_id = $1
     `;
 
-    const result = await pool.query(statsQuery);
+    const result = await pool.query(statsQuery, [userId]);
 
     res.json({
       success: true,
@@ -656,10 +674,11 @@ router.get('/stats/summary', async (req, res) => {
   }
 });
 
-// POST /api/contacts/validate-ids - ID'lerin varlığını kontrol et (debug endpoint)
+// POST /api/contacts/validate-ids - ID'lerin varlığını kontrol et - SADECE KULLANICININ VERİLERİ
 router.post('/validate-ids', async (req, res) => {
   try {
     const { ids } = req.body;
+    const userId = req.user.id;
     
     if (!Array.isArray(ids)) {
       return res.status(400).json({
@@ -669,8 +688,8 @@ router.post('/validate-ids', async (req, res) => {
     }
 
     const result = await pool.query(
-      'SELECT id FROM contacts WHERE id = ANY($1)',
-      [ids]
+      'SELECT id FROM contacts WHERE id = ANY($1) AND user_id = $2',
+      [ids, userId]
     );
 
     const existingIds = result.rows.map(row => row.id);
@@ -696,10 +715,20 @@ router.post('/validate-ids', async (req, res) => {
   }
 });
 
-// GET /api/contacts/:id/sent-emails - Kişiye gönderilen tüm emailleri listele
+// GET /api/contacts/:id/sent-emails - Kişiye gönderilen tüm emailleri listele - SADECE KULLANICININ VERİSİ
 router.get('/:id/sent-emails', async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user.id;
+    
+    // Önce kişinin kullanıcıya ait olduğunu kontrol et
+    const contactCheck = await pool.query('SELECT id FROM contacts WHERE id = $1 AND user_id = $2', [id, userId]);
+    if (contactCheck.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Müşteri bulunamadı',
+      });
+    }
     const { page = 1, pageSize = 10 } = req.query;
     const offset = (page - 1) * pageSize;
 

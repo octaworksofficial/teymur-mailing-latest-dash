@@ -4,7 +4,7 @@
  */
 
 const jwt = require('jsonwebtoken');
-const pool = require('../db');
+const { pool } = require('../db');
 
 // JWT Secret - .env'den alınacak, yoksa rastgele bir default
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';

@@ -161,12 +161,13 @@ const Login: React.FC = () => {
       // Hata durumunda kullanıcı hata bilgisi ayarla
       setUserLoginState(msg);
     } catch (error) {
-      const defaultLoginFailureMessage = intl.formatMessage({
-        id: 'pages.login.failure',
-        defaultMessage: 'Giriş başarısız, lütfen tekrar deneyin!',
+      // Hata zaten global errorHandler tarafından gösteriliyor
+      // Sadece state'i güncelle
+      console.log('Login error:', error);
+      setUserLoginState({
+        status: 'error',
+        type,
       });
-      console.log(error);
-      message.error(defaultLoginFailureMessage);
     }
   };
   const { status, type: loginType } = userLoginState;

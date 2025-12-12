@@ -2,6 +2,10 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../db');
 const { syncCampaignSchedules } = require('../utils/scheduleUtils');
+const { authenticateToken } = require('../middleware/auth');
+
+// Tüm campaigns route'ları için authentication zorunlu
+router.use(authenticateToken);
 
 function normalizeTemplateSequence(sequence) {
   if (!sequence) {
@@ -93,9 +97,10 @@ async function applyTemplateUsageDiff(diffMap = {}) {
   }
 }
 
-// GET /api/campaigns - Tüm kampanyaları listele (sayfalama, filtreleme, sıralama)
+// GET /api/campaigns - Tüm kampanyaları listele - SADECE KULLANICININ VERİLERİ
 router.get('/', async (req, res) => {
   try {
+    const userId = req.user.id;
     const {
       page = 1,
       limit = 10,
@@ -109,9 +114,9 @@ router.get('/', async (req, res) => {
 
     const offset = (page - 1) * (pageSize || limit);
 
-    let query = 'SELECT * FROM email_campaigns WHERE 1=1';
-    const params = [];
-    let paramIndex = 1;
+    let query = 'SELECT * FROM email_campaigns WHERE user_id = $1';
+    const params = [userId];
+    let paramIndex = 2;
 
     if (name) {
       query += ` AND name ILIKE $${paramIndex}`;
@@ -161,11 +166,12 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET /api/campaigns/:id - Tek kampanya detayı
+// GET /api/campaigns/:id - Tek kampanya detayı - SADECE KULLANICININ VERİSİ
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const result = await pool.query('SELECT * FROM email_campaigns WHERE id = $1', [id]);
+    const userId = req.user.id;
+    const result = await pool.query('SELECT * FROM email_campaigns WHERE id = $1 AND user_id = $2', [id, userId]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Kampanya bulunamadı' });
@@ -178,9 +184,11 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// POST /api/campaigns - Yeni kampanya oluştur
+// POST /api/campaigns - Yeni kampanya oluştur - KULLANICIYA AİT
 router.post('/', async (req, res) => {
   try {
+    const userId = req.user.id;
+    const organizationId = req.user.organizationId;
     const {
       name,
       description,
@@ -211,8 +219,9 @@ router.post('/', async (req, res) => {
       INSERT INTO email_campaigns (
         name, description, target_contact_ids, target_filters,
         is_recurring, template_sequence, first_send_date, recurrence_interval_days,
-        stop_on_reply, reply_notification_email, total_recipients, status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        stop_on_reply, reply_notification_email, total_recipients, status,
+        user_id, organization_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
       RETURNING *
     `;
 
@@ -229,6 +238,8 @@ router.post('/', async (req, res) => {
       reply_notification_email,
       total_recipients,
       status,
+      userId,
+      organizationId,
     ];
 
     const result = await pool.query(query, values);
@@ -257,10 +268,11 @@ router.post('/', async (req, res) => {
   }
 });
 
-// PUT /api/campaigns/:id - Kampanya güncelle
+// PUT /api/campaigns/:id - Kampanya güncelle - SADECE KULLANICININ VERİSİ
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user.id;
     const {
       name,
       description,
@@ -276,8 +288,8 @@ router.put('/:id', async (req, res) => {
     } = req.body;
 
     const existingCampaign = await pool.query(
-      'SELECT template_sequence FROM email_campaigns WHERE id = $1',
-      [id]
+      'SELECT template_sequence FROM email_campaigns WHERE id = $1 AND user_id = $2',
+      [id, userId]
     );
 
     if (existingCampaign.rows.length === 0) {
@@ -323,7 +335,7 @@ router.put('/:id', async (req, res) => {
         total_recipients = $11,
         status = $12,
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $13
+      WHERE id = $13 AND user_id = $14
       RETURNING *
     `;
 
@@ -341,6 +353,7 @@ router.put('/:id', async (req, res) => {
       total_recipients,
       status,
       id,
+      userId,
     ];
 
     const result = await pool.query(query, values);
@@ -372,13 +385,14 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// DELETE /api/campaigns/:id - Kampanya sil
+// DELETE /api/campaigns/:id - Kampanya sil - SADECE KULLANICININ VERİSİ
 router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user.id;
     const existingCampaign = await pool.query(
-      'SELECT template_sequence FROM email_campaigns WHERE id = $1',
-      [id]
+      'SELECT template_sequence FROM email_campaigns WHERE id = $1 AND user_id = $2',
+      [id, userId]
     );
 
     if (existingCampaign.rows.length === 0) {
@@ -389,8 +403,8 @@ router.delete('/:id', async (req, res) => {
     const usageDiff = calculateTemplateUsageDiff(existingCounts, {});
 
     const result = await pool.query(
-      'DELETE FROM email_campaigns WHERE id = $1 RETURNING *',
-      [id]
+      'DELETE FROM email_campaigns WHERE id = $1 AND user_id = $2 RETURNING *',
+      [id, userId]
     );
 
     if (result.rows.length === 0) {
@@ -411,18 +425,19 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-// POST /api/campaigns/bulk-delete - Toplu kampanya silme
+// POST /api/campaigns/bulk-delete - Toplu kampanya silme - SADECE KULLANICININ VERİLERİ
 router.post('/bulk-delete', async (req, res) => {
   try {
     const { ids } = req.body;
+    const userId = req.user.id;
 
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({ success: false, message: 'Geçerli ID listesi gönderilmedi' });
     }
 
     const campaigns = await pool.query(
-      'SELECT id, template_sequence FROM email_campaigns WHERE id = ANY($1)',
-      [ids]
+      'SELECT id, template_sequence FROM email_campaigns WHERE id = ANY($1) AND user_id = $2',
+      [ids, userId]
     );
 
     const aggregatedCounts = {};
@@ -440,8 +455,8 @@ router.post('/bulk-delete', async (req, res) => {
     const usageDiff = calculateTemplateUsageDiff(aggregatedCounts, {});
 
     const result = await pool.query(
-      'DELETE FROM email_campaigns WHERE id = ANY($1) RETURNING id',
-      [ids]
+      'DELETE FROM email_campaigns WHERE id = ANY($1) AND user_id = $2 RETURNING id',
+      [ids, userId]
     );
 
     if (Object.keys(usageDiff).length > 0) {
@@ -459,12 +474,14 @@ router.post('/bulk-delete', async (req, res) => {
   }
 });
 
-// POST /api/campaigns/:id/duplicate - Kampanya kopyala
+// POST /api/campaigns/:id/duplicate - Kampanya kopyala - SADECE KULLANICININ VERİSİ
 router.post('/:id/duplicate', async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user.id;
+    const organizationId = req.user.organizationId;
     
-    const original = await pool.query('SELECT * FROM email_campaigns WHERE id = $1', [id]);
+    const original = await pool.query('SELECT * FROM email_campaigns WHERE id = $1 AND user_id = $2', [id, userId]);
     
     if (original.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Kampanya bulunamadı' });
@@ -478,23 +495,26 @@ router.post('/:id/duplicate', async (req, res) => {
       INSERT INTO email_campaigns (
         name, description, target_contact_ids, target_filters,
         is_recurring, template_sequence, first_send_date, recurrence_interval_days,
-        stop_on_reply, reply_notification_email, total_recipients, status
-      ) VALUES ($1, $2, $3, $4::jsonb, $5, $6::jsonb, $7, $8, $9, $10, $11, 'draft')
+        stop_on_reply, reply_notification_email, total_recipients, status,
+        user_id, organization_id
+      ) VALUES ($1, $2, $3, $4::jsonb, $5, $6::jsonb, $7, $8, $9, $10, $11, 'draft', $12, $13)
       RETURNING *
     `;
 
     const values = [
       newName,
       campaign.description,
-      campaign.target_contact_ids, // integer[] olarak direkt
-      JSON.stringify(campaign.target_filters || {}), // jsonb
+      campaign.target_contact_ids,
+      JSON.stringify(campaign.target_filters || {}),
       campaign.is_recurring,
-      JSON.stringify(campaign.template_sequence || []), // jsonb
+      JSON.stringify(campaign.template_sequence || []),
       campaign.first_send_date,
       campaign.recurrence_interval_days,
       campaign.stop_on_reply,
       campaign.reply_notification_email,
       campaign.total_recipients,
+      userId,
+      organizationId,
     ];
 
     const result = await pool.query(query, values);
@@ -515,9 +535,10 @@ router.post('/:id/duplicate', async (req, res) => {
   }
 });
 
-// GET /api/campaigns/stats/summary - İstatistikler
+// GET /api/campaigns/stats/summary - İstatistikler - SADECE KULLANICININ VERİLERİ
 router.get('/stats/summary', async (req, res) => {
   try {
+    const userId = req.user.id;
     const summaryQuery = `
       SELECT 
         COUNT(*) as total_campaigns,
@@ -528,18 +549,20 @@ router.get('/stats/summary', async (req, res) => {
         SUM(total_opened) as total_opens,
         SUM(total_clicked) as total_clicks
       FROM email_campaigns
+      WHERE user_id = $1
     `;
 
     const byStatusQuery = `
       SELECT status, COUNT(*) as count
       FROM email_campaigns
+      WHERE user_id = $1
       GROUP BY status
       ORDER BY count DESC
     `;
 
     const [summaryResult, byStatusResult] = await Promise.all([
-      pool.query(summaryQuery),
-      pool.query(byStatusQuery),
+      pool.query(summaryQuery, [userId]),
+      pool.query(byStatusQuery, [userId]),
     ]);
 
     res.json({
