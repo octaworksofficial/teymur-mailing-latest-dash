@@ -119,22 +119,30 @@ const OrganizationsPage: React.FC = () => {
     },
     {
       title: 'Kullanıcı Sayısı',
-      dataIndex: 'userCount',
+      dataIndex: 'user_count',
       search: false,
       render: (_, record) => (
         <span>
-          {record.userCount || 0} / {record.maxUsers || '∞'}
+          {(record as any).user_count || 0} / {(record as any).max_users || '∞'}
         </span>
       ),
     },
     {
       title: 'Kişi Sayısı',
-      dataIndex: 'contactCount',
+      dataIndex: 'contact_count',
       search: false,
       render: (_, record) => (
         <span>
-          {record.contactCount || 0} / {record.maxContacts || '∞'}
+          {(record as any).contact_count || 0} / {(record as any).max_contacts || '∞'}
         </span>
+      ),
+    },
+    {
+      title: 'Email Limiti',
+      dataIndex: 'max_emails_per_month',
+      search: false,
+      render: (_, record) => (
+        <span>{(record as any).max_emails_per_month || '∞'} / ay</span>
       ),
     },
     {
@@ -142,6 +150,10 @@ const OrganizationsPage: React.FC = () => {
       dataIndex: 'created_at',
       valueType: 'dateTime',
       search: false,
+      render: (_, record) => {
+        const date = (record as any).created_at;
+        return date ? new Date(date).toLocaleString('tr-TR') : '-';
+      },
     },
     {
       title: 'İşlemler',

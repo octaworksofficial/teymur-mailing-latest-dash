@@ -135,18 +135,21 @@ const UsersPage: React.FC = () => {
     },
     {
       title: 'Ad',
-      dataIndex: 'firstName',
+      dataIndex: 'first_name',
       search: false,
+      render: (_, record) => (record as any).first_name || record.firstName || '-',
     },
     {
       title: 'Soyad',
-      dataIndex: 'lastName',
+      dataIndex: 'last_name',
       search: false,
+      render: (_, record) => (record as any).last_name || record.lastName || '-',
     },
     {
       title: 'Telefon',
       dataIndex: 'phone',
       search: false,
+      render: (_, record) => record.phone || '-',
     },
     {
       title: 'Rol',
@@ -178,20 +181,29 @@ const UsersPage: React.FC = () => {
     },
     {
       title: 'Organizasyon',
-      dataIndex: 'organizationName',
+      dataIndex: 'organization_name',
       search: false,
+      render: (_, record) => (record as any).organization_name || record.organizationName || '-',
     },
     {
       title: 'Son Giriş',
-      dataIndex: 'lastLoginAt',
+      dataIndex: 'last_login_at',
       valueType: 'dateTime',
       search: false,
+      render: (_, record) => {
+        const date = (record as any).last_login_at || record.lastLoginAt;
+        return date ? new Date(date).toLocaleString('tr-TR') : '-';
+      },
     },
     {
       title: 'Oluşturulma',
-      dataIndex: 'createdAt',
+      dataIndex: 'created_at',
       valueType: 'dateTime',
       search: false,
+      render: (_, record) => {
+        const date = (record as any).created_at || record.createdAt;
+        return date ? new Date(date).toLocaleString('tr-TR') : '-';
+      },
     },
     {
       title: 'İşlemler',
