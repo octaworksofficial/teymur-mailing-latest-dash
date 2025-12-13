@@ -6,16 +6,32 @@ const { authMiddleware } = require('../middleware/auth');
 // Tüm templates route'ları için authentication zorunlu
 router.use(authMiddleware);
 
-async function generateUniqueTemplateName(originalName, userId) {
+// Helper: Kullanıcının organization_id'sini al (super_admin için null döner)
+const getOrganizationId = (req) => {
+  if (req.user.role === 'super_admin') {
+    return null; // Super admin tüm organizasyonları görebilir
+  }
+  return req.user.organization_id;
+};
+
+async function generateUniqueTemplateName(originalName, organizationId, isSuperAdmin) {
   const baseName = `${originalName} (Kopya)`;
   let candidate = baseName;
   let counter = 2;
 
   while (true) {
-    const exists = await pool.query(
-      'SELECT 1 FROM email_templates WHERE name = $1 AND user_id = $2 LIMIT 1',
-      [candidate, userId]
-    );
+    let exists;
+    if (isSuperAdmin) {
+      exists = await pool.query(
+        'SELECT 1 FROM email_templates WHERE name = $1 LIMIT 1',
+        [candidate]
+      );
+    } else {
+      exists = await pool.query(
+        'SELECT 1 FROM email_templates WHERE name = $1 AND organization_id = $2 LIMIT 1',
+        [candidate, organizationId]
+      );
+    }
 
     if (exists.rows.length === 0) {
       return candidate;
@@ -26,10 +42,11 @@ async function generateUniqueTemplateName(originalName, userId) {
   }
 }
 
-// GET /api/templates - Tüm şablonları listele - SADECE KULLANICININ VERİLERİ
+// GET /api/templates - Tüm şablonları listele - ORGANİZASYON BAZLI
 router.get('/', async (req, res) => {
   try {
-    const userId = req.user.id;
+    const organizationId = getOrganizationId(req);
+    const isSuperAdmin = req.user.role === 'super_admin';
     const {
       page = 1,
       pageSize = 10,
@@ -41,9 +58,17 @@ router.get('/', async (req, res) => {
     } = req.query;
 
     const offset = (page - 1) * pageSize;
-    let query = 'SELECT * FROM email_templates WHERE user_id = $1';
-    const params = [userId];
-    let paramIndex = 2;
+    
+    let query, params, paramIndex;
+    if (isSuperAdmin) {
+      query = 'SELECT * FROM email_templates WHERE 1=1';
+      params = [];
+      paramIndex = 1;
+    } else {
+      query = 'SELECT * FROM email_templates WHERE organization_id = $1';
+      params = [organizationId];
+      paramIndex = 2;
+    }
 
     // Filtreleme
     if (name) {
@@ -102,12 +127,19 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET /api/templates/:id - Tek şablon detayı - SADECE KULLANICININ VERİSİ
+// GET /api/templates/:id - Tek şablon detayı - ORGANİZASYON BAZLI
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user.id;
-    const result = await pool.query('SELECT * FROM email_templates WHERE id = $1 AND user_id = $2', [id, userId]);
+    const organizationId = getOrganizationId(req);
+    const isSuperAdmin = req.user.role === 'super_admin';
+    
+    let result;
+    if (isSuperAdmin) {
+      result = await pool.query('SELECT * FROM email_templates WHERE id = $1', [id]);
+    } else {
+      result = await pool.query('SELECT * FROM email_templates WHERE id = $1 AND organization_id = $2', [id, organizationId]);
+    }
 
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Şablon bulunamadı' });
@@ -120,11 +152,11 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// POST /api/templates - Yeni şablon oluştur - KULLANICIYA AİT
+// POST /api/templates - Yeni şablon oluştur - ORGANİZASYONA AİT
 router.post('/', async (req, res) => {
   try {
     const userId = req.user.id;
-    const organizationId = req.user.organizationId;
+    const organizationId = req.user.organization_id;
     const {
       name,
       description,
@@ -240,14 +272,20 @@ router.post('/', async (req, res) => {
   }
 });
 
-// PUT /api/templates/:id - Şablon güncelle - SADECE KULLANICININ VERİSİ
+// PUT /api/templates/:id - Şablon güncelle - ORGANİZASYON BAZLI
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user.id;
+    const organizationId = getOrganizationId(req);
+    const isSuperAdmin = req.user.role === 'super_admin';
     
-    // Önce şablonun kullanıcıya ait olduğunu kontrol et
-    const checkResult = await pool.query('SELECT id FROM email_templates WHERE id = $1 AND user_id = $2', [id, userId]);
+    // Önce şablonun organizasyona ait olduğunu kontrol et
+    let checkResult;
+    if (isSuperAdmin) {
+      checkResult = await pool.query('SELECT id FROM email_templates WHERE id = $1', [id]);
+    } else {
+      checkResult = await pool.query('SELECT id FROM email_templates WHERE id = $1 AND organization_id = $2', [id, organizationId]);
+    }
     if (checkResult.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Şablon bulunamadı' });
     }
@@ -304,7 +342,7 @@ router.put('/:id', async (req, res) => {
         status = $22,
         is_default = $23,
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $24 AND user_id = $25
+      WHERE id = $24
       RETURNING *
     `;
 
@@ -333,7 +371,6 @@ router.put('/:id', async (req, res) => {
       status,
       is_default,
       id,
-      userId,
     ];
 
     const result = await pool.query(query, values);
@@ -383,27 +420,44 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// DELETE /api/templates/:id - Şablon sil - SADECE KULLANICININ VERİSİ
+// DELETE /api/templates/:id - Şablon sil - ORGANİZASYON BAZLI
 router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user.id;
+    const organizationId = getOrganizationId(req);
+    const isSuperAdmin = req.user.role === 'super_admin';
     
-    // Önce şablonun kullanıcıya ait olduğunu kontrol et
-    const ownerCheck = await pool.query('SELECT id FROM email_templates WHERE id = $1 AND user_id = $2', [id, userId]);
+    // Önce şablonun organizasyona ait olduğunu kontrol et
+    let ownerCheck;
+    if (isSuperAdmin) {
+      ownerCheck = await pool.query('SELECT id FROM email_templates WHERE id = $1', [id]);
+    } else {
+      ownerCheck = await pool.query('SELECT id FROM email_templates WHERE id = $1 AND organization_id = $2', [id, organizationId]);
+    }
     if (ownerCheck.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Şablon bulunamadı' });
     }
     
     // Şablonun herhangi bir kampanyada kullanılıp kullanılmadığını kontrol et
-    // JSONB içinde template_id kontrolü - sadece kullanıcının kampanyaları
-    const campaignUsage = await pool.query(
-      `SELECT c.id, c.name
-       FROM email_campaigns c
-       CROSS JOIN LATERAL jsonb_array_elements(c.template_sequence) AS template
-       WHERE c.user_id = $1 AND COALESCE((template->>'template_id')::integer, (template->>'templateId')::integer) = $2`,
-      [userId, id]
-    );
+    // JSONB içinde template_id kontrolü - organizasyonun kampanyaları
+    let campaignUsage;
+    if (isSuperAdmin) {
+      campaignUsage = await pool.query(
+        `SELECT c.id, c.name
+         FROM email_campaigns c
+         CROSS JOIN LATERAL jsonb_array_elements(c.template_sequence) AS template
+         WHERE COALESCE((template->>'template_id')::integer, (template->>'templateId')::integer) = $1`,
+        [id]
+      );
+    } else {
+      campaignUsage = await pool.query(
+        `SELECT c.id, c.name
+         FROM email_campaigns c
+         CROSS JOIN LATERAL jsonb_array_elements(c.template_sequence) AS template
+         WHERE c.organization_id = $1 AND COALESCE((template->>'template_id')::integer, (template->>'templateId')::integer) = $2`,
+        [organizationId, id]
+      );
+    }
     
     if (campaignUsage.rows.length > 0) {
       const campaignNames = campaignUsage.rows.map((row) => `"${row.name}"`).join(', ');
@@ -431,8 +485,8 @@ router.delete('/:id', async (req, res) => {
     }
     
     const result = await pool.query(
-      'DELETE FROM email_templates WHERE id = $1 AND user_id = $2 RETURNING *',
-      [id, userId]
+      'DELETE FROM email_templates WHERE id = $1 RETURNING *',
+      [id]
     );
 
     if (result.rows.length === 0) {
@@ -449,33 +503,50 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-// POST /api/templates/bulk-delete - Toplu şablon silme - SADECE KULLANICININ VERİLERİ
+// POST /api/templates/bulk-delete - Toplu şablon silme - ORGANİZASYON BAZLI
 router.post('/bulk-delete', async (req, res) => {
   try {
     const { ids } = req.body;
-    const userId = req.user.id;
+    const organizationId = getOrganizationId(req);
+    const isSuperAdmin = req.user.role === 'super_admin';
 
     if (!Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({ success: false, message: 'Geçersiz ID listesi' });
     }
 
-    // Hangi şablonların kampanyalarda kullanıldığını kontrol et - sadece kullanıcının şablonları
+    // Hangi şablonların kampanyalarda kullanıldığını kontrol et
     const usedTemplates = [];
     for (const id of ids) {
-      // Önce şablonun kullanıcıya ait olduğunu kontrol et
-      const ownerCheck = await pool.query('SELECT name FROM email_templates WHERE id = $1 AND user_id = $2', [id, userId]);
+      // Önce şablonun organizasyona ait olduğunu kontrol et
+      let ownerCheck;
+      if (isSuperAdmin) {
+        ownerCheck = await pool.query('SELECT name FROM email_templates WHERE id = $1', [id]);
+      } else {
+        ownerCheck = await pool.query('SELECT name FROM email_templates WHERE id = $1 AND organization_id = $2', [id, organizationId]);
+      }
       if (ownerCheck.rows.length === 0) {
-        continue; // Kullanıcıya ait olmayan şablonu atla
+        continue; // Organizasyona ait olmayan şablonu atla
       }
       
-      // Kampanyalarda kullanım kontrolü - sadece kullanıcının kampanyaları
-      const campaignUsage = await pool.query(
-        `SELECT c.id, c.name 
-         FROM email_campaigns c
-         CROSS JOIN LATERAL jsonb_array_elements(c.template_sequence) AS template
-         WHERE c.user_id = $1 AND COALESCE((template->>'template_id')::integer, (template->>'templateId')::integer) = $2`,
-        [userId, id]
-      );
+      // Kampanyalarda kullanım kontrolü
+      let campaignUsage;
+      if (isSuperAdmin) {
+        campaignUsage = await pool.query(
+          `SELECT c.id, c.name 
+           FROM email_campaigns c
+           CROSS JOIN LATERAL jsonb_array_elements(c.template_sequence) AS template
+           WHERE COALESCE((template->>'template_id')::integer, (template->>'templateId')::integer) = $1`,
+          [id]
+        );
+      } else {
+        campaignUsage = await pool.query(
+          `SELECT c.id, c.name 
+           FROM email_campaigns c
+           CROSS JOIN LATERAL jsonb_array_elements(c.template_sequence) AS template
+           WHERE c.organization_id = $1 AND COALESCE((template->>'template_id')::integer, (template->>'templateId')::integer) = $2`,
+          [organizationId, id]
+        );
+      }
       
       if (campaignUsage.rows.length > 0) {
         usedTemplates.push({
@@ -519,11 +590,19 @@ router.post('/bulk-delete', async (req, res) => {
       });
     }
 
-    // Hiçbiri kullanılmıyorsa, tümünü sil - sadece kullanıcının şablonları
-    const result = await pool.query(
-      'DELETE FROM email_templates WHERE id = ANY($1) AND user_id = $2 RETURNING id',
-      [ids, userId]
-    );
+    // Hiçbiri kullanılmıyorsa, tümünü sil
+    let result;
+    if (isSuperAdmin) {
+      result = await pool.query(
+        'DELETE FROM email_templates WHERE id = ANY($1) RETURNING id',
+        [ids]
+      );
+    } else {
+      result = await pool.query(
+        'DELETE FROM email_templates WHERE id = ANY($1) AND organization_id = $2 RETURNING id',
+        [ids, organizationId]
+      );
+    }
 
     res.json({
       success: true,
@@ -536,15 +615,21 @@ router.post('/bulk-delete', async (req, res) => {
   }
 });
 
-// POST /api/templates/:id/duplicate - Şablon kopyala - SADECE KULLANICININ VERİSİ
+// POST /api/templates/:id/duplicate - Şablon kopyala - ORGANİZASYON BAZLI
 router.post('/:id/duplicate', async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user.id;
-    const organizationId = req.user.organizationId;
+    const organizationId = req.user.organization_id;
+    const isSuperAdmin = req.user.role === 'super_admin';
     
-    // Orijinal şablonu al - sadece kullanıcının şablonu
-    const original = await pool.query('SELECT * FROM email_templates WHERE id = $1 AND user_id = $2', [id, userId]);
+    // Orijinal şablonu al
+    let original;
+    if (isSuperAdmin) {
+      original = await pool.query('SELECT * FROM email_templates WHERE id = $1', [id]);
+    } else {
+      original = await pool.query('SELECT * FROM email_templates WHERE id = $1 AND organization_id = $2', [id, organizationId]);
+    }
     
     if (original.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Şablon bulunamadı' });
@@ -552,27 +637,50 @@ router.post('/:id/duplicate', async (req, res) => {
 
     const template = original.rows[0];
 
-    const newName = await generateUniqueTemplateName(template.name, userId);
+    const newName = await generateUniqueTemplateName(template.name, organizationId, isSuperAdmin);
 
-    const result = await pool.query(
-      `INSERT INTO email_templates (
-         name, description, category, subject, preheader,
-         body_html, body_text, from_name, from_email, reply_to,
-         cc_emails, bcc_emails, priority, track_opens, track_clicks,
-         available_variables, attachments, design_json, thumbnail_url,
-         tags, language, status, user_id, organization_id
-       )
-       SELECT
-         $1, description, category, subject, preheader,
-         body_html, body_text, from_name, from_email, reply_to,
-         cc_emails, bcc_emails, priority, track_opens, track_clicks,
-         available_variables, attachments, design_json, thumbnail_url,
-         tags, language, 'draft', $3, $4
-       FROM email_templates
-       WHERE id = $2 AND user_id = $3
-       RETURNING *`,
-      [newName, id, userId, organizationId]
-    );
+    let result;
+    if (isSuperAdmin) {
+      result = await pool.query(
+        `INSERT INTO email_templates (
+           name, description, category, subject, preheader,
+           body_html, body_text, from_name, from_email, reply_to,
+           cc_emails, bcc_emails, priority, track_opens, track_clicks,
+           available_variables, attachments, design_json, thumbnail_url,
+           tags, language, status, user_id, organization_id
+         )
+         SELECT
+           $1, description, category, subject, preheader,
+           body_html, body_text, from_name, from_email, reply_to,
+           cc_emails, bcc_emails, priority, track_opens, track_clicks,
+           available_variables, attachments, design_json, thumbnail_url,
+           tags, language, 'draft', $3, organization_id
+         FROM email_templates
+         WHERE id = $2
+         RETURNING *`,
+        [newName, id, userId]
+      );
+    } else {
+      result = await pool.query(
+        `INSERT INTO email_templates (
+           name, description, category, subject, preheader,
+           body_html, body_text, from_name, from_email, reply_to,
+           cc_emails, bcc_emails, priority, track_opens, track_clicks,
+           available_variables, attachments, design_json, thumbnail_url,
+           tags, language, status, user_id, organization_id
+         )
+         SELECT
+           $1, description, category, subject, preheader,
+           body_html, body_text, from_name, from_email, reply_to,
+           cc_emails, bcc_emails, priority, track_opens, track_clicks,
+           available_variables, attachments, design_json, thumbnail_url,
+           tags, language, 'draft', $3, $4
+         FROM email_templates
+         WHERE id = $2 AND organization_id = $4
+         RETURNING *`,
+        [newName, id, userId, organizationId]
+      );
+    }
 
     res.status(201).json({
       success: true,
@@ -585,10 +693,15 @@ router.post('/:id/duplicate', async (req, res) => {
   }
 });
 
-// GET /api/templates/stats/summary - İstatistikler - SADECE KULLANICININ VERİLERİ
+// GET /api/templates/stats/summary - İstatistikler - ORGANİZASYON BAZLI
 router.get('/stats/summary', async (req, res) => {
   try {
-    const userId = req.user.id;
+    const organizationId = getOrganizationId(req);
+    const isSuperAdmin = req.user.role === 'super_admin';
+    
+    const whereClause = isSuperAdmin ? '1=1' : 'organization_id = $1';
+    const params = isSuperAdmin ? [] : [organizationId];
+    
     const stats = await pool.query(`
       SELECT 
         COUNT(*) as total_templates,
@@ -597,16 +710,16 @@ router.get('/stats/summary', async (req, res) => {
         COUNT(CASE WHEN status = 'archived' THEN 1 END) as archived_templates,
         SUM(usage_count) as total_usage
       FROM email_templates
-      WHERE user_id = $1
-    `, [userId]);
+      WHERE ${whereClause}
+    `, params);
 
     const categoryStats = await pool.query(`
       SELECT category, COUNT(*) as count
       FROM email_templates
-      WHERE user_id = $1 AND category IS NOT NULL
+      WHERE ${whereClause} AND category IS NOT NULL
       GROUP BY category
       ORDER BY count DESC
-    `, [userId]);
+    `, params);
 
     res.json({
       success: true,

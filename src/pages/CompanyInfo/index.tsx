@@ -52,6 +52,20 @@ const CompanyInfo: React.FC = () => {
       const response = await getCompanyInfo();
       if (response.success) {
         const data = response.data;
+
+        // Data null ise (super admin için) boş form göster
+        if (!data) {
+          setCompanyData(null);
+          setLogoUrl('');
+          setFaviconUrl('');
+          setCoverUrl('');
+          setGalleryPhotos([]);
+          setProducts([]);
+          setTeamMembers([]);
+          form.resetFields();
+          return;
+        }
+
         setCompanyData(data);
         setLogoUrl(data.logo_url || '');
         setFaviconUrl(data.favicon_url || '');
@@ -67,6 +81,8 @@ const CompanyInfo: React.FC = () => {
         );
 
         form.setFieldsValue(data);
+      } else if (!response.success && response.message) {
+        message.warning(response.message);
       }
     } catch (error) {
       message.error('Veriler yüklenirken hata oluştu');

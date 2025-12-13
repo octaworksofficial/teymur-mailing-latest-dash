@@ -1,19 +1,35 @@
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../db');
+const { authMiddleware } = require('../middleware/auth');
 
-// GET /api/company-info - Kurumsal bilgileri getir
-router.get('/', async (req, res) => {
+// GET /api/company-info - Kurumsal bilgileri getir (organizasyon bazlı)
+router.get('/', authMiddleware, async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM company_info WHERE id = 1');
+    const organizationId = req.user.organization_id;
+    
+    // Super admin için organization_id olmayabilir
+    if (!organizationId && req.user.role !== 'super_admin') {
+      return res.status(400).json({ success: false, message: 'Organizasyon bulunamadı' });
+    }
+    
+    // Super admin ise tüm bilgileri göster veya boş döndür
+    if (req.user.role === 'super_admin') {
+      return res.json({ success: true, data: null, message: 'Super admin için kurumsal bilgi yok' });
+    }
+    
+    const result = await pool.query(
+      'SELECT * FROM company_info WHERE organization_id = $1',
+      [organizationId]
+    );
     
     if (result.rows.length === 0) {
-      // Eğer kayıt yoksa, boş bir kayıt oluştur
+      // Eğer kayıt yoksa, organizasyon için yeni bir kayıt oluştur
       const createResult = await pool.query(`
-        INSERT INTO company_info (id, company_name, country)
-        VALUES (1, 'Şirket Adı', 'Türkiye')
+        INSERT INTO company_info (organization_id, company_name, country)
+        VALUES ($1, 'Şirket Adı', 'Türkiye')
         RETURNING *
-      `);
+      `, [organizationId]);
       return res.json({ success: true, data: createResult.rows[0] });
     }
 
@@ -24,9 +40,21 @@ router.get('/', async (req, res) => {
   }
 });
 
-// PUT /api/company-info - Kurumsal bilgileri güncelle
-router.put('/', async (req, res) => {
+// PUT /api/company-info - Kurumsal bilgileri güncelle (organizasyon bazlı)
+router.put('/', authMiddleware, async (req, res) => {
   try {
+    const organizationId = req.user.organization_id;
+    
+    // Super admin için organization_id olmayabilir
+    if (!organizationId && req.user.role !== 'super_admin') {
+      return res.status(400).json({ success: false, message: 'Organizasyon bulunamadı' });
+    }
+    
+    // Super admin için kurumsal bilgi güncellenemez
+    if (req.user.role === 'super_admin') {
+      return res.status(403).json({ success: false, message: 'Super admin için kurumsal bilgi düzenlenemez' });
+    }
+    
     const {
       company_name,
       company_slogan,
@@ -119,7 +147,7 @@ router.put('/', async (req, res) => {
         default_language = COALESCE($42, default_language),
         timezone = COALESCE($43, timezone),
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = 1
+      WHERE organization_id = $44
       RETURNING *
     `;
 
@@ -167,11 +195,28 @@ router.put('/', async (req, res) => {
       default_currency,
       default_language,
       timezone,
+      organizationId, // $44 - organization_id filter
     ];
 
     const result = await pool.query(query, values);
 
     if (result.rows.length === 0) {
+      // Kayıt yoksa oluştur (UPSERT mantığı)
+      const insertResult = await pool.query(`
+        INSERT INTO company_info (organization_id, company_name, country)
+        VALUES ($1, COALESCE($2, 'Şirket Adı'), COALESCE($3, 'Türkiye'))
+        RETURNING *
+      `, [organizationId, company_name, country]);
+      
+      // Şimdi güncelle
+      if (insertResult.rows.length > 0) {
+        const updateResult = await pool.query(query, values);
+        return res.json({
+          success: true,
+          data: updateResult.rows[0],
+          message: 'Kurumsal bilgiler başarıyla oluşturuldu ve güncellendi',
+        });
+      }
       return res.status(404).json({ success: false, message: 'Kurumsal bilgi kaydı bulunamadı' });
     }
 

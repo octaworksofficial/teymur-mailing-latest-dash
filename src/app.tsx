@@ -76,6 +76,14 @@ export const layout: RunTimeLayoutConfig = ({
       // Giriş yapılmamışsa login sayfasına yönlendir
       if (!initialState?.currentUser && location.pathname !== loginPath) {
         history.push(loginPath);
+        return;
+      }
+      // Super admin ana sayfaya girerse /admin'e yönlendir
+      if (
+        initialState?.currentUser?.role === 'super_admin' &&
+        (location.pathname === '/' || location.pathname === '/dashboard')
+      ) {
+        history.push('/admin');
       }
     },
     bgLayoutImgList: [
@@ -98,12 +106,15 @@ export const layout: RunTimeLayoutConfig = ({
         width: '331px',
       },
     ],
-    links: [
-      <Link key="scheduler-logs" to="/scheduler-logs">
-        <LinkOutlined />
-        <span>Scheduler Logs</span>
-      </Link>,
-    ],
+    links:
+      initialState?.currentUser?.role !== 'super_admin'
+        ? [
+            <Link key="scheduler-logs" to="/scheduler-logs">
+              <LinkOutlined />
+              <span>Scheduler Logs</span>
+            </Link>,
+          ]
+        : [],
     menuHeaderRender: undefined,
     // Özel 403 sayfası
     // unAccessible: <div>unAccessible</div>,

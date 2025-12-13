@@ -7,10 +7,19 @@ const { checkContactLimit, checkBulkContactLimit } = require('../middleware/limi
 // Tüm contacts route'ları için authentication zorunlu
 router.use(authMiddleware);
 
-// GET /api/contacts - Tüm müşterileri listele (filtreleme ile) - SADECE KULLANICININ KENDİ VERİLERİ
+// Helper: Kullanıcının organization_id'sini al (super_admin için null döner)
+const getOrganizationId = (req) => {
+  if (req.user.role === 'super_admin') {
+    return null; // Super admin tüm organizasyonları görebilir
+  }
+  return req.user.organization_id;
+};
+
+// GET /api/contacts - Tüm müşterileri listele (filtreleme ile) - ORGANİZASYON BAZLI
 router.get('/', async (req, res) => {
   try {
-    const userId = req.user.id;
+    const organizationId = getOrganizationId(req);
+    const isSuperAdmin = req.user.role === 'super_admin';
     const {
       page = 1,
       pageSize = 10,
@@ -31,9 +40,18 @@ router.get('/', async (req, res) => {
     } = req.query;
 
     const offset = (page - 1) * pageSize;
-    let query = 'SELECT * FROM contacts WHERE user_id = $1';
-    const params = [userId];
-    let paramIndex = 2;
+    
+    // Super admin tüm kişileri görür, diğerleri sadece organizasyonlarındaki kişileri
+    let query, params, paramIndex;
+    if (isSuperAdmin) {
+      query = 'SELECT * FROM contacts WHERE 1=1';
+      params = [];
+      paramIndex = 1;
+    } else {
+      query = 'SELECT * FROM contacts WHERE organization_id = $1';
+      params = [organizationId];
+      paramIndex = 2;
+    }
 
     // Helper: Virgülle ayrılmış string veya array'i array'e çevir
     const toArray = (val) => {
@@ -232,43 +250,48 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET /api/contacts/filter-options - Filtreleme için benzersiz değerleri getir - SADECE KULLANICININ VERİLERİ
+// GET /api/contacts/filter-options - Filtreleme için benzersiz değerleri getir - ORGANİZASYON BAZLI
 router.get('/filter-options', async (req, res) => {
   try {
-    const userId = req.user.id;
+    const organizationId = getOrganizationId(req);
+    const isSuperAdmin = req.user.role === 'super_admin';
     
-    // Tüm filtrelenebilir alanlar için benzersiz değerleri al - kullanıcıya özel
+    // Tüm filtrelenebilir alanlar için benzersiz değerleri al - organizasyona özel
+    const whereClause = isSuperAdmin ? '1=1' : 'organization_id = $1';
+    const params = isSuperAdmin ? [] : [organizationId];
+    
     const queries = {
-      salutation: `SELECT DISTINCT salutation FROM contacts WHERE user_id = $1 AND salutation IS NOT NULL AND salutation != '' ORDER BY salutation`,
-      status: `SELECT DISTINCT status FROM contacts WHERE user_id = $1 AND status IS NOT NULL AND status != '' ORDER BY status`,
-      subscription_status: `SELECT DISTINCT subscription_status FROM contacts WHERE user_id = $1 AND subscription_status IS NOT NULL AND subscription_status != '' ORDER BY subscription_status`,
-      importance_level: `SELECT DISTINCT importance_level FROM contacts WHERE user_id = $1 AND importance_level IS NOT NULL ORDER BY importance_level`,
-      customer_representative: `SELECT DISTINCT customer_representative FROM contacts WHERE user_id = $1 AND customer_representative IS NOT NULL AND customer_representative != '' ORDER BY customer_representative`,
-      country: `SELECT DISTINCT country FROM contacts WHERE user_id = $1 AND country IS NOT NULL AND country != '' ORDER BY country`,
-      state: `SELECT DISTINCT state FROM contacts WHERE user_id = $1 AND state IS NOT NULL AND state != '' ORDER BY state`,
-      district: `SELECT DISTINCT district FROM contacts WHERE user_id = $1 AND district IS NOT NULL AND district != '' ORDER BY district`,
-      company: `SELECT DISTINCT company FROM contacts WHERE user_id = $1 AND company IS NOT NULL AND company != '' ORDER BY company LIMIT 100`,
-      position: `SELECT DISTINCT position FROM contacts WHERE user_id = $1 AND position IS NOT NULL AND position != '' ORDER BY position LIMIT 100`,
-      source: `SELECT DISTINCT source FROM contacts WHERE user_id = $1 AND source IS NOT NULL AND source != '' ORDER BY source`,
+      salutation: `SELECT DISTINCT salutation FROM contacts WHERE ${whereClause} AND salutation IS NOT NULL AND salutation != '' ORDER BY salutation`,
+      status: `SELECT DISTINCT status FROM contacts WHERE ${whereClause} AND status IS NOT NULL AND status != '' ORDER BY status`,
+      subscription_status: `SELECT DISTINCT subscription_status FROM contacts WHERE ${whereClause} AND subscription_status IS NOT NULL AND subscription_status != '' ORDER BY subscription_status`,
+      importance_level: `SELECT DISTINCT importance_level FROM contacts WHERE ${whereClause} AND importance_level IS NOT NULL ORDER BY importance_level`,
+      customer_representative: `SELECT DISTINCT customer_representative FROM contacts WHERE ${whereClause} AND customer_representative IS NOT NULL AND customer_representative != '' ORDER BY customer_representative`,
+      country: `SELECT DISTINCT country FROM contacts WHERE ${whereClause} AND country IS NOT NULL AND country != '' ORDER BY country`,
+      state: `SELECT DISTINCT state FROM contacts WHERE ${whereClause} AND state IS NOT NULL AND state != '' ORDER BY state`,
+      district: `SELECT DISTINCT district FROM contacts WHERE ${whereClause} AND district IS NOT NULL AND district != '' ORDER BY district`,
+      company: `SELECT DISTINCT company FROM contacts WHERE ${whereClause} AND company IS NOT NULL AND company != '' ORDER BY company LIMIT 100`,
+      position: `SELECT DISTINCT position FROM contacts WHERE ${whereClause} AND position IS NOT NULL AND position != '' ORDER BY position LIMIT 100`,
+      source: `SELECT DISTINCT source FROM contacts WHERE ${whereClause} AND source IS NOT NULL AND source != '' ORDER BY source`,
     };
 
     const results = {};
     
     for (const [field, query] of Object.entries(queries)) {
-      const result = await pool.query(query, [userId]);
+      const result = await pool.query(query, params);
       results[field] = result.rows.map(row => row[field]).filter(v => v);
     }
 
     // Tags için özel işlem - JSONB array'den unique değerleri al
+    const tagsWhereClause = isSuperAdmin ? '1=1' : 'organization_id = $1';
     const tagsQuery = `
       SELECT DISTINCT unnest(tags) as tag 
       FROM contacts 
-      WHERE user_id = $1 AND tags IS NOT NULL AND array_length(tags, 1) > 0 
+      WHERE ${tagsWhereClause} AND tags IS NOT NULL AND array_length(tags, 1) > 0 
       ORDER BY tag 
       LIMIT 100
     `;
     try {
-      const tagsResult = await pool.query(tagsQuery, [userId]);
+      const tagsResult = await pool.query(tagsQuery, params);
       results.tags = tagsResult.rows.map(row => row.tag).filter(v => v);
     } catch (e) {
       results.tags = [];
@@ -288,14 +311,20 @@ router.get('/filter-options', async (req, res) => {
   }
 });
 
-// GET /api/contacts/:id - Tek müşteriyi getir - SADECE KULLANICININ VERİSİ
+// GET /api/contacts/:id - Tek müşteriyi getir - ORGANİZASYON BAZLI
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user.id;
-    console.log(`[GET /api/contacts/${id}] Müşteri detayı isteniyor (user: ${userId})...`);
+    const organizationId = getOrganizationId(req);
+    const isSuperAdmin = req.user.role === 'super_admin';
+    console.log(`[GET /api/contacts/${id}] Müşteri detayı isteniyor (org: ${organizationId})...`);
     
-    const result = await pool.query('SELECT * FROM contacts WHERE id = $1 AND user_id = $2', [id, userId]);
+    let result;
+    if (isSuperAdmin) {
+      result = await pool.query('SELECT * FROM contacts WHERE id = $1', [id]);
+    } else {
+      result = await pool.query('SELECT * FROM contacts WHERE id = $1 AND organization_id = $2', [id, organizationId]);
+    }
 
     if (result.rows.length === 0) {
       console.log(`[GET /api/contacts/${id}] Müşteri bulunamadı veya erişim yok - 404`);
@@ -444,11 +473,12 @@ router.post('/', checkContactLimit, async (req, res) => {
   }
 });
 
-// PUT /api/contacts/:id - Müşteri güncelle - SADECE KULLANICININ VERİSİ
+// PUT /api/contacts/:id - Müşteri güncelle - ORGANİZASYON BAZLI
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user.id;
+    const organizationId = getOrganizationId(req);
+    const isSuperAdmin = req.user.role === 'super_admin';
     const {
       email,
       salutation,
@@ -488,8 +518,13 @@ router.put('/:id', async (req, res) => {
       validatedImportanceLevel = null;
     }
 
-    // Önce müşterinin var olup olmadığını ve kullanıcıya ait olup olmadığını kontrol et
-    const checkResult = await pool.query('SELECT * FROM contacts WHERE id = $1 AND user_id = $2', [id, userId]);
+    // Önce müşterinin var olup olmadığını ve organizasyona ait olup olmadığını kontrol et
+    let checkResult;
+    if (isSuperAdmin) {
+      checkResult = await pool.query('SELECT * FROM contacts WHERE id = $1', [id]);
+    } else {
+      checkResult = await pool.query('SELECT * FROM contacts WHERE id = $1 AND organization_id = $2', [id, organizationId]);
+    }
     if (checkResult.rows.length === 0) {
       return res.status(404).json({
         success: false,
@@ -520,7 +555,7 @@ router.put('/:id', async (req, res) => {
         address_2 = COALESCE($19, address_2),
         importance_level = COALESCE($20, importance_level),
         notes = COALESCE($21, notes)
-      WHERE id = $22 AND user_id = $23
+      WHERE id = $22
       RETURNING *
     `;
 
@@ -547,7 +582,6 @@ router.put('/:id', async (req, res) => {
       validatedImportanceLevel,
       notes,
       id,
-      userId,
     ];
 
     const result = await pool.query(query, values);
@@ -582,13 +616,19 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// DELETE /api/contacts/:id - Müşteri sil - SADECE KULLANICININ VERİSİ
+// DELETE /api/contacts/:id - Müşteri sil - ORGANİZASYON BAZLI
 router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user.id;
+    const organizationId = getOrganizationId(req);
+    const isSuperAdmin = req.user.role === 'super_admin';
 
-    const result = await pool.query('DELETE FROM contacts WHERE id = $1 AND user_id = $2 RETURNING *', [id, userId]);
+    let result;
+    if (isSuperAdmin) {
+      result = await pool.query('DELETE FROM contacts WHERE id = $1 RETURNING *', [id]);
+    } else {
+      result = await pool.query('DELETE FROM contacts WHERE id = $1 AND organization_id = $2 RETURNING *', [id, organizationId]);
+    }
 
     if (result.rows.length === 0) {
       return res.status(404).json({
@@ -612,11 +652,12 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-// POST /api/contacts/bulk-delete - Toplu silme - SADECE KULLANICININ VERİLERİ
+// POST /api/contacts/bulk-delete - Toplu silme - ORGANİZASYON BAZLI
 router.post('/bulk-delete', async (req, res) => {
   try {
     const { ids } = req.body;
-    const userId = req.user.id;
+    const organizationId = getOrganizationId(req);
+    const isSuperAdmin = req.user.role === 'super_admin';
 
     if (!Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({
@@ -625,10 +666,18 @@ router.post('/bulk-delete', async (req, res) => {
       });
     }
 
-    const result = await pool.query(
-      'DELETE FROM contacts WHERE id = ANY($1) AND user_id = $2 RETURNING id',
-      [ids, userId]
-    );
+    let result;
+    if (isSuperAdmin) {
+      result = await pool.query(
+        'DELETE FROM contacts WHERE id = ANY($1) RETURNING id',
+        [ids]
+      );
+    } else {
+      result = await pool.query(
+        'DELETE FROM contacts WHERE id = ANY($1) AND organization_id = $2 RETURNING id',
+        [ids, organizationId]
+      );
+    }
 
     res.json({
       success: true,
@@ -645,10 +694,15 @@ router.post('/bulk-delete', async (req, res) => {
   }
 });
 
-// GET /api/contacts/stats/summary - İstatistikler - SADECE KULLANICININ VERİLERİ
+// GET /api/contacts/stats/summary - İstatistikler - ORGANİZASYON BAZLI
 router.get('/stats/summary', async (req, res) => {
   try {
-    const userId = req.user.id;
+    const organizationId = getOrganizationId(req);
+    const isSuperAdmin = req.user.role === 'super_admin';
+    
+    const whereClause = isSuperAdmin ? '1=1' : 'organization_id = $1';
+    const params = isSuperAdmin ? [] : [organizationId];
+    
     const statsQuery = `
       SELECT
         COUNT(*) as total_contacts,
@@ -656,10 +710,10 @@ router.get('/stats/summary', async (req, res) => {
         COUNT(*) FILTER (WHERE subscription_status = 'subscribed') as subscribed_contacts,
         COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '30 days') as new_this_month
       FROM contacts
-      WHERE user_id = $1
+      WHERE ${whereClause}
     `;
 
-    const result = await pool.query(statsQuery, [userId]);
+    const result = await pool.query(statsQuery, params);
 
     res.json({
       success: true,
@@ -675,11 +729,12 @@ router.get('/stats/summary', async (req, res) => {
   }
 });
 
-// POST /api/contacts/validate-ids - ID'lerin varlığını kontrol et - SADECE KULLANICININ VERİLERİ
+// POST /api/contacts/validate-ids - ID'lerin varlığını kontrol et - ORGANİZASYON BAZLI
 router.post('/validate-ids', async (req, res) => {
   try {
     const { ids } = req.body;
-    const userId = req.user.id;
+    const organizationId = getOrganizationId(req);
+    const isSuperAdmin = req.user.role === 'super_admin';
     
     if (!Array.isArray(ids)) {
       return res.status(400).json({
@@ -688,10 +743,18 @@ router.post('/validate-ids', async (req, res) => {
       });
     }
 
-    const result = await pool.query(
-      'SELECT id FROM contacts WHERE id = ANY($1) AND user_id = $2',
-      [ids, userId]
-    );
+    let result;
+    if (isSuperAdmin) {
+      result = await pool.query(
+        'SELECT id FROM contacts WHERE id = ANY($1)',
+        [ids]
+      );
+    } else {
+      result = await pool.query(
+        'SELECT id FROM contacts WHERE id = ANY($1) AND organization_id = $2',
+        [ids, organizationId]
+      );
+    }
 
     const existingIds = result.rows.map(row => row.id);
     const missingIds = ids.filter(id => !existingIds.includes(id));
@@ -716,14 +779,20 @@ router.post('/validate-ids', async (req, res) => {
   }
 });
 
-// GET /api/contacts/:id/sent-emails - Kişiye gönderilen tüm emailleri listele - SADECE KULLANICININ VERİSİ
+// GET /api/contacts/:id/sent-emails - Kişiye gönderilen tüm emailleri listele - ORGANİZASYON BAZLI
 router.get('/:id/sent-emails', async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user.id;
+    const organizationId = getOrganizationId(req);
+    const isSuperAdmin = req.user.role === 'super_admin';
     
-    // Önce kişinin kullanıcıya ait olduğunu kontrol et
-    const contactCheck = await pool.query('SELECT id FROM contacts WHERE id = $1 AND user_id = $2', [id, userId]);
+    // Önce kişinin organizasyona ait olduğunu kontrol et
+    let contactCheck;
+    if (isSuperAdmin) {
+      contactCheck = await pool.query('SELECT id FROM contacts WHERE id = $1', [id]);
+    } else {
+      contactCheck = await pool.query('SELECT id FROM contacts WHERE id = $1 AND organization_id = $2', [id, organizationId]);
+    }
     if (contactCheck.rows.length === 0) {
       return res.status(404).json({
         success: false,

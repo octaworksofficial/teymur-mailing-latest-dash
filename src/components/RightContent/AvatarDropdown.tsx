@@ -1,11 +1,12 @@
 import {
+  BankOutlined,
   LogoutOutlined,
   SettingOutlined,
   UserOutlined,
 } from '@ant-design/icons';
 import { history, useModel } from '@umijs/max';
 import type { MenuProps } from 'antd';
-import { Spin } from 'antd';
+import { Spin, Typography } from 'antd';
 import { createStyles } from 'antd-style';
 import React from 'react';
 import { flushSync } from 'react-dom';
@@ -104,6 +105,24 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({
   }
 
   const menuItems = [
+    // Organizasyon bilgisi göster (super_admin hariç)
+    ...(currentUser.organizationName && currentUser.role !== 'super_admin'
+      ? [
+          {
+            key: 'organization',
+            icon: <BankOutlined />,
+            label: (
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                {currentUser.organizationName}
+              </Typography.Text>
+            ),
+            disabled: true,
+          },
+          {
+            type: 'divider' as const,
+          },
+        ]
+      : []),
     ...(menu
       ? [
           {

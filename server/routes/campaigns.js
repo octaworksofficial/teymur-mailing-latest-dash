@@ -97,10 +97,19 @@ async function applyTemplateUsageDiff(diffMap = {}) {
   }
 }
 
-// GET /api/campaigns - Tüm kampanyaları listele - SADECE KULLANICININ VERİLERİ
+// Helper: Kullanıcının organization_id'sini al (super_admin için null döner)
+const getOrganizationId = (req) => {
+  if (req.user.role === 'super_admin') {
+    return null; // Super admin tüm organizasyonları görebilir
+  }
+  return req.user.organization_id;
+};
+
+// GET /api/campaigns - Tüm kampanyaları listele - ORGANİZASYON BAZLI
 router.get('/', async (req, res) => {
   try {
-    const userId = req.user.id;
+    const organizationId = getOrganizationId(req);
+    const isSuperAdmin = req.user.role === 'super_admin';
     const {
       page = 1,
       limit = 10,
@@ -114,9 +123,16 @@ router.get('/', async (req, res) => {
 
     const offset = (page - 1) * (pageSize || limit);
 
-    let query = 'SELECT * FROM email_campaigns WHERE user_id = $1';
-    const params = [userId];
-    let paramIndex = 2;
+    let query, params, paramIndex;
+    if (isSuperAdmin) {
+      query = 'SELECT * FROM email_campaigns WHERE 1=1';
+      params = [];
+      paramIndex = 1;
+    } else {
+      query = 'SELECT * FROM email_campaigns WHERE organization_id = $1';
+      params = [organizationId];
+      paramIndex = 2;
+    }
 
     if (name) {
       query += ` AND name ILIKE $${paramIndex}`;
@@ -166,12 +182,19 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET /api/campaigns/:id - Tek kampanya detayı - SADECE KULLANICININ VERİSİ
+// GET /api/campaigns/:id - Tek kampanya detayı - ORGANİZASYON BAZLI
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user.id;
-    const result = await pool.query('SELECT * FROM email_campaigns WHERE id = $1 AND user_id = $2', [id, userId]);
+    const organizationId = getOrganizationId(req);
+    const isSuperAdmin = req.user.role === 'super_admin';
+    
+    let result;
+    if (isSuperAdmin) {
+      result = await pool.query('SELECT * FROM email_campaigns WHERE id = $1', [id]);
+    } else {
+      result = await pool.query('SELECT * FROM email_campaigns WHERE id = $1 AND organization_id = $2', [id, organizationId]);
+    }
 
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Kampanya bulunamadı' });
@@ -184,11 +207,11 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// POST /api/campaigns - Yeni kampanya oluştur - KULLANICIYA AİT
+// POST /api/campaigns - Yeni kampanya oluştur - ORGANİZASYONA AİT
 router.post('/', async (req, res) => {
   try {
     const userId = req.user.id;
-    const organizationId = req.user.organizationId;
+    const organizationId = req.user.organization_id;
     const {
       name,
       description,
@@ -268,11 +291,12 @@ router.post('/', async (req, res) => {
   }
 });
 
-// PUT /api/campaigns/:id - Kampanya güncelle - SADECE KULLANICININ VERİSİ
+// PUT /api/campaigns/:id - Kampanya güncelle - ORGANİZASYON BAZLI
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user.id;
+    const organizationId = getOrganizationId(req);
+    const isSuperAdmin = req.user.role === 'super_admin';
     const {
       name,
       description,
@@ -287,10 +311,18 @@ router.put('/:id', async (req, res) => {
       status,
     } = req.body;
 
-    const existingCampaign = await pool.query(
-      'SELECT template_sequence FROM email_campaigns WHERE id = $1 AND user_id = $2',
-      [id, userId]
-    );
+    let existingCampaign;
+    if (isSuperAdmin) {
+      existingCampaign = await pool.query(
+        'SELECT template_sequence FROM email_campaigns WHERE id = $1',
+        [id]
+      );
+    } else {
+      existingCampaign = await pool.query(
+        'SELECT template_sequence FROM email_campaigns WHERE id = $1 AND organization_id = $2',
+        [id, organizationId]
+      );
+    }
 
     if (existingCampaign.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Kampanya bulunamadı' });
@@ -335,7 +367,7 @@ router.put('/:id', async (req, res) => {
         total_recipients = $11,
         status = $12,
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $13 AND user_id = $14
+      WHERE id = $13
       RETURNING *
     `;
 
@@ -353,7 +385,6 @@ router.put('/:id', async (req, res) => {
       total_recipients,
       status,
       id,
-      userId,
     ];
 
     const result = await pool.query(query, values);
@@ -385,15 +416,25 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// DELETE /api/campaigns/:id - Kampanya sil - SADECE KULLANICININ VERİSİ
+// DELETE /api/campaigns/:id - Kampanya sil - ORGANİZASYON BAZLI
 router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user.id;
-    const existingCampaign = await pool.query(
-      'SELECT template_sequence FROM email_campaigns WHERE id = $1 AND user_id = $2',
-      [id, userId]
-    );
+    const organizationId = getOrganizationId(req);
+    const isSuperAdmin = req.user.role === 'super_admin';
+    
+    let existingCampaign;
+    if (isSuperAdmin) {
+      existingCampaign = await pool.query(
+        'SELECT template_sequence FROM email_campaigns WHERE id = $1',
+        [id]
+      );
+    } else {
+      existingCampaign = await pool.query(
+        'SELECT template_sequence FROM email_campaigns WHERE id = $1 AND organization_id = $2',
+        [id, organizationId]
+      );
+    }
 
     if (existingCampaign.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Kampanya bulunamadı' });
@@ -402,10 +443,18 @@ router.delete('/:id', async (req, res) => {
     const existingCounts = getTemplateUsageCounts(existingCampaign.rows[0].template_sequence);
     const usageDiff = calculateTemplateUsageDiff(existingCounts, {});
 
-    const result = await pool.query(
-      'DELETE FROM email_campaigns WHERE id = $1 AND user_id = $2 RETURNING *',
-      [id, userId]
-    );
+    let result;
+    if (isSuperAdmin) {
+      result = await pool.query(
+        'DELETE FROM email_campaigns WHERE id = $1 RETURNING *',
+        [id]
+      );
+    } else {
+      result = await pool.query(
+        'DELETE FROM email_campaigns WHERE id = $1 AND organization_id = $2 RETURNING *',
+        [id, organizationId]
+      );
+    }
 
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Kampanya bulunamadı' });
@@ -425,20 +474,29 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-// POST /api/campaigns/bulk-delete - Toplu kampanya silme - SADECE KULLANICININ VERİLERİ
+// POST /api/campaigns/bulk-delete - Toplu kampanya silme - ORGANİZASYON BAZLI
 router.post('/bulk-delete', async (req, res) => {
   try {
     const { ids } = req.body;
-    const userId = req.user.id;
+    const organizationId = getOrganizationId(req);
+    const isSuperAdmin = req.user.role === 'super_admin';
 
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({ success: false, message: 'Geçerli ID listesi gönderilmedi' });
     }
 
-    const campaigns = await pool.query(
-      'SELECT id, template_sequence FROM email_campaigns WHERE id = ANY($1) AND user_id = $2',
-      [ids, userId]
-    );
+    let campaigns;
+    if (isSuperAdmin) {
+      campaigns = await pool.query(
+        'SELECT id, template_sequence FROM email_campaigns WHERE id = ANY($1)',
+        [ids]
+      );
+    } else {
+      campaigns = await pool.query(
+        'SELECT id, template_sequence FROM email_campaigns WHERE id = ANY($1) AND organization_id = $2',
+        [ids, organizationId]
+      );
+    }
 
     const aggregatedCounts = {};
     campaigns.rows.forEach((row) => {
@@ -454,10 +512,18 @@ router.post('/bulk-delete', async (req, res) => {
 
     const usageDiff = calculateTemplateUsageDiff(aggregatedCounts, {});
 
-    const result = await pool.query(
-      'DELETE FROM email_campaigns WHERE id = ANY($1) AND user_id = $2 RETURNING id',
-      [ids, userId]
-    );
+    let result;
+    if (isSuperAdmin) {
+      result = await pool.query(
+        'DELETE FROM email_campaigns WHERE id = ANY($1) RETURNING id',
+        [ids]
+      );
+    } else {
+      result = await pool.query(
+        'DELETE FROM email_campaigns WHERE id = ANY($1) AND organization_id = $2 RETURNING id',
+        [ids, organizationId]
+      );
+    }
 
     if (Object.keys(usageDiff).length > 0) {
       await applyTemplateUsageDiff(usageDiff);
@@ -474,14 +540,20 @@ router.post('/bulk-delete', async (req, res) => {
   }
 });
 
-// POST /api/campaigns/:id/duplicate - Kampanya kopyala - SADECE KULLANICININ VERİSİ
+// POST /api/campaigns/:id/duplicate - Kampanya kopyala - ORGANİZASYON BAZLI
 router.post('/:id/duplicate', async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user.id;
-    const organizationId = req.user.organizationId;
+    const organizationId = req.user.organization_id;
+    const isSuperAdmin = req.user.role === 'super_admin';
     
-    const original = await pool.query('SELECT * FROM email_campaigns WHERE id = $1 AND user_id = $2', [id, userId]);
+    let original;
+    if (isSuperAdmin) {
+      original = await pool.query('SELECT * FROM email_campaigns WHERE id = $1', [id]);
+    } else {
+      original = await pool.query('SELECT * FROM email_campaigns WHERE id = $1 AND organization_id = $2', [id, organizationId]);
+    }
     
     if (original.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Kampanya bulunamadı' });
@@ -514,7 +586,7 @@ router.post('/:id/duplicate', async (req, res) => {
       campaign.reply_notification_email,
       campaign.total_recipients,
       userId,
-      organizationId,
+      organizationId || campaign.organization_id,
     ];
 
     const result = await pool.query(query, values);
@@ -535,10 +607,15 @@ router.post('/:id/duplicate', async (req, res) => {
   }
 });
 
-// GET /api/campaigns/stats/summary - İstatistikler - SADECE KULLANICININ VERİLERİ
+// GET /api/campaigns/stats/summary - İstatistikler - ORGANİZASYON BAZLI
 router.get('/stats/summary', async (req, res) => {
   try {
-    const userId = req.user.id;
+    const organizationId = getOrganizationId(req);
+    const isSuperAdmin = req.user.role === 'super_admin';
+    
+    const whereClause = isSuperAdmin ? '1=1' : 'organization_id = $1';
+    const params = isSuperAdmin ? [] : [organizationId];
+    
     const summaryQuery = `
       SELECT 
         COUNT(*) as total_campaigns,
@@ -549,20 +626,20 @@ router.get('/stats/summary', async (req, res) => {
         SUM(total_opened) as total_opens,
         SUM(total_clicked) as total_clicks
       FROM email_campaigns
-      WHERE user_id = $1
+      WHERE ${whereClause}
     `;
 
     const byStatusQuery = `
       SELECT status, COUNT(*) as count
       FROM email_campaigns
-      WHERE user_id = $1
+      WHERE ${whereClause}
       GROUP BY status
       ORDER BY count DESC
     `;
 
     const [summaryResult, byStatusResult] = await Promise.all([
-      pool.query(summaryQuery, [userId]),
-      pool.query(byStatusQuery, [userId]),
+      pool.query(summaryQuery, params),
+      pool.query(byStatusQuery, params),
     ]);
 
     res.json({

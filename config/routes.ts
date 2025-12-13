@@ -15,23 +15,27 @@
     name: 'dashboard',
     icon: 'dashboard',
     component: './Dashboard',
+    access: 'canNotSuperAdmin',
   },
   {
     path: '/contacts',
     name: 'contacts',
     icon: 'team',
     component: './Contacts',
+    access: 'canNotSuperAdmin',
   },
   {
     path: '/templates',
     name: 'templates',
     icon: 'mail',
     component: './Templates',
+    access: 'canNotSuperAdmin',
   },
   {
     path: '/campaigns',
     name: 'campaigns',
     icon: 'send',
+    access: 'canNotSuperAdmin',
     routes: [
       {
         path: '/campaigns',
@@ -66,6 +70,7 @@
     name: 'company-info',
     icon: 'bank',
     component: './CompanyInfo',
+    access: 'canNotSuperAdmin',
   },
   {
     path: '/scheduler-logs',

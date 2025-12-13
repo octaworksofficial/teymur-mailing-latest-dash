@@ -1,16 +1,30 @@
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../db');
+const { authMiddleware } = require('../middleware/auth');
+
+// Tüm dashboard route'ları için auth gerekli
+router.use(authMiddleware);
 
 // GET /api/dashboard - Dashboard ana verileri
 router.get('/', async (req, res) => {
   try {
+    const user = req.user;
+    const userId = user.id;
+    const isSuperAdmin = user.role === 'super_admin';
+
     // Toplam kişi sayısı
     let totalContacts = 0;
     try {
-      const contactsResult = await pool.query(
-        "SELECT COUNT(*) as total FROM contacts"
-      );
+      let query, params;
+      if (isSuperAdmin) {
+        query = "SELECT COUNT(*) as total FROM contacts";
+        params = [];
+      } else {
+        query = "SELECT COUNT(*) as total FROM contacts WHERE user_id = $1";
+        params = [userId];
+      }
+      const contactsResult = await pool.query(query, params);
       totalContacts = parseInt(contactsResult.rows[0].total || 0);
     } catch (error) {
       console.log('Contacts tablosu sorgusu başarısız:', error.message);
@@ -19,9 +33,15 @@ router.get('/', async (req, res) => {
     // Toplam kampanya sayısı
     let activeCampaigns = 0;
     try {
-      const campaignsResult = await pool.query(
-        "SELECT COUNT(*) as total FROM email_campaigns"
-      );
+      let query, params;
+      if (isSuperAdmin) {
+        query = "SELECT COUNT(*) as total FROM email_campaigns";
+        params = [];
+      } else {
+        query = "SELECT COUNT(*) as total FROM email_campaigns WHERE user_id = $1";
+        params = [userId];
+      }
+      const campaignsResult = await pool.query(query, params);
       activeCampaigns = parseInt(campaignsResult.rows[0].total || 0);
     } catch (error) {
       console.log('Campaigns tablosu sorgusu başarısız:', error.message);
@@ -30,9 +50,15 @@ router.get('/', async (req, res) => {
     // Toplam şablon sayısı
     let totalTemplates = 0;
     try {
-      const templatesResult = await pool.query(
-        "SELECT COUNT(*) as total FROM email_templates"
-      );
+      let query, params;
+      if (isSuperAdmin) {
+        query = "SELECT COUNT(*) as total FROM email_templates";
+        params = [];
+      } else {
+        query = "SELECT COUNT(*) as total FROM email_templates WHERE user_id = $1";
+        params = [userId];
+      }
+      const templatesResult = await pool.query(query, params);
       totalTemplates = parseInt(templatesResult.rows[0].total || 0);
     } catch (error) {
       console.log('Templates tablosu sorgusu başarısız:', error.message);
@@ -53,16 +79,33 @@ router.get('/', async (req, res) => {
 
     try {
       // Son 30 gün email istatistikleri
-      const emailStatsQuery = `
-        SELECT 
-          COUNT(*) FILTER (WHERE is_sent = true) as total_sent,
-          COUNT(*) FILTER (WHERE is_opened = true) as total_opened,
-          COUNT(*) FILTER (WHERE is_clicked = true) as total_clicked,
-          COUNT(*) FILTER (WHERE is_replied = true) as total_replied
-        FROM campaign_sends 
-        WHERE sent_date >= NOW() - INTERVAL '30 days'
-      `;
-      const statsResult = await pool.query(emailStatsQuery);
+      let emailStatsQuery, params;
+      if (isSuperAdmin) {
+        emailStatsQuery = `
+          SELECT 
+            COUNT(*) FILTER (WHERE is_sent = true) as total_sent,
+            COUNT(*) FILTER (WHERE is_opened = true) as total_opened,
+            COUNT(*) FILTER (WHERE is_clicked = true) as total_clicked,
+            COUNT(*) FILTER (WHERE is_replied = true) as total_replied
+          FROM campaign_sends 
+          WHERE sent_date >= NOW() - INTERVAL '30 days'
+        `;
+        params = [];
+      } else {
+        emailStatsQuery = `
+          SELECT 
+            COUNT(*) FILTER (WHERE cs.is_sent = true) as total_sent,
+            COUNT(*) FILTER (WHERE cs.is_opened = true) as total_opened,
+            COUNT(*) FILTER (WHERE cs.is_clicked = true) as total_clicked,
+            COUNT(*) FILTER (WHERE cs.is_replied = true) as total_replied
+          FROM campaign_sends cs
+          JOIN email_campaigns ec ON cs.campaign_id = ec.id
+          WHERE cs.sent_date >= NOW() - INTERVAL '30 days'
+            AND ec.user_id = $1
+        `;
+        params = [userId];
+      }
+      const statsResult = await pool.query(emailStatsQuery, params);
       
       if (statsResult.rows.length > 0) {
         const stats = statsResult.rows[0];
@@ -75,61 +118,43 @@ router.get('/', async (req, res) => {
         emailStats.openRate = totalSent > 0 ? (totalOpened / totalSent) * 100 : 0;
         emailStats.clickRate = totalSent > 0 ? (totalClicked / totalSent) * 100 : 0;
         emailStats.replyRate = totalSent > 0 ? (totalReplied / totalSent) * 100 : 0;
-
-        // Önceki 30 gün ile karşılaştırma
-        const prevEmailStatsQuery = `
-          SELECT 
-            COUNT(*) FILTER (WHERE is_sent = true) as total_sent,
-            COUNT(*) FILTER (WHERE is_opened = true) as total_opened,
-            COUNT(*) FILTER (WHERE is_clicked = true) as total_clicked,
-            COUNT(*) FILTER (WHERE is_replied = true) as total_replied
-          FROM campaign_sends 
-          WHERE sent_date >= NOW() - INTERVAL '60 days'
-            AND sent_date < NOW() - INTERVAL '30 days'
-        `;
-        const prevStatsResult = await pool.query(prevEmailStatsQuery);
-        
-        if (prevStatsResult.rows.length > 0) {
-          const prevStats = prevStatsResult.rows[0];
-          const prevTotalSent = parseInt(prevStats.total_sent) || 1; // 0 bölme hatasını önle
-          const prevOpenRate = (parseInt(prevStats.total_opened) || 0) / prevTotalSent * 100;
-          const prevClickRate = (parseInt(prevStats.total_clicked) || 0) / prevTotalSent * 100;
-          const prevReplyRate = (parseInt(prevStats.total_replied) || 0) / prevTotalSent * 100;
-
-          // Değişim yüzdeleri
-          emailStats.totalEmailsSentChange = prevTotalSent > 0 
-            ? ((totalSent - prevTotalSent) / prevTotalSent) * 100 
-            : 0;
-          emailStats.openRateChange = prevOpenRate > 0 
-            ? ((emailStats.openRate - prevOpenRate) / prevOpenRate) * 100 
-            : 0;
-          emailStats.clickRateChange = prevClickRate > 0 
-            ? ((emailStats.clickRate - prevClickRate) / prevClickRate) * 100 
-            : 0;
-          emailStats.replyRateChange = prevReplyRate > 0 
-            ? ((emailStats.replyRate - prevReplyRate) / prevReplyRate) * 100 
-            : 0;
-        }
       }
     } catch (emailError) {
       console.log('Email stats alınamadı:', emailError.message);
-      // Varsayılan değerler kullanılacak
     }
 
     // Haftalık email verileri (son 7 gün)
     let weeklyEmails = [];
     try {
-      const weeklyQuery = `
-        SELECT 
-          TO_CHAR(DATE(sent_date), 'Dy') as day_name,
-          DATE(sent_date) as send_date,
-          COUNT(*) FILTER (WHERE is_sent = true) as count
-        FROM campaign_sends
-        WHERE sent_date >= NOW() - INTERVAL '7 days'
-        GROUP BY DATE(sent_date)
-        ORDER BY send_date ASC
-      `;
-      const weeklyResult = await pool.query(weeklyQuery);
+      let weeklyQuery, weeklyParams;
+      if (isSuperAdmin) {
+        weeklyQuery = `
+          SELECT 
+            TO_CHAR(DATE(sent_date), 'Dy') as day_name,
+            DATE(sent_date) as send_date,
+            COUNT(*) FILTER (WHERE is_sent = true) as count
+          FROM campaign_sends
+          WHERE sent_date >= NOW() - INTERVAL '7 days'
+          GROUP BY DATE(sent_date)
+          ORDER BY send_date ASC
+        `;
+        weeklyParams = [];
+      } else {
+        weeklyQuery = `
+          SELECT 
+            TO_CHAR(DATE(cs.sent_date), 'Dy') as day_name,
+            DATE(cs.sent_date) as send_date,
+            COUNT(*) FILTER (WHERE cs.is_sent = true) as count
+          FROM campaign_sends cs
+          JOIN email_campaigns ec ON cs.campaign_id = ec.id
+          WHERE cs.sent_date >= NOW() - INTERVAL '7 days'
+            AND ec.user_id = $1
+          GROUP BY DATE(cs.sent_date)
+          ORDER BY send_date ASC
+        `;
+        weeklyParams = [userId];
+      }
+      const weeklyResult = await pool.query(weeklyQuery, weeklyParams);
       
       // Türkçe gün isimleri
       const dayMap = {
@@ -176,31 +201,62 @@ router.get('/', async (req, res) => {
     // Aktif kampanyalar
     let activeCampaignsData = [];
     try {
-      const campaignsQuery = `
-        SELECT 
-          ec.id,
-          ec.name,
-          ec.status,
-          ec.created_at,
-          ec.first_send_date,
-          ec.target_contact_ids,
-          ec.total_sent,
-          ec.total_opened,
-          ec.total_clicked,
-          ec.total_replied,
-          COALESCE(array_length(ec.target_contact_ids, 1), 0) as recipient_count,
-          t.name as template_name
-        FROM email_campaigns ec
-        LEFT JOIN LATERAL (
-          SELECT et.name 
-          FROM email_templates et 
-          WHERE et.id = (ec.template_sequence->0->>'template_id')::integer
-        ) t ON true
-        WHERE ec.status IN ('active', 'running', 'scheduled', 'draft')
-        ORDER BY ec.created_at DESC
-        LIMIT 10
-      `;
-      const campaignsQueryResult = await pool.query(campaignsQuery);
+      let campaignsQuery, campaignsParams;
+      if (isSuperAdmin) {
+        campaignsQuery = `
+          SELECT 
+            ec.id,
+            ec.name,
+            ec.status,
+            ec.created_at,
+            ec.first_send_date,
+            ec.target_contact_ids,
+            ec.total_sent,
+            ec.total_opened,
+            ec.total_clicked,
+            ec.total_replied,
+            COALESCE(array_length(ec.target_contact_ids, 1), 0) as recipient_count,
+            t.name as template_name
+          FROM email_campaigns ec
+          LEFT JOIN LATERAL (
+            SELECT et.name 
+            FROM email_templates et 
+            WHERE et.id = (ec.template_sequence->0->>'template_id')::integer
+          ) t ON true
+          WHERE ec.status IN ('active', 'running', 'scheduled', 'draft')
+          ORDER BY ec.created_at DESC
+          LIMIT 10
+        `;
+        campaignsParams = [];
+      } else {
+        campaignsQuery = `
+          SELECT 
+            ec.id,
+            ec.name,
+            ec.status,
+            ec.created_at,
+            ec.first_send_date,
+            ec.target_contact_ids,
+            ec.total_sent,
+            ec.total_opened,
+            ec.total_clicked,
+            ec.total_replied,
+            COALESCE(array_length(ec.target_contact_ids, 1), 0) as recipient_count,
+            t.name as template_name
+          FROM email_campaigns ec
+          LEFT JOIN LATERAL (
+            SELECT et.name 
+            FROM email_templates et 
+            WHERE et.id = (ec.template_sequence->0->>'template_id')::integer
+          ) t ON true
+          WHERE ec.status IN ('active', 'running', 'scheduled', 'draft')
+            AND ec.user_id = $1
+          ORDER BY ec.created_at DESC
+          LIMIT 10
+        `;
+        campaignsParams = [userId];
+      }
+      const campaignsQueryResult = await pool.query(campaignsQuery, campaignsParams);
       
       activeCampaignsData = campaignsQueryResult.rows.map(campaign => {
         const recipientCount = parseInt(campaign.recipient_count) || 0;
@@ -274,32 +330,54 @@ router.get('/', async (req, res) => {
 // GET /api/dashboard/stats - Sadece istatistikler
 router.get('/stats', async (req, res) => {
   try {
+    const user = req.user;
+    const userId = user.id;
+    const isSuperAdmin = user.role === 'super_admin';
+
     let totalContacts = 0;
     let activeCampaigns = 0;
     let totalTemplates = 0;
 
     try {
-      const contactsResult = await pool.query(
-        "SELECT COUNT(*) as total FROM contacts"
-      );
+      let query, params;
+      if (isSuperAdmin) {
+        query = "SELECT COUNT(*) as total FROM contacts";
+        params = [];
+      } else {
+        query = "SELECT COUNT(*) as total FROM contacts WHERE user_id = $1";
+        params = [userId];
+      }
+      const contactsResult = await pool.query(query, params);
       totalContacts = parseInt(contactsResult.rows[0].total || 0);
     } catch (error) {
       console.log('Contacts count hatası:', error.message);
     }
 
     try {
-      const campaignsResult = await pool.query(
-        "SELECT COUNT(*) as total FROM email_campaigns"
-      );
+      let query, params;
+      if (isSuperAdmin) {
+        query = "SELECT COUNT(*) as total FROM email_campaigns";
+        params = [];
+      } else {
+        query = "SELECT COUNT(*) as total FROM email_campaigns WHERE user_id = $1";
+        params = [userId];
+      }
+      const campaignsResult = await pool.query(query, params);
       activeCampaigns = parseInt(campaignsResult.rows[0].total || 0);
     } catch (error) {
       console.log('Campaigns count hatası:', error.message);
     }
 
     try {
-      const templatesResult = await pool.query(
-        "SELECT COUNT(*) as total FROM email_templates"
-      );
+      let query, params;
+      if (isSuperAdmin) {
+        query = "SELECT COUNT(*) as total FROM email_templates";
+        params = [];
+      } else {
+        query = "SELECT COUNT(*) as total FROM email_templates WHERE user_id = $1";
+        params = [userId];
+      }
+      const templatesResult = await pool.query(query, params);
       totalTemplates = parseInt(templatesResult.rows[0].total || 0);
     } catch (error) {
       console.log('Templates count hatası:', error.message);
