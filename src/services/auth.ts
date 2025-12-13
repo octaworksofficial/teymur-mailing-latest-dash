@@ -23,19 +23,28 @@ export interface RegisterParams {
 export interface User {
   id: number;
   email: string;
+  // camelCase (frontend)
   firstName?: string;
   lastName?: string;
+  organizationId?: number;
+  organizationName?: string;
+  lastLoginAt?: string;
+  createdAt?: string;
+  // snake_case (backend response)
+  first_name?: string;
+  last_name?: string;
+  organization_id?: number;
+  organization_name?: string;
+  last_login_at?: string;
+  created_at?: string;
+  // Common fields
   name?: string;
   phone?: string;
   avatar?: string;
   role: 'super_admin' | 'org_admin' | 'user';
   status?: 'active' | 'inactive' | 'suspended';
-  organizationId?: number;
-  organizationName?: string;
   permissions?: string[];
   preferences?: Record<string, unknown>;
-  lastLoginAt?: string;
-  createdAt?: string;
 }
 
 export interface AuthResponse {

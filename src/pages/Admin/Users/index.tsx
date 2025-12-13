@@ -241,9 +241,21 @@ const UsersPage: React.FC = () => {
 
   const handleSubmit = async (values: any) => {
     try {
+      // camelCase'den snake_case'e dönüştür
+      const transformedValues = {
+        email: values.email,
+        password: values.password,
+        first_name: values.firstName,
+        last_name: values.lastName,
+        phone: values.phone,
+        role: values.role,
+        organization_id: values.organizationId,
+        status: values.status,
+      };
+
       if (editingUser) {
         // Güncelle
-        const result = await updateUser(editingUser.id, values);
+        const result = await updateUser(editingUser.id, transformedValues);
         if (result.success) {
           message.success('Kullanıcı güncellendi');
           setModalVisible(false);
@@ -255,7 +267,7 @@ const UsersPage: React.FC = () => {
         return false;
       }
       // Yeni oluştur
-      const result = await createUser(values);
+      const result = await createUser(transformedValues);
       if (result.success) {
         message.success('Kullanıcı oluşturuldu');
         setModalVisible(false);
@@ -327,7 +339,15 @@ const UsersPage: React.FC = () => {
           if (!visible) setEditingUser(null);
         }}
         onFinish={handleSubmit}
-        initialValues={editingUser || {}}
+        initialValues={editingUser ? {
+          email: editingUser.email,
+          firstName: editingUser.first_name,
+          lastName: editingUser.last_name,
+          phone: editingUser.phone,
+          role: editingUser.role,
+          organizationId: editingUser.organization_id,
+          status: editingUser.status,
+        } : {}}
         modalProps={{
           destroyOnClose: true,
         }}
