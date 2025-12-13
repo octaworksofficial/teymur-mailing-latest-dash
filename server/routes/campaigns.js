@@ -2,10 +2,10 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../db');
 const { syncCampaignSchedules } = require('../utils/scheduleUtils');
-const { authenticateToken } = require('../middleware/auth');
+const { authMiddleware } = require('../middleware/auth');
 
 // Tüm campaigns route'ları için authentication zorunlu
-router.use(authenticateToken);
+router.use(authMiddleware);
 
 function normalizeTemplateSequence(sequence) {
   if (!sequence) {

@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../db');
-const { authenticateToken } = require('../middleware/auth');
+const { authMiddleware } = require('../middleware/auth');
 
 // Tüm templates route'ları için authentication zorunlu
-router.use(authenticateToken);
+router.use(authMiddleware);
 
 async function generateUniqueTemplateName(originalName, userId) {
   const baseName = `${originalName} (Kopya)`;

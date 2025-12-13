@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../db');
-const { authenticateToken } = require('../middleware/auth');
+const { authMiddleware } = require('../middleware/auth');
 
 // Tüm contacts route'ları için authentication zorunlu
-router.use(authenticateToken);
+router.use(authMiddleware);
 
 // GET /api/contacts - Tüm müşterileri listele (filtreleme ile) - SADECE KULLANICININ KENDİ VERİLERİ
 router.get('/', async (req, res) => {
