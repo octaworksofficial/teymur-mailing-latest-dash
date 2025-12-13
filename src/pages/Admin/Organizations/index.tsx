@@ -269,7 +269,19 @@ const OrganizationsPage: React.FC = () => {
           if (!visible) setEditingOrg(null);
         }}
         onFinish={handleSubmit}
-        initialValues={editingOrg || { plan: 'free', status: 'active' }}
+        initialValues={editingOrg ? {
+          name: editingOrg.name,
+          slug: editingOrg.slug,
+          description: editingOrg.description,
+          email: editingOrg.email,
+          phone: editingOrg.phone,
+          website: editingOrg.website,
+          plan: editingOrg.plan,
+          status: editingOrg.status,
+          maxUsers: editingOrg.maxUsers ?? (editingOrg as any).max_users,
+          maxContacts: editingOrg.maxContacts ?? (editingOrg as any).max_contacts,
+          maxEmailsPerMonth: editingOrg.maxEmailsPerMonth ?? (editingOrg as any).max_emails_per_month,
+        } : { plan: 'free', status: 'active', maxUsers: 5, maxContacts: 1000, maxEmailsPerMonth: 5000 }}
         modalProps={{
           destroyOnClose: true,
           width: 600,
