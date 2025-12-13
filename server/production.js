@@ -45,6 +45,7 @@ if (!fs.existsSync(distPath)) {
 console.log('📦 Loading API routes...');
 let authRouter, contactsRouter, templatesRouter, campaignsRouter;
 let dashboardRouter, logsRouter, companyInfoRouter, trackingRouter, uploadRouter;
+let organizationsRouter, usersRouter;
 let startEmailScheduler;
 
 try {
@@ -83,6 +84,14 @@ try {
   console.log('  - Loading upload router...');
   uploadRouter = require('./routes/upload');
   console.log('  ✅ upload router loaded');
+  
+  console.log('  - Loading organizations router...');
+  organizationsRouter = require('./routes/organizations');
+  console.log('  ✅ organizations router loaded');
+  
+  console.log('  - Loading users router...');
+  usersRouter = require('./routes/users');
+  console.log('  ✅ users router loaded');
   
   console.log('  - Loading emailScheduler...');
   const scheduler = require('./services/emailScheduler');
@@ -126,6 +135,8 @@ app.use('/api/logs', logsRouter);
 app.use('/api/company-info', companyInfoRouter);
 app.use('/api/tracking', trackingRouter);
 app.use('/api/uploads', uploadRouter);
+app.use('/api/organizations', organizationsRouter);
+app.use('/api/users', usersRouter);
 
 // Health check
 app.get('/health', (req, res) => {

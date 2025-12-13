@@ -74,6 +74,7 @@
     component: './SchedulerLogs',
     hideInMenu: true,
   },
+  // Super Admin yönetim paneli
   {
     path: '/admin',
     name: 'admin',
@@ -93,6 +94,29 @@
         path: '/admin/users',
         name: 'users',
         component: './Admin/Users',
+      },
+    ],
+  },
+  // Org Admin yönetim paneli
+  {
+    path: '/organization',
+    name: 'organization',
+    icon: 'team',
+    access: 'canOrgAdmin',
+    routes: [
+      {
+        path: '/organization',
+        redirect: '/organization/users',
+      },
+      {
+        path: '/organization/users',
+        name: 'users',
+        component: './Organization/Users',
+      },
+      {
+        path: '/organization/limits',
+        name: 'limits',
+        component: './Organization/Limits',
       },
     ],
   },

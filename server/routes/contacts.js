@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../db');
 const { authMiddleware } = require('../middleware/auth');
+const { checkContactLimit, checkBulkContactLimit } = require('../middleware/limitCheck');
 
 // Tüm contacts route'ları için authentication zorunlu
 router.use(authMiddleware);
@@ -320,7 +321,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST /api/contacts - Yeni müşteri ekle - KULLANICIYA AİT
-router.post('/', async (req, res) => {
+router.post('/', checkContactLimit, async (req, res) => {
   try {
     const userId = req.user.id;
     const organizationId = req.user.organizationId;

@@ -238,7 +238,7 @@ export async function getUsers(params?: {
   page?: number;
   pageSize?: number;
 }> {
-  return request('/api/auth/users', {
+  return request('/api/users', {
     method: 'GET',
     params,
   });
@@ -253,9 +253,17 @@ export async function createUser(params: {
   role?: string;
   organizationId?: number;
 }): Promise<{ success: boolean; data?: User; error?: string }> {
-  return request('/api/auth/users', {
+  return request('/api/users', {
     method: 'POST',
-    data: params,
+    data: {
+      email: params.email,
+      password: params.password,
+      first_name: params.firstName,
+      last_name: params.lastName,
+      phone: params.phone,
+      role: params.role,
+      organization_id: params.organizationId,
+    },
   });
 }
 
@@ -270,14 +278,32 @@ export async function updateUser(
     organizationId?: number;
   },
 ): Promise<{ success: boolean; data?: User; error?: string }> {
-  return request(`/api/auth/users/${id}`, {
+  return request(`/api/users/${id}`, {
     method: 'PUT',
-    data: params,
+    data: {
+      first_name: params.firstName,
+      last_name: params.lastName,
+      phone: params.phone,
+      role: params.role,
+      status: params.status,
+      organization_id: params.organizationId,
+    },
+  });
+}
+
+export async function updateUserPassword(
+  id: number,
+  password: string,
+  showPassword?: boolean,
+): Promise<{ success: boolean; message?: string; password?: string; error?: string }> {
+  return request(`/api/users/${id}/password`, {
+    method: 'PUT',
+    data: { password, show_password: showPassword },
   });
 }
 
 export async function deleteUser(id: number): Promise<{ success: boolean; message?: string; error?: string }> {
-  return request(`/api/auth/users/${id}`, {
+  return request(`/api/users/${id}`, {
     method: 'DELETE',
   });
 }
@@ -295,9 +321,15 @@ export async function getOrganizations(params?: {
   page?: number;
   pageSize?: number;
 }> {
-  return request('/api/auth/organizations', {
+  return request('/api/organizations', {
     method: 'GET',
     params,
+  });
+}
+
+export async function getOrganization(id: number): Promise<{ success: boolean; data?: Organization; error?: string }> {
+  return request(`/api/organizations/${id}`, {
+    method: 'GET',
   });
 }
 
@@ -313,9 +345,20 @@ export async function createOrganization(params: {
   maxContacts?: number;
   maxEmailsPerMonth?: number;
 }): Promise<{ success: boolean; data?: Organization; error?: string }> {
-  return request('/api/auth/organizations', {
+  return request('/api/organizations', {
     method: 'POST',
-    data: params,
+    data: {
+      name: params.name,
+      slug: params.slug,
+      description: params.description,
+      email: params.email,
+      phone: params.phone,
+      website: params.website,
+      plan: params.plan,
+      max_users: params.maxUsers,
+      max_contacts: params.maxContacts,
+      max_emails_per_month: params.maxEmailsPerMonth,
+    },
   });
 }
 
@@ -334,16 +377,35 @@ export async function updateOrganization(
     maxEmailsPerMonth?: number;
   },
 ): Promise<{ success: boolean; data?: Organization; error?: string }> {
-  return request(`/api/auth/organizations/${id}`, {
+  return request(`/api/organizations/${id}`, {
     method: 'PUT',
-    data: params,
+    data: {
+      name: params.name,
+      description: params.description,
+      email: params.email,
+      phone: params.phone,
+      website: params.website,
+      plan: params.plan,
+      status: params.status,
+      max_users: params.maxUsers,
+      max_contacts: params.maxContacts,
+      max_emails_per_month: params.maxEmailsPerMonth,
+    },
   });
 }
 
 export async function deleteOrganization(
   id: number,
 ): Promise<{ success: boolean; message?: string; error?: string }> {
-  return request(`/api/auth/organizations/${id}`, {
+  return request(`/api/organizations/${id}`, {
     method: 'DELETE',
+  });
+}
+
+export async function getOrganizationLimits(
+  id: number,
+): Promise<{ success: boolean; data?: { organization: string; plan: string; limits: any; usage: any; remaining: any }; error?: string }> {
+  return request(`/api/organizations/${id}/limits`, {
+    method: 'GET',
   });
 }
