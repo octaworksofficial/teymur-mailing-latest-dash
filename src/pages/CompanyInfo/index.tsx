@@ -459,32 +459,86 @@ const CompanyInfo: React.FC = () => {
                 </Col>
 
                 <Col span={8}>
-                  <Form.Item name="phone_primary" label="Ana Telefon">
+                  <Form.Item
+                    name="phone_primary"
+                    label="Ana Telefon"
+                    rules={[
+                      {
+                        pattern: /^[+]?[\d\s\-()]+$/,
+                        message: 'Geçerli bir telefon numarası girin',
+                      },
+                    ]}
+                  >
                     <Input placeholder="+90 555 123 4567" />
                   </Form.Item>
                 </Col>
                 <Col span={8}>
-                  <Form.Item name="phone_secondary" label="İkinci Telefon">
+                  <Form.Item
+                    name="phone_secondary"
+                    label="İkinci Telefon"
+                    rules={[
+                      {
+                        pattern: /^[+]?[\d\s\-()]+$/,
+                        message: 'Geçerli bir telefon numarası girin',
+                      },
+                    ]}
+                  >
                     <Input placeholder="+90 555 987 6543" />
                   </Form.Item>
                 </Col>
                 <Col span={8}>
-                  <Form.Item name="whatsapp_number" label="WhatsApp Hattı">
+                  <Form.Item
+                    name="whatsapp_number"
+                    label="WhatsApp Hattı"
+                    rules={[
+                      {
+                        pattern: /^[+]?[\d\s\-()]+$/,
+                        message: 'Geçerli bir telefon numarası girin',
+                      },
+                    ]}
+                  >
                     <Input placeholder="+90 555 123 4567" />
                   </Form.Item>
                 </Col>
                 <Col span={8}>
-                  <Form.Item name="email_general" label="Genel Email">
+                  <Form.Item
+                    name="email_general"
+                    label="Genel Email"
+                    rules={[
+                      {
+                        type: 'email',
+                        message: 'Geçerli bir email adresi girin',
+                      },
+                    ]}
+                  >
                     <Input placeholder="info@example.com" />
                   </Form.Item>
                 </Col>
                 <Col span={8}>
-                  <Form.Item name="email_support" label="Destek Email">
+                  <Form.Item
+                    name="email_support"
+                    label="Destek Email"
+                    rules={[
+                      {
+                        type: 'email',
+                        message: 'Geçerli bir email adresi girin',
+                      },
+                    ]}
+                  >
                     <Input placeholder="destek@example.com" />
                   </Form.Item>
                 </Col>
                 <Col span={8}>
-                  <Form.Item name="email_sales" label="Satış Email">
+                  <Form.Item
+                    name="email_sales"
+                    label="Satış Email"
+                    rules={[
+                      {
+                        type: 'email',
+                        message: 'Geçerli bir email adresi girin',
+                      },
+                    ]}
+                  >
                     <Input placeholder="satis@example.com" />
                   </Form.Item>
                 </Col>
@@ -504,7 +558,18 @@ const CompanyInfo: React.FC = () => {
             <Card>
               <Row gutter={[16, 16]}>
                 <Col span={24}>
-                  <Form.Item name="website_url" label="Website">
+                  <Form.Item
+                    name="website_url"
+                    label="Website"
+                    rules={[
+                      {
+                        pattern:
+                          /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/,
+                        message:
+                          'Geçerli bir website adresi girin (örn: https://example.com)',
+                      },
+                    ]}
+                  >
                     <Input
                       prefix={<GlobalOutlined />}
                       placeholder="https://www.example.com"
@@ -512,27 +577,72 @@ const CompanyInfo: React.FC = () => {
                   </Form.Item>
                 </Col>
                 <Col span={12}>
-                  <Form.Item name="facebook_url" label="Facebook">
+                  <Form.Item
+                    name="facebook_url"
+                    label="Facebook"
+                    rules={[
+                      {
+                        pattern: /^(https?:\/\/)?(www\.)?facebook\.com\/.+$/,
+                        message: 'Geçerli bir Facebook URL girin',
+                      },
+                    ]}
+                  >
                     <Input placeholder="https://facebook.com/..." />
                   </Form.Item>
                 </Col>
                 <Col span={12}>
-                  <Form.Item name="twitter_url" label="Twitter/X">
+                  <Form.Item
+                    name="twitter_url"
+                    label="Twitter/X"
+                    rules={[
+                      {
+                        pattern: /^(https?:\/\/)?(www\.)?(twitter|x)\.com\/.+$/,
+                        message: 'Geçerli bir Twitter/X URL girin',
+                      },
+                    ]}
+                  >
                     <Input placeholder="https://twitter.com/..." />
                   </Form.Item>
                 </Col>
                 <Col span={12}>
-                  <Form.Item name="instagram_url" label="Instagram">
+                  <Form.Item
+                    name="instagram_url"
+                    label="Instagram"
+                    rules={[
+                      {
+                        pattern: /^(https?:\/\/)?(www\.)?instagram\.com\/.+$/,
+                        message: 'Geçerli bir Instagram URL girin',
+                      },
+                    ]}
+                  >
                     <Input placeholder="https://instagram.com/..." />
                   </Form.Item>
                 </Col>
                 <Col span={12}>
-                  <Form.Item name="linkedin_url" label="LinkedIn">
+                  <Form.Item
+                    name="linkedin_url"
+                    label="LinkedIn"
+                    rules={[
+                      {
+                        pattern: /^(https?:\/\/)?(www\.)?linkedin\.com\/.+$/,
+                        message: 'Geçerli bir LinkedIn URL girin',
+                      },
+                    ]}
+                  >
                     <Input placeholder="https://linkedin.com/company/..." />
                   </Form.Item>
                 </Col>
                 <Col span={12}>
-                  <Form.Item name="youtube_url" label="YouTube">
+                  <Form.Item
+                    name="youtube_url"
+                    label="YouTube"
+                    rules={[
+                      {
+                        pattern: /^(https?:\/\/)?(www\.)?youtube\.com\/.+$/,
+                        message: 'Geçerli bir YouTube URL girin',
+                      },
+                    ]}
+                  >
                     <Input placeholder="https://youtube.com/@..." />
                   </Form.Item>
                 </Col>

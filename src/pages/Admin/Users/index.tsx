@@ -17,15 +17,24 @@ import {
   ProFormText,
   ProTable,
 } from '@ant-design/pro-components';
-import { App, Button, Popconfirm, Space, Tag, Modal, Input, Typography } from 'antd';
-import React, { useRef, useState, useEffect } from 'react';
+import {
+  App,
+  Button,
+  Input,
+  Modal,
+  Popconfirm,
+  Space,
+  Tag,
+  Typography,
+} from 'antd';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   createUser,
   deleteUser,
-  getUsers,
   getOrganizations,
-  type User,
+  getUsers,
   type Organization,
+  type User,
   updateUser,
   updateUserPassword,
 } from '@/services/auth';
@@ -65,7 +74,9 @@ const UsersPage: React.FC = () => {
   const [passwordModalVisible, setPasswordModalVisible] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [newPassword, setNewPassword] = useState('');
-  const [generatedPassword, setGeneratedPassword] = useState<string | null>(null);
+  const [generatedPassword, setGeneratedPassword] = useState<string | null>(
+    null,
+  );
 
   // Organizasyonları yükle
   useEffect(() => {
@@ -112,7 +123,8 @@ const UsersPage: React.FC = () => {
   };
 
   const generateRandomPassword = () => {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%';
+    const chars =
+      'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%';
     let password = '';
     for (let i = 0; i < 12; i++) {
       password += chars.charAt(Math.floor(Math.random() * chars.length));
@@ -137,13 +149,15 @@ const UsersPage: React.FC = () => {
       title: 'Ad',
       dataIndex: 'first_name',
       search: false,
-      render: (_, record) => (record as any).first_name || record.firstName || '-',
+      render: (_, record) =>
+        (record as any).first_name || record.firstName || '-',
     },
     {
       title: 'Soyad',
       dataIndex: 'last_name',
       search: false,
-      render: (_, record) => (record as any).last_name || record.lastName || '-',
+      render: (_, record) =>
+        (record as any).last_name || record.lastName || '-',
     },
     {
       title: 'Telefon',
@@ -183,7 +197,8 @@ const UsersPage: React.FC = () => {
       title: 'Organizasyon',
       dataIndex: 'organization_name',
       search: false,
-      render: (_, record) => (record as any).organization_name || record.organizationName || '-',
+      render: (_, record) =>
+        (record as any).organization_name || record.organizationName || '-',
     },
     {
       title: 'Son Giriş',
@@ -351,15 +366,19 @@ const UsersPage: React.FC = () => {
           if (!visible) setEditingUser(null);
         }}
         onFinish={handleSubmit}
-        initialValues={editingUser ? {
-          email: editingUser.email,
-          firstName: editingUser.first_name,
-          lastName: editingUser.last_name,
-          phone: editingUser.phone,
-          role: editingUser.role,
-          organizationId: editingUser.organization_id,
-          status: editingUser.status,
-        } : {}}
+        initialValues={
+          editingUser
+            ? {
+                email: editingUser.email,
+                firstName: editingUser.first_name,
+                lastName: editingUser.last_name,
+                phone: editingUser.phone,
+                role: editingUser.role,
+                organizationId: editingUser.organization_id,
+                status: editingUser.status,
+              }
+            : {}
+        }
         modalProps={{
           destroyOnClose: true,
         }}
@@ -385,12 +404,22 @@ const UsersPage: React.FC = () => {
         )}
         <ProFormText name="firstName" label="Ad" />
         <ProFormText name="lastName" label="Soyad" />
-        <ProFormText name="phone" label="Telefon" />
+        <ProFormText
+          name="phone"
+          label="Telefon"
+          rules={[
+            {
+              pattern: /^[+]?[\d\s\-()]+$/,
+              message:
+                'Geçerli bir telefon numarası girin (sadece rakam, +, -, boşluk ve parantez)',
+            },
+          ]}
+        />
         <ProFormSelect
           name="organizationId"
           label="Organizasyon"
           rules={[{ required: true, message: 'Organizasyon seçiniz' }]}
-          options={organizations.map(org => ({
+          options={organizations.map((org) => ({
             value: org.id,
             label: `${org.name} (${org.slug})`,
           }))}
@@ -424,12 +453,16 @@ const UsersPage: React.FC = () => {
       <Modal
         title="Şifre Değiştir"
         open={passwordModalVisible}
-        onOk={generatedPassword ? () => {
-          setPasswordModalVisible(false);
-          setNewPassword('');
-          setSelectedUserId(null);
-          setGeneratedPassword(null);
-        } : handlePasswordChange}
+        onOk={
+          generatedPassword
+            ? () => {
+                setPasswordModalVisible(false);
+                setNewPassword('');
+                setSelectedUserId(null);
+                setGeneratedPassword(null);
+              }
+            : handlePasswordChange
+        }
         onCancel={() => {
           setPasswordModalVisible(false);
           setNewPassword('');
@@ -442,7 +475,16 @@ const UsersPage: React.FC = () => {
         {generatedPassword ? (
           <div>
             <Paragraph>Yeni şifre başarıyla ayarlandı:</Paragraph>
-            <Paragraph copyable strong style={{ fontSize: 18, backgroundColor: '#f0f0f0', padding: 10, borderRadius: 4 }}>
+            <Paragraph
+              copyable
+              strong
+              style={{
+                fontSize: 18,
+                backgroundColor: '#f0f0f0',
+                padding: 10,
+                borderRadius: 4,
+              }}
+            >
               {generatedPassword}
             </Paragraph>
             <Text type="warning">Bu şifreyi güvenli bir yere kaydedin!</Text>
@@ -454,7 +496,9 @@ const UsersPage: React.FC = () => {
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
             />
-            <Button onClick={generateRandomPassword}>Rastgele Şifre Oluştur</Button>
+            <Button onClick={generateRandomPassword}>
+              Rastgele Şifre Oluştur
+            </Button>
           </Space>
         )}
       </Modal>

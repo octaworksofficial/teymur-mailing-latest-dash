@@ -17,7 +17,17 @@ import {
   ProFormText,
   ProTable,
 } from '@ant-design/pro-components';
-import { App, Button, Popconfirm, Space, Tag, Modal, Input, Typography } from 'antd';
+import { useModel } from '@umijs/max';
+import {
+  App,
+  Button,
+  Input,
+  Modal,
+  Popconfirm,
+  Space,
+  Tag,
+  Typography,
+} from 'antd';
 import React, { useRef, useState } from 'react';
 import {
   createUser,
@@ -27,7 +37,6 @@ import {
   updateUser,
   updateUserPassword,
 } from '@/services/auth';
-import { useModel } from '@umijs/max';
 
 const { Text, Paragraph } = Typography;
 
@@ -58,13 +67,15 @@ const OrgUsersPage: React.FC = () => {
   const { message } = App.useApp();
   const { initialState } = useModel('@@initialState');
   const currentUser = initialState?.currentUser;
-  
+
   const [modalVisible, setModalVisible] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [passwordModalVisible, setPasswordModalVisible] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [newPassword, setNewPassword] = useState('');
-  const [generatedPassword, setGeneratedPassword] = useState<string | null>(null);
+  const [generatedPassword, setGeneratedPassword] = useState<string | null>(
+    null,
+  );
 
   const handlePasswordChange = async () => {
     if (!selectedUserId || !newPassword) {
@@ -96,7 +107,8 @@ const OrgUsersPage: React.FC = () => {
   };
 
   const generateRandomPassword = () => {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%';
+    const chars =
+      'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%';
     let password = '';
     for (let i = 0; i < 12; i++) {
       password += chars.charAt(Math.floor(Math.random() * chars.length));
@@ -251,17 +263,21 @@ const OrgUsersPage: React.FC = () => {
         title={editingUser ? 'Kullanıcı Düzenle' : 'Yeni Kullanıcı'}
         open={modalVisible}
         onOpenChange={setModalVisible}
-        initialValues={editingUser ? {
-          email: editingUser.email,
-          firstName: editingUser.firstName,
-          lastName: editingUser.lastName,
-          phone: editingUser.phone,
-          role: editingUser.role,
-          status: editingUser.status,
-        } : {
-          role: 'user',
-          status: 'active',
-        }}
+        initialValues={
+          editingUser
+            ? {
+                email: editingUser.email,
+                firstName: editingUser.firstName,
+                lastName: editingUser.lastName,
+                phone: editingUser.phone,
+                role: editingUser.role,
+                status: editingUser.status,
+              }
+            : {
+                role: 'user',
+                status: 'active',
+              }
+        }
         onFinish={async (values) => {
           try {
             if (editingUser) {
@@ -313,13 +329,21 @@ const OrgUsersPage: React.FC = () => {
         )}
         <ProFormText name="firstName" label="Ad" />
         <ProFormText name="lastName" label="Soyad" />
-        <ProFormText name="phone" label="Telefon" />
+        <ProFormText
+          name="phone"
+          label="Telefon"
+          rules={[
+            {
+              pattern: /^[+]?[\d\s\-()]+$/,
+              message:
+                'Geçerli bir telefon numarası girin (sadece rakam, +, -, boşluk ve parantez)',
+            },
+          ]}
+        />
         <ProFormSelect
           name="role"
           label="Rol"
-          options={[
-            { value: 'user', label: 'Kullanıcı' },
-          ]}
+          options={[{ value: 'user', label: 'Kullanıcı' }]}
           rules={[{ required: true }]}
         />
         <ProFormSelect
@@ -349,7 +373,16 @@ const OrgUsersPage: React.FC = () => {
         {generatedPassword ? (
           <div>
             <Paragraph>Yeni şifre başarıyla ayarlandı:</Paragraph>
-            <Paragraph copyable strong style={{ fontSize: 18, backgroundColor: '#f0f0f0', padding: 10, borderRadius: 4 }}>
+            <Paragraph
+              copyable
+              strong
+              style={{
+                fontSize: 18,
+                backgroundColor: '#f0f0f0',
+                padding: 10,
+                borderRadius: 4,
+              }}
+            >
               {generatedPassword}
             </Paragraph>
             <Text type="warning">Bu şifreyi güvenli bir yere kaydedin!</Text>
@@ -361,7 +394,9 @@ const OrgUsersPage: React.FC = () => {
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
             />
-            <Button onClick={generateRandomPassword}>Rastgele Şifre Oluştur</Button>
+            <Button onClick={generateRandomPassword}>
+              Rastgele Şifre Oluştur
+            </Button>
           </Space>
         )}
       </Modal>

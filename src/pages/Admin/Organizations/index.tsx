@@ -133,7 +133,8 @@ const OrganizationsPage: React.FC = () => {
       search: false,
       render: (_, record) => (
         <span>
-          {(record as any).contact_count || 0} / {(record as any).max_contacts || '∞'}
+          {(record as any).contact_count || 0} /{' '}
+          {(record as any).max_contacts || '∞'}
         </span>
       ),
     },
@@ -281,19 +282,32 @@ const OrganizationsPage: React.FC = () => {
           if (!visible) setEditingOrg(null);
         }}
         onFinish={handleSubmit}
-        initialValues={editingOrg ? {
-          name: editingOrg.name,
-          slug: editingOrg.slug,
-          description: editingOrg.description,
-          email: editingOrg.email,
-          phone: editingOrg.phone,
-          website: editingOrg.website,
-          plan: editingOrg.plan,
-          status: editingOrg.status,
-          maxUsers: editingOrg.maxUsers ?? (editingOrg as any).max_users,
-          maxContacts: editingOrg.maxContacts ?? (editingOrg as any).max_contacts,
-          maxEmailsPerMonth: editingOrg.maxEmailsPerMonth ?? (editingOrg as any).max_emails_per_month,
-        } : { plan: 'free', status: 'active', maxUsers: 5, maxContacts: 1000, maxEmailsPerMonth: 5000 }}
+        initialValues={
+          editingOrg
+            ? {
+                name: editingOrg.name,
+                slug: editingOrg.slug,
+                description: editingOrg.description,
+                email: editingOrg.email,
+                phone: editingOrg.phone,
+                website: editingOrg.website,
+                plan: editingOrg.plan,
+                status: editingOrg.status,
+                maxUsers: editingOrg.maxUsers ?? (editingOrg as any).max_users,
+                maxContacts:
+                  editingOrg.maxContacts ?? (editingOrg as any).max_contacts,
+                maxEmailsPerMonth:
+                  editingOrg.maxEmailsPerMonth ??
+                  (editingOrg as any).max_emails_per_month,
+              }
+            : {
+                plan: 'free',
+                status: 'active',
+                maxUsers: 5,
+                maxContacts: 1000,
+                maxEmailsPerMonth: 5000,
+              }
+        }
         modalProps={{
           destroyOnClose: true,
           width: 600,
@@ -318,9 +332,34 @@ const OrganizationsPage: React.FC = () => {
           tooltip="URL'lerde kullanılacak benzersiz tanımlayıcı"
         />
         <ProFormTextArea name="description" label="Açıklama" />
-        <ProFormText name="email" label="Email" />
-        <ProFormText name="phone" label="Telefon" />
-        <ProFormText name="website" label="Website" />
+        <ProFormText
+          name="email"
+          label="Email"
+          rules={[{ type: 'email', message: 'Geçerli bir email adresi girin' }]}
+        />
+        <ProFormText
+          name="phone"
+          label="Telefon"
+          rules={[
+            {
+              pattern: /^[+]?[\d\s\-()]+$/,
+              message:
+                'Geçerli bir telefon numarası girin (sadece rakam, +, -, boşluk ve parantez)',
+            },
+          ]}
+        />
+        <ProFormText
+          name="website"
+          label="Website"
+          rules={[
+            {
+              pattern:
+                /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/,
+              message:
+                'Geçerli bir website adresi girin (örn: https://example.com)',
+            },
+          ]}
+        />
         <ProFormSelect
           name="plan"
           label="Plan"

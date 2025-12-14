@@ -808,11 +808,25 @@ const Contacts: React.FC = () => {
           name="phone"
           label="Telefon"
           placeholder="+90 5XX XXX XX XX"
+          rules={[
+            {
+              pattern: /^[+]?[\d\s\-()]+$/,
+              message:
+                'Geçerli bir telefon numarası girin (sadece rakam, +, -, boşluk ve parantez)',
+            },
+          ]}
         />
         <ProFormText
           name="mobile_phone"
           label="Mobil Telefon"
           placeholder="+90 5XX XXX XX XX"
+          rules={[
+            {
+              pattern: /^[+]?[\d\s\-()]+$/,
+              message:
+                'Geçerli bir telefon numarası girin (sadece rakam, +, -, boşluk ve parantez)',
+            },
+          ]}
         />
         <ProFormText name="company" label="Şirket" placeholder="Şirket adı" />
         <ProFormText
@@ -975,11 +989,25 @@ const Contacts: React.FC = () => {
           name="phone"
           label="Telefon"
           placeholder="+90 5XX XXX XX XX"
+          rules={[
+            {
+              pattern: /^[+]?[\d\s\-()]+$/,
+              message:
+                'Geçerli bir telefon numarası girin (sadece rakam, +, -, boşluk ve parantez)',
+            },
+          ]}
         />
         <ProFormText
           name="mobile_phone"
           label="Mobil Telefon"
           placeholder="+90 5XX XXX XX XX"
+          rules={[
+            {
+              pattern: /^[+]?[\d\s\-()]+$/,
+              message:
+                'Geçerli bir telefon numarası girin (sadece rakam, +, -, boşluk ve parantez)',
+            },
+          ]}
         />
         <ProFormText name="company" label="Şirket" placeholder="Şirket adı" />
         <ProFormText

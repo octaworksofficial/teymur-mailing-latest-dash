@@ -250,6 +250,11 @@ const Login: React.FC = () => {
                       />
                     ),
                   },
+                  {
+                    type: 'email',
+                    message:
+                      'Geçerli bir email adresi girin (örn: ornek@email.com)',
+                  },
                 ]}
               />
               <ProFormText.Password
