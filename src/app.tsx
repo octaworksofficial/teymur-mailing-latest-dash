@@ -78,12 +78,26 @@ export const layout: RunTimeLayoutConfig = ({
         history.push(loginPath);
         return;
       }
+
+      const userRole = initialState?.currentUser?.role;
+
       // Super admin ana sayfaya girerse /admin'e yönlendir
       if (
-        initialState?.currentUser?.role === 'super_admin' &&
+        userRole === 'super_admin' &&
         (location.pathname === '/' || location.pathname === '/dashboard')
       ) {
         history.push('/admin');
+        return;
+      }
+
+      // Normal kullanıcı veya org_admin /admin sayfalarına girerse /dashboard'a yönlendir
+      if (
+        userRole &&
+        userRole !== 'super_admin' &&
+        location.pathname.startsWith('/admin')
+      ) {
+        history.push('/dashboard');
+        return;
       }
     },
     bgLayoutImgList: [

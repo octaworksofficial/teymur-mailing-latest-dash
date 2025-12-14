@@ -126,6 +126,11 @@
     ],
   },
   {
+    path: '/403',
+    component: './403',
+    hideInMenu: true,
+  },
+  {
     path: '/',
     redirect: '/dashboard',
   },
