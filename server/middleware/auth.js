@@ -116,6 +116,7 @@ const authMiddleware = async (req, res, next) => {
       lastName: user.last_name,
       role: user.role,
       organizationId: user.organization_id,
+      organization_id: user.organization_id, // snake_case alias
       organizationName: user.organization_name,
       organizationSlug: user.organization_slug,
       permissions: user.permissions || [],
@@ -176,6 +177,7 @@ const optionalAuthMiddleware = async (req, res, next) => {
         lastName: user.last_name,
         role: user.role,
         organizationId: user.organization_id,
+        organization_id: user.organization_id, // snake_case alias
         organizationName: user.organization_name,
         organizationSlug: user.organization_slug,
         permissions: user.permissions || [],

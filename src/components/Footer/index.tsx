@@ -7,12 +7,12 @@ const Footer: React.FC = () => {
       style={{
         background: 'none',
       }}
-      copyright="2025 CERİLAS Yüksek Teknoloji San. ve Tic. A.Ş."
+      copyright="2025 CRMENTUM - Email Kampanya Yönetim Platformu"
       links={[
         {
           key: 'help',
           title: 'Yardım',
-          href: 'mailto:deniz@cerilas.com',
+          href: 'mailto:destek@crmentum.com',
           blankTarget: false,
         },
       ]}

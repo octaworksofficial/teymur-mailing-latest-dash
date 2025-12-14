@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="40" height="40">
+  <defs>
+    <linearGradient id="mailGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1890ff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#096dd9;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background - Tam Kare -->
+  <rect x="0" y="0" width="40" height="40" rx="0" ry="0" fill="url(#mailGrad)" />
+  
+  <!-- Envelope -->
+  <path d="M8 14 L20 24 L32 14" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="8" y="12" width="24" height="18" rx="2" ry="2" fill="none" stroke="#fff" stroke-width="2"/>
+</svg>
