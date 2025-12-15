@@ -9,14 +9,24 @@ const { pool } = require('../db');
  * Özel gün tarihini veritabanından al
  * @param {string} dayType - Özel gün tipi (ramazan_bayrami_1, yilbasi, vb.)
  * @param {number} year - Yıl
+ * @param {number} userId - Kullanıcı ID (özel günler kullanıcı bazlı)
  * @returns {Date|null} Tarih veya null
  */
-async function getSpecialDayDate(dayType, year) {
+async function getSpecialDayDate(dayType, year, userId = null) {
   try {
-    const result = await pool.query(
-      'SELECT actual_date FROM special_days_calendar WHERE day_type = $1 AND year = $2',
-      [dayType, year]
-    );
+    let result;
+    if (userId) {
+      result = await pool.query(
+        'SELECT actual_date FROM special_days_calendar WHERE day_type = $1 AND year = $2 AND user_id = $3',
+        [dayType, year, userId]
+      );
+    } else {
+      // userId yoksa fallback (geriye uyumluluk)
+      result = await pool.query(
+        'SELECT actual_date FROM special_days_calendar WHERE day_type = $1 AND year = $2 LIMIT 1',
+        [dayType, year]
+      );
+    }
     
     if (result.rows.length > 0) {
       return new Date(result.rows[0].actual_date);
@@ -168,9 +178,10 @@ function calculateNextRecurringDate(recurrenceConfig, lastSentDate = null) {
 /**
  * Special day schedule için bir sonraki gönderim tarihini hesapla
  * @param {Object} specialDayConfig - Special day konfigürasyonu
+ * @param {number} userId - Kullanıcı ID (özel günler kullanıcı bazlı)
  * @returns {Date|null} Bir sonraki gönderim tarihi
  */
-async function calculateNextSpecialDayDate(specialDayConfig) {
+async function calculateNextSpecialDayDate(specialDayConfig, userId = null) {
   const { day_type, custom_date, day_offset = 0, time, yearly_repeat = true } = specialDayConfig;
   
   const now = new Date();
@@ -187,10 +198,10 @@ async function calculateNextSpecialDayDate(specialDayConfig) {
     targetDate = new Date(custom_date);
   } else {
     // Önce bu yılın tarihini kontrol et
-    targetDate = await getSpecialDayDate(day_type, currentYear);
+    targetDate = await getSpecialDayDate(day_type, currentYear, userId);
     
     if (!targetDate) {
-      console.warn(`Special day not found: ${day_type} for year ${currentYear}`);
+      console.warn(`Special day not found: ${day_type} for year ${currentYear}, userId: ${userId}`);
       return null;
     }
     
@@ -201,7 +212,7 @@ async function calculateNextSpecialDayDate(specialDayConfig) {
     
     // Eğer tarih geçmişte kaldıysa ve yıllık tekrar aktifse, gelecek yıla bak
     if (targetDate <= now && yearly_repeat) {
-      targetDate = await getSpecialDayDate(day_type, currentYear + 1);
+      targetDate = await getSpecialDayDate(day_type, currentYear + 1, userId);
       if (targetDate) {
         targetDate = new Date(targetDate);
         targetDate.setDate(targetDate.getDate() + day_offset);
@@ -221,9 +232,10 @@ async function calculateNextSpecialDayDate(specialDayConfig) {
  * Template sequence item'dan next_send_date hesapla
  * @param {Object} sequenceItem - Template sequence item
  * @param {Date} lastSentDate - Son gönderim tarihi (opsiyonel)
+ * @param {number} userId - Kullanıcı ID (özel günler için)
  * @returns {Date|null} Bir sonraki gönderim tarihi
  */
-async function calculateNextSendDate(sequenceItem, lastSentDate = null) {
+async function calculateNextSendDate(sequenceItem, lastSentDate = null, userId = null) {
   const { schedule_type, scheduled_date, recurrence_config, special_day_config } = sequenceItem;
   
   switch (schedule_type) {
@@ -239,7 +251,7 @@ async function calculateNextSendDate(sequenceItem, lastSentDate = null) {
       
     case 'special_day':
       if (!special_day_config) return null;
-      return await calculateNextSpecialDayDate(special_day_config);
+      return await calculateNextSpecialDayDate(special_day_config, userId);
       
     default:
       // Varsayılan olarak scheduled_date kullan
@@ -264,6 +276,14 @@ async function syncCampaignSchedules(campaignId, templateSequence) {
       return;
     }
     
+    // Kampanya bilgisini al (user_id için)
+    const campaignResult = await pool.query(
+      'SELECT user_id FROM email_campaigns WHERE id = $1',
+      [campaignId]
+    );
+    
+    const userId = campaignResult.rows[0]?.user_id || null;
+    
     // Mevcut schedule'ları al
     const existingSchedules = await pool.query(
       'SELECT id, sequence_index FROM email_campaign_schedules WHERE campaign_id = $1',
@@ -283,7 +303,7 @@ async function syncCampaignSchedules(campaignId, templateSequence) {
     // Her template sequence item için schedule oluştur/güncelle
     for (let i = 0; i < templateSequence.length; i++) {
       const item = templateSequence[i];
-      const nextSendDate = await calculateNextSendDate(item);
+      const nextSendDate = await calculateNextSendDate(item, null, userId);
       
       if (existingIndexes.has(i)) {
         // Güncelle
@@ -313,8 +333,8 @@ async function syncCampaignSchedules(campaignId, templateSequence) {
           INSERT INTO email_campaign_schedules (
             campaign_id, template_id, sequence_index,
             schedule_type, scheduled_date, recurrence_config, special_day_config,
-            next_send_date
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            next_send_date, user_id
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         `, [
           campaignId,
           item.template_id,
@@ -323,7 +343,8 @@ async function syncCampaignSchedules(campaignId, templateSequence) {
           item.scheduled_date || null,
           item.recurrence_config ? JSON.stringify(item.recurrence_config) : null,
           item.special_day_config ? JSON.stringify(item.special_day_config) : null,
-          nextSendDate
+          nextSendDate,
+          userId
         ]);
       }
     }
@@ -342,13 +363,14 @@ async function syncCampaignSchedules(campaignId, templateSequence) {
 async function updateScheduleAfterSend(scheduleId) {
   try {
     const result = await pool.query(
-      'SELECT * FROM email_campaign_schedules WHERE id = $1',
+      'SELECT ecs.*, ec.user_id FROM email_campaign_schedules ecs LEFT JOIN email_campaigns ec ON ecs.campaign_id = ec.id WHERE ecs.id = $1',
       [scheduleId]
     );
     
     if (result.rows.length === 0) return;
     
     const schedule = result.rows[0];
+    const userId = schedule.user_id;
     const now = new Date();
     
     let nextSendDate = null;
@@ -356,7 +378,7 @@ async function updateScheduleAfterSend(scheduleId) {
     if (schedule.schedule_type === 'recurring') {
       nextSendDate = calculateNextRecurringDate(schedule.recurrence_config, now);
     } else if (schedule.schedule_type === 'special_day' && schedule.special_day_config?.yearly_repeat) {
-      nextSendDate = await calculateNextSpecialDayDate(schedule.special_day_config);
+      nextSendDate = await calculateNextSpecialDayDate(schedule.special_day_config, userId);
     }
     // custom_date için next_send_date null kalır (tek seferlik)
     

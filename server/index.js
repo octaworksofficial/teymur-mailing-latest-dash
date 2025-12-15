@@ -17,6 +17,7 @@ const trackingRouter = require('./routes/tracking');
 const uploadRouter = require('./routes/upload');
 const organizationsRouter = require('./routes/organizations');
 const usersRouter = require('./routes/users');
+const specialDaysRouter = require('./routes/specialDays');
 const { startEmailScheduler } = require('./services/emailScheduler');
 
 const app = express();
@@ -42,6 +43,7 @@ app.use('/api/tracking', trackingRouter);
 app.use('/api/uploads', uploadRouter);
 app.use('/api/organizations', organizationsRouter);
 app.use('/api/users', usersRouter);
+app.use('/api/special-days', specialDaysRouter);
 
 // Health check
 app.get('/health', (req, res) => {

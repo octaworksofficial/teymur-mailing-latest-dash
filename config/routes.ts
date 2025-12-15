@@ -73,6 +73,13 @@
     access: 'canNotSuperAdmin',
   },
   {
+    path: '/special-days',
+    name: 'special-days',
+    icon: 'calendar',
+    component: './SpecialDays',
+    access: 'canNotSuperAdmin',
+  },
+  {
     path: '/scheduler-logs',
     name: 'scheduler-logs',
     icon: 'code',

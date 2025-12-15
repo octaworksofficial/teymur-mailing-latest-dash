@@ -10,6 +10,7 @@ export default {
   'menu.campaigns.create': 'Yeni Program',
   'menu.scheduler-logs': 'Scheduler Logları',
   'menu.company-info': 'Kurumsal Bilgiler',
+  'menu.special-days': 'Özel Günler Takvimi',
   'menu.admin': 'Platform Yönetimi',
   'menu.admin.organizations': 'Organizasyonlar',
   'menu.admin.users': 'Tüm Kullanıcılar',
