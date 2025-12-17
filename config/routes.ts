@@ -95,7 +95,13 @@
     routes: [
       {
         path: '/admin',
-        redirect: '/admin/organizations',
+        redirect: '/admin/dashboard',
+      },
+      {
+        path: '/admin/dashboard',
+        name: 'dashboard',
+        icon: 'dashboard',
+        component: './Dashboard',
       },
       {
         path: '/admin/organizations',

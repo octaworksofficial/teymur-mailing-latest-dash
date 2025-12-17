@@ -12,6 +12,7 @@ export default {
   'menu.company-info': 'Kurumsal Bilgiler',
   'menu.special-days': 'Özel Günler Takvimi',
   'menu.admin': 'Platform Yönetimi',
+  'menu.admin.dashboard': 'Yönetim Paneli',
   'menu.admin.organizations': 'Organizasyonlar',
   'menu.admin.users': 'Tüm Kullanıcılar',
   'menu.organization': 'Organizasyon',
