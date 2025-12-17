@@ -7,7 +7,6 @@ import {
   EditOutlined,
   KeyOutlined,
   PlusOutlined,
-  UserOutlined,
 } from '@ant-design/icons';
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import {
@@ -15,6 +14,7 @@ import {
   PageContainer,
   ProFormSelect,
   ProFormText,
+  ProFormTextArea,
   ProTable,
 } from '@ant-design/pro-components';
 import {
@@ -117,7 +117,7 @@ const UsersPage: React.FC = () => {
       } else {
         message.error(res.error || 'Şifre güncellenemedi');
       }
-    } catch (error) {
+    } catch (_error) {
       message.error('Bir hata oluştu');
     }
   };
@@ -278,6 +278,7 @@ const UsersPage: React.FC = () => {
         role: values.role,
         organizationId: values.organizationId,
         status: values.status,
+        allowed_sender_emails: values.allowed_sender_emails,
       };
 
       if (editingUser) {
@@ -303,7 +304,7 @@ const UsersPage: React.FC = () => {
       }
       message.error(result.error || 'Oluşturma başarısız');
       return false;
-    } catch (error) {
+    } catch (_error) {
       message.error('Bir hata oluştu');
       return false;
     }
@@ -376,6 +377,8 @@ const UsersPage: React.FC = () => {
                 role: editingUser.role,
                 organizationId: editingUser.organization_id,
                 status: editingUser.status,
+                allowed_sender_emails: (editingUser as any)
+                  .allowed_sender_emails,
               }
             : {}
         }
@@ -447,6 +450,16 @@ const UsersPage: React.FC = () => {
             ]}
           />
         )}
+        <ProFormTextArea
+          name="allowed_sender_emails"
+          label="İzin Verilen Gönderici E-postaları"
+          placeholder="info@sirket.com, satis@sirket.com, destek@sirket.com"
+          tooltip="Kullanıcının kampanya oluştururken kullanabileceği gönderici e-posta adresleri. Virgülle ayırarak birden fazla adres ekleyebilirsiniz."
+          fieldProps={{
+            rows: 3,
+          }}
+          extra="Virgülle ayırarak birden fazla e-posta adresi ekleyebilirsiniz"
+        />
       </ModalForm>
 
       {/* Şifre Değiştirme Modal */}

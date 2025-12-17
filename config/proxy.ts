@@ -15,10 +15,42 @@ export default {
    * @description Frontend (8000/8002) -> Backend (3001) proxy
    */
   dev: {
+    // SSE endpoints - buffering kapalı
+    '/api/admin/backup/stream': {
+      target: 'http://localhost:3001',
+      changeOrigin: true,
+      timeout: 600000,
+      proxyTimeout: 600000,
+      onProxyReq: (_proxyReq: any, _req: any, res: any) => {
+        // SSE için buffering kapat
+        res.setHeader('X-Accel-Buffering', 'no');
+      },
+      onProxyRes: (proxyRes: any, _req: any, _res: any) => {
+        // SSE yanıtları için buffering kapalı
+        proxyRes.headers['cache-control'] = 'no-cache';
+        proxyRes.headers['x-accel-buffering'] = 'no';
+      },
+    },
+    '/api/admin/restore/stream': {
+      target: 'http://localhost:3001',
+      changeOrigin: true,
+      timeout: 600000,
+      proxyTimeout: 600000,
+      onProxyReq: (_proxyReq: any, _req: any, res: any) => {
+        res.setHeader('X-Accel-Buffering', 'no');
+      },
+      onProxyRes: (proxyRes: any, _req: any, _res: any) => {
+        proxyRes.headers['cache-control'] = 'no-cache';
+        proxyRes.headers['x-accel-buffering'] = 'no';
+      },
+    },
+    // Normal API endpoints
     '/api/': {
       target: 'http://localhost:3001',
       changeOrigin: true,
       pathRewrite: { '^/api': '/api' },
+      timeout: 600000, // 10 dakika
+      proxyTimeout: 600000, // 10 dakika
     },
   },
   /**

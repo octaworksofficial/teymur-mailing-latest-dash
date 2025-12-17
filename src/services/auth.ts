@@ -261,6 +261,7 @@ export async function createUser(params: {
   phone?: string;
   role?: string;
   organizationId?: number;
+  allowed_sender_emails?: string;
 }): Promise<{ success: boolean; data?: User; error?: string }> {
   return request('/api/users', {
     method: 'POST',
@@ -272,6 +273,7 @@ export async function createUser(params: {
       phone: params.phone,
       role: params.role,
       organization_id: params.organizationId,
+      allowed_sender_emails: params.allowed_sender_emails,
     },
   });
 }
@@ -285,6 +287,7 @@ export async function updateUser(
     role?: string;
     status?: string;
     organizationId?: number;
+    allowed_sender_emails?: string;
   },
 ): Promise<{ success: boolean; data?: User; error?: string }> {
   return request(`/api/users/${id}`, {
@@ -296,6 +299,7 @@ export async function updateUser(
       role: params.role,
       status: params.status,
       organization_id: params.organizationId,
+      allowed_sender_emails: params.allowed_sender_emails,
     },
   });
 }

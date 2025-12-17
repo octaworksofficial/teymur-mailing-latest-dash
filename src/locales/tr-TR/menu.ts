@@ -15,6 +15,7 @@ export default {
   'menu.admin.dashboard': 'Yönetim Paneli',
   'menu.admin.organizations': 'Organizasyonlar',
   'menu.admin.users': 'Tüm Kullanıcılar',
+  'menu.admin.backup': 'Veritabanı Yönetimi',
   'menu.organization': 'Organizasyon',
   'menu.organization.users': 'Kullanıcılar',
   'menu.organization.limits': 'Limitler',

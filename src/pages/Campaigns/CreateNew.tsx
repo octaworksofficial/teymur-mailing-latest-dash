@@ -30,7 +30,7 @@ import {
   ProTable,
   StepsForm,
 } from '@ant-design/pro-components';
-import { history, useParams } from '@umijs/max';
+import { history, useModel, useParams } from '@umijs/max';
 import {
   Alert,
   Badge,
@@ -83,6 +83,9 @@ import './Create.less';
 const { Text } = Typography;
 
 const CampaignCreateNew: React.FC = () => {
+  const { initialState } = useModel('@@initialState');
+  const currentUser = initialState?.currentUser as any;
+
   const { id } = useParams<{ id: string }>();
   const isEditMode = !!id;
   const contactTableRef = useRef<ActionType>(null);
@@ -125,6 +128,9 @@ const CampaignCreateNew: React.FC = () => {
   const [aiGenerating, setAiGenerating] = useState(false);
   const [createTemplateForm] = Form.useForm();
 
+  // Kullanıcının kullanabileceği gönderici email adresleri
+  const [senderEmails, setSenderEmails] = useState<string[]>([]);
+
   // Filtre seçenekleri - dinamik olarak yüklenir
   const [filterOptions, setFilterOptions] = useState<{
     status: string[];
@@ -157,10 +163,25 @@ const CampaignCreateNew: React.FC = () => {
   useEffect(() => {
     loadTemplates();
     loadFilterOptions();
+    loadSenderEmails();
     if (isEditMode && id) {
       loadCampaign(Number(id));
     }
   }, [id]);
+
+  const loadSenderEmails = async () => {
+    try {
+      const token = localStorage.getItem('access_token');
+      const response = await axios.get('/api/users/me/sender-emails', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.data.success) {
+        setSenderEmails(response.data.data || []);
+      }
+    } catch (error) {
+      console.error('Gönderici emailleri yüklenemedi:', error);
+    }
+  };
 
   const loadCampaign = async (campaignId: number) => {
     setLoading(true);
@@ -263,6 +284,7 @@ const CampaignCreateNew: React.FC = () => {
     purpose: string;
     email_type: string;
     format?: string;
+    language?: string;
   }) => {
     setAiGenerating(true);
     try {
@@ -272,7 +294,9 @@ const CampaignCreateNew: React.FC = () => {
           purpose: params.purpose,
           email_type: params.email_type,
           format: params.format || 'html',
-          language: 'Turkish',
+          language: params.language || 'Turkish',
+          organization_id:
+            currentUser?.organizationId || currentUser?.organization_id,
         },
         {
           headers: { 'Content-Type': 'application/json' },
@@ -1952,6 +1976,31 @@ const CampaignCreateNew: React.FC = () => {
                       }}
                     />
                   </div>
+
+                  <div style={{ minWidth: 140 }}>
+                    <ProFormSelect
+                      name="ai_language"
+                      label={
+                        <Text strong style={{ color: '#444' }}>
+                          Dil
+                        </Text>
+                      }
+                      options={[
+                        { label: '🇹🇷 Türkçe', value: 'Turkish' },
+                        { label: '🇬🇧 İngilizce', value: 'English' },
+                        { label: '🇩🇪 Almanca', value: 'German' },
+                        { label: '🇫🇷 Fransızca', value: 'French' },
+                        { label: '🇪🇸 İspanyolca', value: 'Spanish' },
+                        { label: '🇷🇺 Rusça', value: 'Russian' },
+                        { label: '🇸🇦 Arapça', value: 'Arabic' },
+                        { label: '🇨🇳 Çince', value: 'Chinese' },
+                      ]}
+                      initialValue="Turkish"
+                      fieldProps={{
+                        style: { borderRadius: 8 },
+                      }}
+                    />
+                  </div>
                 </div>
 
                 <Button
@@ -1971,6 +2020,7 @@ const CampaignCreateNew: React.FC = () => {
                       'ai_purpose',
                       'ai_email_type',
                       'ai_format',
+                      'ai_language',
                     ]);
                     if (!values.ai_purpose || !values.ai_email_type) {
                       message.warning('Lütfen email amacını ve türünü girin');
@@ -1980,6 +2030,7 @@ const CampaignCreateNew: React.FC = () => {
                       purpose: values.ai_purpose,
                       email_type: values.ai_email_type,
                       format: values.ai_format || 'html',
+                      language: values.ai_language || 'Turkish',
                     });
                   }}
                   style={{
@@ -2151,11 +2202,28 @@ const CampaignCreateNew: React.FC = () => {
               label="Gönderen Adı"
               placeholder="Örn: Email Otomasyon Platformu"
             />
-            <ProFormText
-              name="from_email"
-              label="Gönderen Email"
-              placeholder="Örn: noreply@platform.com"
-            />
+            {senderEmails.length > 0 ? (
+              <ProFormSelect
+                name="from_email"
+                label="Gönderen Email"
+                placeholder="Gönderici email seçin"
+                options={senderEmails.map((email) => ({
+                  label: email,
+                  value: email,
+                }))}
+                showSearch
+                rules={[
+                  { required: true, message: 'Lütfen gönderici email seçin' },
+                ]}
+              />
+            ) : (
+              <ProFormText
+                name="from_email"
+                label="Gönderen Email"
+                placeholder="Örn: noreply@platform.com"
+                tooltip="Henüz tanımlı gönderici email yok. Yöneticinizden talep edin."
+              />
+            )}
             <ProFormText
               name="cc_emails"
               label="CC (Karbon Kopya)"
@@ -2309,11 +2377,28 @@ const CampaignCreateNew: React.FC = () => {
               label="Gönderen Adı"
               placeholder="Örn: Email Otomasyon Platformu"
             />
-            <ProFormText
-              name="from_email"
-              label="Gönderen Email"
-              placeholder="Örn: noreply@platform.com"
-            />
+            {senderEmails.length > 0 ? (
+              <ProFormSelect
+                name="from_email"
+                label="Gönderen Email"
+                placeholder="Gönderici email seçin"
+                options={senderEmails.map((email) => ({
+                  label: email,
+                  value: email,
+                }))}
+                showSearch
+                rules={[
+                  { required: true, message: 'Lütfen gönderici email seçin' },
+                ]}
+              />
+            ) : (
+              <ProFormText
+                name="from_email"
+                label="Gönderen Email"
+                placeholder="Örn: noreply@platform.com"
+                tooltip="Henüz tanımlı gönderici email yok. Yöneticinizden talep edin."
+              />
+            )}
             <ProFormText
               name="cc_emails"
               label="CC (Karbon Kopya)"

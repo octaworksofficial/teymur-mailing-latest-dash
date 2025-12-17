@@ -113,6 +113,12 @@
         name: 'users',
         component: './Admin/Users',
       },
+      {
+        path: '/admin/backup',
+        name: 'backup',
+        icon: 'database',
+        component: './Admin/Backup',
+      },
     ],
   },
   // Org Admin yönetim paneli

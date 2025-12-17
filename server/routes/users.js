@@ -75,7 +75,7 @@ router.get('/', async (req, res) => {
       `SELECT 
         u.id, u.email, u.first_name, u.last_name, u.phone, u.avatar_url,
         u.role, u.status, u.is_verified, u.last_login_at, u.last_activity_at,
-        u.login_count, u.created_at, u.organization_id,
+        u.login_count, u.created_at, u.organization_id, u.allowed_sender_emails,
         o.name as organization_name, o.slug as organization_slug
       FROM users u
       LEFT JOIN organizations o ON u.organization_id = o.id
@@ -103,6 +103,49 @@ router.get('/', async (req, res) => {
 });
 
 // ============================================
+// GET /api/users/me/sender-emails - Mevcut kullanıcının kullanabileceği gönderici email listesi
+// ============================================
+router.get('/me/sender-emails', async (req, res) => {
+  try {
+    const user = req.user;
+    
+    const result = await pool.query(
+      'SELECT allowed_sender_emails FROM users WHERE id = $1',
+      [user.id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Kullanıcı bulunamadı'
+      });
+    }
+    
+    const allowedEmails = result.rows[0].allowed_sender_emails;
+    
+    // Virgülle ayrılmış string'i array'e çevir ve temizle
+    let emails = [];
+    if (allowedEmails) {
+      emails = allowedEmails
+        .split(',')
+        .map((email) => email.trim())
+        .filter((email) => email.length > 0);
+    }
+    
+    res.json({
+      success: true,
+      data: emails
+    });
+  } catch (error) {
+    console.error('Gönderici emailleri alınırken hata:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Gönderici emailleri alınırken bir hata oluştu'
+    });
+  }
+});
+
+// ============================================
 // GET /api/users/:id - Tek kullanıcı detayı
 // ============================================
 router.get('/:id', async (req, res) => {
@@ -115,6 +158,7 @@ router.get('/:id', async (req, res) => {
         u.id, u.email, u.first_name, u.last_name, u.phone, u.avatar_url,
         u.role, u.status, u.is_verified, u.last_login_at, u.last_activity_at,
         u.login_count, u.created_at, u.organization_id, u.permissions,
+        u.allowed_sender_emails,
         o.name as organization_name, o.slug as organization_slug
       FROM users u
       LEFT JOIN organizations o ON u.organization_id = o.id
@@ -181,7 +225,8 @@ router.post('/', async (req, res) => {
       phone,
       role = 'user',
       organization_id,
-      status = 'active'
+      status = 'active',
+      allowed_sender_emails
     } = req.body;
 
     // Zorunlu alanlar
@@ -265,10 +310,10 @@ router.post('/', async (req, res) => {
     const result = await pool.query(
       `INSERT INTO users (
         email, password_hash, first_name, last_name, phone, 
-        role, organization_id, status, is_verified
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true)
-      RETURNING id, email, first_name, last_name, phone, role, organization_id, status, created_at`,
-      [email, passwordHash, first_name, last_name, phone, role, targetOrgId, status]
+        role, organization_id, status, is_verified, allowed_sender_emails
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, $9)
+      RETURNING id, email, first_name, last_name, phone, role, organization_id, status, allowed_sender_emails, created_at`,
+      [email, passwordHash, first_name, last_name, phone, role, targetOrgId, status, allowed_sender_emails || null]
     );
 
     res.status(201).json({
@@ -299,7 +344,8 @@ router.put('/:id', async (req, res) => {
       phone,
       role,
       status,
-      organization_id
+      organization_id,
+      allowed_sender_emails
     } = req.body;
 
     // Hedef kullanıcıyı bul
@@ -391,6 +437,12 @@ router.put('/:id', async (req, res) => {
       updateFields.push(`organization_id = $${paramIndex++}`);
       updateValues.push(organization_id);
     }
+    
+    // allowed_sender_emails - sadece super admin güncelleyebilir
+    if (allowed_sender_emails !== undefined && isSuperAdmin) {
+      updateFields.push(`allowed_sender_emails = $${paramIndex++}`);
+      updateValues.push(allowed_sender_emails || null);
+    }
 
     if (updateFields.length === 0) {
       return res.status(400).json({
@@ -404,7 +456,7 @@ router.put('/:id', async (req, res) => {
     const result = await pool.query(
       `UPDATE users SET ${updateFields.join(', ')} 
        WHERE id = $${paramIndex}
-       RETURNING id, email, first_name, last_name, phone, role, organization_id, status`,
+       RETURNING id, email, first_name, last_name, phone, role, organization_id, status, allowed_sender_emails`,
       updateValues
     );
 

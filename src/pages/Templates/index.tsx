@@ -27,6 +27,7 @@ import {
   ProFormTextArea,
   ProTable,
 } from '@ant-design/pro-components';
+import { useModel } from '@umijs/max';
 import {
   Alert,
   Button,
@@ -56,6 +57,9 @@ const { confirm } = Modal;
 const { Text } = Typography;
 
 const Templates: React.FC = () => {
+  const { initialState } = useModel('@@initialState');
+  const currentUser = initialState?.currentUser as any;
+
   const [createModalOpen, setCreateModalOpen] = useState<boolean>(false);
   const [updateModalOpen, setUpdateModalOpen] = useState<boolean>(false);
   const [previewModalOpen, setPreviewModalOpen] = useState<boolean>(false);
@@ -72,6 +76,7 @@ const Templates: React.FC = () => {
     purpose: string;
     email_type: string;
     format: 'html' | 'plain_text';
+    language?: string;
   }) => {
     setAiGenerating(true);
     try {
@@ -81,6 +86,9 @@ const Templates: React.FC = () => {
           purpose: values.purpose,
           email_type: values.email_type,
           format: values.format,
+          language: values.language || 'Turkish',
+          organization_id:
+            currentUser?.organizationId || currentUser?.organization_id,
         },
         {
           headers: {
@@ -670,6 +678,31 @@ const Templates: React.FC = () => {
                   }}
                 />
               </div>
+
+              <div style={{ minWidth: 140 }}>
+                <ProFormSelect
+                  name="ai_language"
+                  label={
+                    <Text strong style={{ color: '#444' }}>
+                      Dil
+                    </Text>
+                  }
+                  options={[
+                    { label: '🇹🇷 Türkçe', value: 'Turkish' },
+                    { label: '🇬🇧 İngilizce', value: 'English' },
+                    { label: '🇩🇪 Almanca', value: 'German' },
+                    { label: '🇫🇷 Fransızca', value: 'French' },
+                    { label: '🇪🇸 İspanyolca', value: 'Spanish' },
+                    { label: '🇷🇺 Rusça', value: 'Russian' },
+                    { label: '🇸🇦 Arapça', value: 'Arabic' },
+                    { label: '🇨🇳 Çince', value: 'Chinese' },
+                  ]}
+                  initialValue="Turkish"
+                  fieldProps={{
+                    style: { borderRadius: 8 },
+                  }}
+                />
+              </div>
             </div>
 
             <Button
@@ -689,6 +722,7 @@ const Templates: React.FC = () => {
                   'ai_purpose',
                   'ai_email_type',
                   'ai_format',
+                  'ai_language',
                 ]);
                 if (!values.ai_purpose || !values.ai_email_type) {
                   message.warning('Lütfen email amacını ve türünü girin');
@@ -698,6 +732,7 @@ const Templates: React.FC = () => {
                   purpose: values.ai_purpose,
                   email_type: values.ai_email_type,
                   format: values.ai_format || 'html',
+                  language: values.ai_language || 'Turkish',
                 });
               }}
               style={{

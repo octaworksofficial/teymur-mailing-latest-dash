@@ -113,7 +113,13 @@ const Login: React.FC = () => {
           message.success(defaultLoginSuccessMessage);
           await fetchUserInfo();
           const urlParams = new URL(window.location.href).searchParams;
-          history.push(urlParams.get('redirect') || '/');
+          const redirect = urlParams.get('redirect');
+          // Super admin için /admin/dashboard'a yönlendir
+          if (result.data.user?.role === 'super_admin') {
+            history.push(redirect || '/admin/dashboard');
+          } else {
+            history.push(redirect || '/dashboard');
+          }
           return;
         }
 
@@ -147,7 +153,13 @@ const Login: React.FC = () => {
         message.success(defaultLoginSuccessMessage);
         await fetchUserInfo();
         const urlParams = new URL(window.location.href).searchParams;
-        history.push(urlParams.get('redirect') || '/');
+        const redirect = urlParams.get('redirect');
+        // Super admin için /admin/dashboard'a yönlendir
+        if (msg.user?.role === 'super_admin') {
+          history.push(redirect || '/admin/dashboard');
+        } else {
+          history.push(redirect || '/dashboard');
+        }
         return;
       }
       console.log(msg);

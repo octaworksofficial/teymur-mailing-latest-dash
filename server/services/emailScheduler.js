@@ -98,7 +98,7 @@ function replaceTemplateVariables(text, contact) {
  * n8n webhook ile email gönder
  * HTML'e Outlook VML fallback eklenir
  */
-async function sendEmail(to, subject, htmlBody, contact, trackingId = null, campaignId = null, contactId = null, attachments = null) {
+async function sendEmail(to, subject, htmlBody, contact, trackingId = null, campaignId = null, contactId = null, attachments = null, fromEmail = null, fromName = null) {
   try {
     // Outlook uyumluluğu için VML fallback ekle
     const outlookCompatibleHtml = makeOutlookCompatible(htmlBody);
@@ -107,8 +107,13 @@ async function sendEmail(to, subject, htmlBody, contact, trackingId = null, camp
       to,
       subject,
       html_body: outlookCompatibleHtml,
-      sender_name: SENDER_NAME,
+      sender_name: fromName || SENDER_NAME,
     };
+    
+    // from_email varsa ekle
+    if (fromEmail) {
+      payload.from_email = fromEmail;
+    }
     
     // CC ve BCC varsa ekle
     if (DEFAULT_CC) payload.cc = DEFAULT_CC;
@@ -134,7 +139,7 @@ async function sendEmail(to, subject, htmlBody, contact, trackingId = null, camp
       console.log(`📎 ${attachments.length} ek dosya eklendi`);
     }
     
-    console.log(`📧 Email gönderiliyor: ${to} - ${subject}${trackingId ? ` [Tracking: ${trackingId}]` : ''}`);
+    console.log(`📧 Email gönderiliyor: ${to} - ${subject}${fromEmail ? ` [From: ${fromEmail}]` : ''}${trackingId ? ` [Tracking: ${trackingId}]` : ''}`);
     
     const response = await axios.post(N8N_WEBHOOK_URL, payload, {
       headers: {
@@ -358,7 +363,7 @@ async function processScheduledEmails() {
         
         // Template'i getir
         const templateResult = await pool.query(
-          'SELECT id, name, subject, body_html, body_text, category, attachments FROM email_templates WHERE id = $1',
+          'SELECT id, name, subject, body_html, body_text, category, attachments, from_email, from_name FROM email_templates WHERE id = $1',
           [template_id]
         );
         
@@ -478,7 +483,7 @@ async function processScheduledEmails() {
           // Subject'i de personalize et
           const personalizedSubject = replaceTemplateVariables(template.subject, contact);
           
-          // Email'i gönder (tracking bilgileriyle birlikte + attachments)
+          // Email'i gönder (tracking bilgileriyle birlikte + attachments + from_email)
           const result = await sendEmail(
             contact.email,
             personalizedSubject,
@@ -487,7 +492,9 @@ async function processScheduledEmails() {
             sendRecord.tracking_id,  // tracking_id ekle
             campaignId,              // campaign_id ekle
             contactId,               // contact_id ekle
-            template.attachments     // attachments ekle (Google Drive URL'leri)
+            template.attachments,    // attachments ekle (Google Drive URL'leri)
+            template.from_email,     // from_email ekle
+            template.from_name       // from_name ekle
           );
           
           if (result.success) {
@@ -698,7 +705,7 @@ async function processScheduledEmailsV2() {
           contactId
         );
         
-        // Email gönder
+        // Email gönder (from_email ve from_name ile)
         const result = await sendEmail(
           contact.email,
           personalizedSubject,
@@ -707,7 +714,9 @@ async function processScheduledEmailsV2() {
           sendRecord.tracking_id,
           campaignId,
           contactId,
-          attachments  // Google Drive URL'leri ile attachments
+          attachments,  // Google Drive URL'leri ile attachments
+          fromEmail,    // Gönderici email adresi
+          fromName      // Gönderici adı
         );
         
         if (result.success) {
