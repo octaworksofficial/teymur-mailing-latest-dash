@@ -21,7 +21,6 @@ import { useModel } from '@umijs/max';
 import {
   Card,
   Col,
-  Empty,
   Progress,
   Row,
   Spin,
@@ -32,6 +31,7 @@ import {
   Typography,
 } from 'antd';
 import React, { useEffect, useState } from 'react';
+import { type AdminStats, getAdminStats } from '@/services/adminStats';
 import { getCampaignStats } from '@/services/campaigns';
 import { getContactStats } from '@/services/contacts';
 import type {
@@ -53,13 +53,31 @@ const Dashboard: React.FC = () => {
   const [campaignCount, setCampaignCount] = useState(0);
   const [templateCount, setTemplateCount] = useState(0);
 
+  // Super admin için state
+  const [adminStats, setAdminStats] = useState<AdminStats | null>(null);
+
   useEffect(() => {
     loadDashboardData();
-  }, []);
+  }, [isSuperAdmin]);
 
   const loadDashboardData = async () => {
     setLoading(true);
     try {
+      // Super admin için ayrı endpoint
+      if (isSuperAdmin) {
+        try {
+          const adminResponse = await getAdminStats();
+          if (adminResponse.success && adminResponse.data) {
+            setAdminStats(adminResponse.data.stats);
+          }
+        } catch (error) {
+          console.error('Admin stats loading error:', error);
+        }
+        setLoading(false);
+        return;
+      }
+
+      // Normal kullanıcılar için dashboard verileri
       // Dashboard ana verilerini getir
       try {
         const dashboardResponse = await getDashboardData();
@@ -312,11 +330,11 @@ const Dashboard: React.FC = () => {
       >
         <Spin spinning={loading}>
           <Row gutter={[16, 16]}>
-            <Col xs={24} sm={12} lg={8}>
+            <Col xs={24} sm={12} lg={6}>
               <Card bordered={false}>
                 <Statistic
                   title="Toplam Organizasyon"
-                  value={0}
+                  value={adminStats?.totalOrganizations || 0}
                   prefix={<BankOutlined />}
                   valueStyle={{ color: '#1890ff' }}
                 />
@@ -325,11 +343,11 @@ const Dashboard: React.FC = () => {
                 </div>
               </Card>
             </Col>
-            <Col xs={24} sm={12} lg={8}>
+            <Col xs={24} sm={12} lg={6}>
               <Card bordered={false}>
                 <Statistic
                   title="Toplam Kullanıcı"
-                  value={0}
+                  value={adminStats?.totalUsers || 0}
                   prefix={<TeamOutlined />}
                   valueStyle={{ color: '#52c41a' }}
                 />
@@ -338,11 +356,11 @@ const Dashboard: React.FC = () => {
                 </div>
               </Card>
             </Col>
-            <Col xs={24} sm={12} lg={8}>
+            <Col xs={24} sm={12} lg={6}>
               <Card bordered={false}>
                 <Statistic
                   title="Aktif Kullanıcı"
-                  value={0}
+                  value={adminStats?.activeUsers || 0}
                   prefix={<UserOutlined />}
                   valueStyle={{ color: '#faad14' }}
                 />
@@ -351,29 +369,144 @@ const Dashboard: React.FC = () => {
                 </div>
               </Card>
             </Col>
+            <Col xs={24} sm={12} lg={6}>
+              <Card bordered={false}>
+                <Statistic
+                  title="Toplam Email"
+                  value={adminStats?.totalEmailsSent || 0}
+                  prefix={<SendOutlined />}
+                  valueStyle={{ color: '#eb2f96' }}
+                />
+                <div style={{ marginTop: 8, fontSize: 12, color: '#888' }}>
+                  Gönderilen email sayısı
+                </div>
+              </Card>
+            </Col>
           </Row>
 
+          {/* İkinci Satır - Email İstatistikleri */}
+          <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+            <Col xs={24} sm={12} lg={6}>
+              <Card bordered={false}>
+                <Statistic
+                  title="Toplam Kampanya"
+                  value={adminStats?.totalCampaigns || 0}
+                  prefix={<ThunderboltOutlined />}
+                  valueStyle={{ color: '#722ed1' }}
+                />
+                <div style={{ marginTop: 8, fontSize: 12, color: '#888' }}>
+                  {adminStats?.activeCampaigns || 0} aktif kampanya
+                </div>
+              </Card>
+            </Col>
+            <Col xs={24} sm={12} lg={6}>
+              <Card bordered={false}>
+                <Statistic
+                  title="Toplam Kişi"
+                  value={adminStats?.totalContacts || 0}
+                  prefix={<TeamOutlined />}
+                  valueStyle={{ color: '#13c2c2' }}
+                />
+                <div style={{ marginTop: 8, fontSize: 12, color: '#888' }}>
+                  Tüm sistemdeki kişiler
+                </div>
+              </Card>
+            </Col>
+            <Col xs={24} sm={12} lg={6}>
+              <Card bordered={false}>
+                <Statistic
+                  title="Açılma Oranı"
+                  value={adminStats?.openRate || '0.00'}
+                  suffix="%"
+                  prefix={<EyeOutlined />}
+                  valueStyle={{ color: '#1890ff' }}
+                />
+                <div style={{ marginTop: 8, fontSize: 12, color: '#888' }}>
+                  {adminStats?.openedEmails || 0} email açıldı
+                </div>
+              </Card>
+            </Col>
+            <Col xs={24} sm={12} lg={6}>
+              <Card bordered={false}>
+                <Statistic
+                  title="Tıklama Oranı"
+                  value={adminStats?.clickRate || '0.00'}
+                  suffix="%"
+                  prefix={<MailOutlined />}
+                  valueStyle={{ color: '#52c41a' }}
+                />
+                <div style={{ marginTop: 8, fontSize: 12, color: '#888' }}>
+                  {adminStats?.clickedEmails || 0} tıklama
+                </div>
+              </Card>
+            </Col>
+          </Row>
+
+          {/* Alt Kısım - Platform Yönetimi */}
           <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
             <Col span={24}>
-              <Card
-                title="Hoş Geldiniz"
-                bordered={false}
-                style={{ textAlign: 'center', padding: '40px 0' }}
-              >
-                <Empty
-                  image={Empty.PRESENTED_IMAGE_SIMPLE}
-                  description={
-                    <span>
-                      <Typography.Title level={4}>
-                        Super Admin Paneli
-                      </Typography.Title>
-                      <Typography.Paragraph style={{ fontSize: 16 }}>
-                        Organizasyonları ve kullanıcıları yönetmek için sol
-                        menüden ilgili bölüme gidin.
-                      </Typography.Paragraph>
-                    </span>
-                  }
-                />
+              <Card title="Platform Yönetimi" bordered={false}>
+                <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                  <Typography.Title level={4}>
+                    Hoş Geldiniz, Super Admin
+                  </Typography.Title>
+                  <Typography.Paragraph
+                    style={{ fontSize: 16, marginBottom: 24 }}
+                  >
+                    Platformdaki tüm organizasyonları ve kullanıcıları
+                    yönetebilirsiniz.
+                  </Typography.Paragraph>
+                  <Row gutter={16} justify="center">
+                    <Col>
+                      <Card
+                        hoverable
+                        style={{ width: 200, textAlign: 'center' }}
+                        onClick={() => {
+                          window.location.href = '/admin/organizations';
+                        }}
+                      >
+                        <BankOutlined
+                          style={{
+                            fontSize: 48,
+                            color: '#1890ff',
+                            marginBottom: 16,
+                          }}
+                        />
+                        <Typography.Text strong>
+                          Organizasyonlar
+                        </Typography.Text>
+                        <div
+                          style={{ fontSize: 12, color: '#888', marginTop: 8 }}
+                        >
+                          {adminStats?.totalOrganizations || 0} organizasyon
+                        </div>
+                      </Card>
+                    </Col>
+                    <Col>
+                      <Card
+                        hoverable
+                        style={{ width: 200, textAlign: 'center' }}
+                        onClick={() => {
+                          window.location.href = '/admin/users';
+                        }}
+                      >
+                        <TeamOutlined
+                          style={{
+                            fontSize: 48,
+                            color: '#52c41a',
+                            marginBottom: 16,
+                          }}
+                        />
+                        <Typography.Text strong>Kullanıcılar</Typography.Text>
+                        <div
+                          style={{ fontSize: 12, color: '#888', marginTop: 8 }}
+                        >
+                          {adminStats?.totalUsers || 0} kullanıcı
+                        </div>
+                      </Card>
+                    </Col>
+                  </Row>
+                </div>
               </Card>
             </Col>
           </Row>
