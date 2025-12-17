@@ -164,6 +164,15 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const currentUser = req.user;
+    
+    // currentUser kontrolü
+    if (!currentUser) {
+      return res.status(401).json({
+        success: false,
+        message: 'Oturum açmanız gerekiyor'
+      });
+    }
+    
     const {
       email,
       password,

@@ -268,21 +268,21 @@ const UsersPage: React.FC = () => {
 
   const handleSubmit = async (values: any) => {
     try {
-      // camelCase'den snake_case'e dönüştür
-      const transformedValues = {
+      // createUser fonksiyonu camelCase bekliyor, snake_case dönüşümü service içinde yapılıyor
+      const userData = {
         email: values.email,
         password: values.password,
-        first_name: values.firstName,
-        last_name: values.lastName,
+        firstName: values.firstName,
+        lastName: values.lastName,
         phone: values.phone,
         role: values.role,
-        organization_id: values.organizationId,
+        organizationId: values.organizationId,
         status: values.status,
       };
 
       if (editingUser) {
         // Güncelle
-        const result = await updateUser(editingUser.id, transformedValues);
+        const result = await updateUser(editingUser.id, userData);
         if (result.success) {
           message.success('Kullanıcı güncellendi');
           setModalVisible(false);
@@ -294,7 +294,7 @@ const UsersPage: React.FC = () => {
         return false;
       }
       // Yeni oluştur
-      const result = await createUser(transformedValues);
+      const result = await createUser(userData);
       if (result.success) {
         message.success('Kullanıcı oluşturuldu');
         setModalVisible(false);

@@ -111,6 +111,8 @@ router.post('/auth/login', async (req, res) => {
           organizationId: user.organization_id,
           organizationName: user.organization_name,
           permissions: user.permissions || [],
+          is_super_admin: user.is_super_admin || user.role === 'super_admin',
+          is_org_admin: user.is_org_admin || user.role === 'org_admin',
         },
         accessToken,
         refreshToken,
@@ -904,6 +906,9 @@ router.get('/currentUser', optionalAuthMiddleware, async (req, res) => {
             role: user.role,
             organizationId: user.organization_id,
             organizationName: user.organization_name,
+            // Super admin ve org admin flag'leri
+            is_super_admin: user.is_super_admin || user.role === 'super_admin',
+            is_org_admin: user.is_org_admin || user.role === 'org_admin',
           },
         });
       }

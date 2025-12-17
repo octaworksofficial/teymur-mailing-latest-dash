@@ -44,7 +44,9 @@ import { getTemplateStats } from '@/services/templates';
 
 const Dashboard: React.FC = () => {
   const { initialState } = useModel('@@initialState');
-  const isSuperAdmin = (initialState?.currentUser as any)?.is_super_admin;
+  const currentUser = initialState?.currentUser as any;
+  const isSuperAdmin =
+    currentUser?.is_super_admin || currentUser?.role === 'super_admin';
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [weeklyData, setWeeklyData] = useState<WeeklyEmailData[]>([]);
@@ -67,11 +69,47 @@ const Dashboard: React.FC = () => {
       if (isSuperAdmin) {
         try {
           const adminResponse = await getAdminStats();
+
           if (adminResponse.success && adminResponse.data) {
             setAdminStats(adminResponse.data.stats);
+          } else {
+            // Hata durumunda boş stats objesi set et
+            setAdminStats({
+              totalOrganizations: 0,
+              totalUsers: 0,
+              activeUsers: 0,
+              totalSuperAdmins: 0,
+              totalOrgAdmins: 0,
+              totalContacts: 0,
+              totalTemplates: 0,
+              totalCampaigns: 0,
+              activeCampaigns: 0,
+              totalEmailsSent: 0,
+              openedEmails: 0,
+              clickedEmails: 0,
+              openRate: '0.00',
+              clickRate: '0.00',
+            });
           }
         } catch (error) {
-          console.error('Admin stats loading error:', error);
+          console.error('❌ Admin stats loading error:', error);
+          // Hata durumunda boş stats objesi set et
+          setAdminStats({
+            totalOrganizations: 0,
+            totalUsers: 0,
+            activeUsers: 0,
+            totalSuperAdmins: 0,
+            totalOrgAdmins: 0,
+            totalContacts: 0,
+            totalTemplates: 0,
+            totalCampaigns: 0,
+            activeCampaigns: 0,
+            totalEmailsSent: 0,
+            openedEmails: 0,
+            clickedEmails: 0,
+            openRate: '0.00',
+            clickRate: '0.00',
+          });
         }
         setLoading(false);
         return;
@@ -469,10 +507,11 @@ const Dashboard: React.FC = () => {
                           style={{
                             fontSize: 48,
                             color: '#1890ff',
+                            display: 'block',
                             marginBottom: 16,
                           }}
                         />
-                        <Typography.Text strong>
+                        <Typography.Text strong style={{ display: 'block' }}>
                           Organizasyonlar
                         </Typography.Text>
                         <div
@@ -494,10 +533,13 @@ const Dashboard: React.FC = () => {
                           style={{
                             fontSize: 48,
                             color: '#52c41a',
+                            display: 'block',
                             marginBottom: 16,
                           }}
                         />
-                        <Typography.Text strong>Kullanıcılar</Typography.Text>
+                        <Typography.Text strong style={{ display: 'block' }}>
+                          Kullanıcılar
+                        </Typography.Text>
                         <div
                           style={{ fontSize: 12, color: '#888', marginTop: 8 }}
                         >
