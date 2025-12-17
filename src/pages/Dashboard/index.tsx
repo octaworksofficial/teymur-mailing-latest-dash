@@ -2,6 +2,7 @@ import { Column } from '@ant-design/charts';
 import {
   ArrowDownOutlined,
   ArrowUpOutlined,
+  BankOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
   EyeOutlined,
@@ -11,13 +12,16 @@ import {
   PlayCircleOutlined,
   ReloadOutlined,
   SendOutlined,
+  TeamOutlined,
   ThunderboltOutlined,
   UserOutlined,
 } from '@ant-design/icons';
 import { PageContainer } from '@ant-design/pro-components';
+import { useModel } from '@umijs/max';
 import {
   Card,
   Col,
+  Empty,
   Progress,
   Row,
   Spin,
@@ -39,6 +43,8 @@ import { getDashboardData } from '@/services/dashboard';
 import { getTemplateStats } from '@/services/templates';
 
 const Dashboard: React.FC = () => {
+  const { initialState } = useModel('@@initialState');
+  const isSuperAdmin = (initialState?.currentUser as any)?.is_super_admin;
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [weeklyData, setWeeklyData] = useState<WeeklyEmailData[]>([]);
@@ -295,6 +301,88 @@ const Dashboard: React.FC = () => {
     },
   ];
 
+  // Super Admin için özel dashboard
+  if (isSuperAdmin) {
+    return (
+      <PageContainer
+        header={{
+          title: 'Yönetim Paneli',
+          subTitle: 'Sistem Genel Bakış',
+        }}
+      >
+        <Spin spinning={loading}>
+          <Row gutter={[16, 16]}>
+            <Col xs={24} sm={12} lg={8}>
+              <Card bordered={false}>
+                <Statistic
+                  title="Toplam Organizasyon"
+                  value={0}
+                  prefix={<BankOutlined />}
+                  valueStyle={{ color: '#1890ff' }}
+                />
+                <div style={{ marginTop: 8, fontSize: 12, color: '#888' }}>
+                  Aktif organizasyonlar
+                </div>
+              </Card>
+            </Col>
+            <Col xs={24} sm={12} lg={8}>
+              <Card bordered={false}>
+                <Statistic
+                  title="Toplam Kullanıcı"
+                  value={0}
+                  prefix={<TeamOutlined />}
+                  valueStyle={{ color: '#52c41a' }}
+                />
+                <div style={{ marginTop: 8, fontSize: 12, color: '#888' }}>
+                  Tüm kullanıcılar
+                </div>
+              </Card>
+            </Col>
+            <Col xs={24} sm={12} lg={8}>
+              <Card bordered={false}>
+                <Statistic
+                  title="Aktif Kullanıcı"
+                  value={0}
+                  prefix={<UserOutlined />}
+                  valueStyle={{ color: '#faad14' }}
+                />
+                <div style={{ marginTop: 8, fontSize: 12, color: '#888' }}>
+                  Son 30 günde aktif
+                </div>
+              </Card>
+            </Col>
+          </Row>
+
+          <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
+            <Col span={24}>
+              <Card
+                title="Hoş Geldiniz"
+                bordered={false}
+                style={{ textAlign: 'center', padding: '40px 0' }}
+              >
+                <Empty
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                  description={
+                    <span>
+                      <Typography.Title level={4}>
+                        Super Admin Paneli
+                      </Typography.Title>
+                      <Typography.Paragraph style={{ fontSize: 16 }}>
+                        Organizasyonları ve kullanıcıları yönetmek için sol
+                        menüden ilgili bölüme gidin.
+                      </Typography.Paragraph>
+                    </span>
+                  }
+                />
+              </Card>
+            </Col>
+          </Row>
+        </Spin>
+      </PageContainer>
+    );
+  }
+
+  // Normal kullanıcılar için mevcut dashboard
   return (
     <PageContainer
       header={{
