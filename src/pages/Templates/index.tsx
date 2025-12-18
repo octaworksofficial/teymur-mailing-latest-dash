@@ -76,7 +76,7 @@ const Templates: React.FC = () => {
   useEffect(() => {
     const loadSenderEmails = async () => {
       try {
-        const response = await request('/api/users/sender-emails', {
+        const response = await request('/api/users/me/sender-emails', {
           method: 'GET',
         });
         if (response.success && response.data) {
