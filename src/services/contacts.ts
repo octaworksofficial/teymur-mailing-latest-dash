@@ -432,14 +432,26 @@ export async function importContactsFromExcel(file: File): Promise<{
             }
 
             // API'ye gönder
-            await createContact(contactData);
+            const response = await createContact(contactData) as any;
+            if (response.success === false) {
+              throw new Error(response.message || response.error || 'Kayıt başarısız');
+            }
             imported++;
           } catch (error: any) {
             failed++;
+            // Hata mesajını çıkar
+            let errorMsg = 'Bilinmeyen hata';
+            if (error.info?.errorMessage) {
+              errorMsg = error.info.errorMessage;
+            } else if (error.response?.data?.message) {
+              errorMsg = error.response.data.message;
+            } else if (error.message) {
+              errorMsg = error.message;
+            }
             errors.push({
               row: rowNumber,
               email: row.email || 'N/A',
-              error: error.message || 'Bilinmeyen hata',
+              error: errorMsg,
             });
           }
         }
