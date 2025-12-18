@@ -59,8 +59,13 @@ const SchedulerLogs: React.FC = () => {
       eventSourceRef.current.close();
     }
 
+    // Production'da API_URL kullan, development'da localhost
+    const apiBaseUrl = process.env.NODE_ENV === 'production' 
+      ? (window.location.origin.includes('localhost') ? 'http://localhost:3001' : window.location.origin)
+      : 'http://localhost:3001';
+    
     const eventSource = new EventSource(
-      'http://localhost:3001/api/logs/stream',
+      `${apiBaseUrl}/api/logs/stream`,
     );
 
     eventSource.onopen = () => {

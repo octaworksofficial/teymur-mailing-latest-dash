@@ -85,6 +85,7 @@
     icon: 'code',
     component: './SchedulerLogs',
     hideInMenu: true,
+    access: 'canSuperAdmin', // Sadece super_admin erişebilir
   },
   // Super Admin yönetim paneli
   {
