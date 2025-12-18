@@ -15,11 +15,12 @@ const getOrganizationId = (req) => {
   return req.user.organization_id;
 };
 
-// GET /api/contacts - Tüm müşterileri listele (filtreleme ile) - ORGANİZASYON BAZLI
+// GET /api/contacts - Tüm müşterileri listele (filtreleme ile) - KULLANICI BAZLI
 router.get('/', async (req, res) => {
   try {
     const organizationId = getOrganizationId(req);
     const isSuperAdmin = req.user.role === 'super_admin';
+    const userId = req.user.id;
     const {
       page = 1,
       pageSize = 10,
@@ -41,16 +42,17 @@ router.get('/', async (req, res) => {
 
     const offset = (page - 1) * pageSize;
     
-    // Super admin tüm kişileri görür, diğerleri sadece organizasyonlarındaki kişileri
+    // Super admin tüm kişileri görür, diğerleri sadece KENDİ kişilerini görür
     let query, params, paramIndex;
     if (isSuperAdmin) {
       query = 'SELECT * FROM contacts WHERE 1=1';
       params = [];
       paramIndex = 1;
     } else {
-      query = 'SELECT * FROM contacts WHERE organization_id = $1';
-      params = [organizationId];
-      paramIndex = 2;
+      // Her kullanıcı sadece kendi oluşturduğu kişileri görür
+      query = 'SELECT * FROM contacts WHERE organization_id = $1 AND user_id = $2';
+      params = [organizationId, userId];
+      paramIndex = 3;
     }
 
     // Helper: Virgülle ayrılmış string veya array'i array'e çevir
@@ -311,19 +313,21 @@ router.get('/filter-options', async (req, res) => {
   }
 });
 
-// GET /api/contacts/:id - Tek müşteriyi getir - ORGANİZASYON BAZLI
+// GET /api/contacts/:id - Tek müşteriyi getir - KULLANICI BAZLI
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const organizationId = getOrganizationId(req);
     const isSuperAdmin = req.user.role === 'super_admin';
-    console.log(`[GET /api/contacts/${id}] Müşteri detayı isteniyor (org: ${organizationId})...`);
+    const userId = req.user.id;
+    console.log(`[GET /api/contacts/${id}] Müşteri detayı isteniyor (org: ${organizationId}, user: ${userId})...`);
     
     let result;
     if (isSuperAdmin) {
       result = await pool.query('SELECT * FROM contacts WHERE id = $1', [id]);
     } else {
-      result = await pool.query('SELECT * FROM contacts WHERE id = $1 AND organization_id = $2', [id, organizationId]);
+      // Kullanıcı sadece kendi kişisini görebilir
+      result = await pool.query('SELECT * FROM contacts WHERE id = $1 AND organization_id = $2 AND user_id = $3', [id, organizationId, userId]);
     }
 
     if (result.rows.length === 0) {
@@ -473,12 +477,13 @@ router.post('/', checkContactLimit, async (req, res) => {
   }
 });
 
-// PUT /api/contacts/:id - Müşteri güncelle - ORGANİZASYON BAZLI
+// PUT /api/contacts/:id - Müşteri güncelle - KULLANICI BAZLI
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const organizationId = getOrganizationId(req);
     const isSuperAdmin = req.user.role === 'super_admin';
+    const userId = req.user.id;
     const {
       email,
       salutation,
@@ -518,12 +523,13 @@ router.put('/:id', async (req, res) => {
       validatedImportanceLevel = null;
     }
 
-    // Önce müşterinin var olup olmadığını ve organizasyona ait olup olmadığını kontrol et
+    // Önce müşterinin var olup olmadığını ve kullanıcıya ait olup olmadığını kontrol et
     let checkResult;
     if (isSuperAdmin) {
       checkResult = await pool.query('SELECT * FROM contacts WHERE id = $1', [id]);
     } else {
-      checkResult = await pool.query('SELECT * FROM contacts WHERE id = $1 AND organization_id = $2', [id, organizationId]);
+      // Kullanıcı sadece kendi kişisini güncelleyebilir
+      checkResult = await pool.query('SELECT * FROM contacts WHERE id = $1 AND organization_id = $2 AND user_id = $3', [id, organizationId, userId]);
     }
     if (checkResult.rows.length === 0) {
       return res.status(404).json({
@@ -616,18 +622,20 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// DELETE /api/contacts/:id - Müşteri sil - ORGANİZASYON BAZLI
+// DELETE /api/contacts/:id - Müşteri sil - KULLANICI BAZLI
 router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const organizationId = getOrganizationId(req);
     const isSuperAdmin = req.user.role === 'super_admin';
+    const userId = req.user.id;
 
     let result;
     if (isSuperAdmin) {
       result = await pool.query('DELETE FROM contacts WHERE id = $1 RETURNING *', [id]);
     } else {
-      result = await pool.query('DELETE FROM contacts WHERE id = $1 AND organization_id = $2 RETURNING *', [id, organizationId]);
+      // Kullanıcı sadece kendi kişisini silebilir
+      result = await pool.query('DELETE FROM contacts WHERE id = $1 AND organization_id = $2 AND user_id = $3 RETURNING *', [id, organizationId, userId]);
     }
 
     if (result.rows.length === 0) {
@@ -652,12 +660,13 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-// POST /api/contacts/bulk-delete - Toplu silme - ORGANİZASYON BAZLI
+// POST /api/contacts/bulk-delete - Toplu silme - KULLANICI BAZLI
 router.post('/bulk-delete', async (req, res) => {
   try {
     const { ids } = req.body;
     const organizationId = getOrganizationId(req);
     const isSuperAdmin = req.user.role === 'super_admin';
+    const userId = req.user.id;
 
     if (!Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({
@@ -673,9 +682,10 @@ router.post('/bulk-delete', async (req, res) => {
         [ids]
       );
     } else {
+      // Kullanıcı sadece kendi kişilerini toplu silebilir
       result = await pool.query(
-        'DELETE FROM contacts WHERE id = ANY($1) AND organization_id = $2 RETURNING id',
-        [ids, organizationId]
+        'DELETE FROM contacts WHERE id = ANY($1) AND organization_id = $2 AND user_id = $3 RETURNING id',
+        [ids, organizationId, userId]
       );
     }
 
@@ -887,14 +897,16 @@ router.post('/bulk-import', async (req, res) => {
   }
 });
 
-// GET /api/contacts/stats/summary - İstatistikler - ORGANİZASYON BAZLI
+// GET /api/contacts/stats/summary - İstatistikler - KULLANICI BAZLI
 router.get('/stats/summary', async (req, res) => {
   try {
     const organizationId = getOrganizationId(req);
+    const userId = req.user.id;
     const isSuperAdmin = req.user.role === 'super_admin';
     
-    const whereClause = isSuperAdmin ? '1=1' : 'organization_id = $1';
-    const params = isSuperAdmin ? [] : [organizationId];
+    // Her kullanıcı sadece kendi kişilerinin istatistiklerini görebilir
+    const whereClause = isSuperAdmin ? '1=1' : 'organization_id = $1 AND user_id = $2';
+    const params = isSuperAdmin ? [] : [organizationId, userId];
     
     const statsQuery = `
       SELECT
@@ -922,11 +934,12 @@ router.get('/stats/summary', async (req, res) => {
   }
 });
 
-// POST /api/contacts/validate-ids - ID'lerin varlığını kontrol et - ORGANİZASYON BAZLI
+// POST /api/contacts/validate-ids - ID'lerin varlığını kontrol et - KULLANICI BAZLI
 router.post('/validate-ids', async (req, res) => {
   try {
     const { ids } = req.body;
     const organizationId = getOrganizationId(req);
+    const userId = req.user.id;
     const isSuperAdmin = req.user.role === 'super_admin';
     
     if (!Array.isArray(ids)) {
@@ -943,9 +956,10 @@ router.post('/validate-ids', async (req, res) => {
         [ids]
       );
     } else {
+      // Her kullanıcı sadece kendi kişilerini doğrulayabilir
       result = await pool.query(
-        'SELECT id FROM contacts WHERE id = ANY($1) AND organization_id = $2',
-        [ids, organizationId]
+        'SELECT id FROM contacts WHERE id = ANY($1) AND organization_id = $2 AND user_id = $3',
+        [ids, organizationId, userId]
       );
     }
 
@@ -972,19 +986,21 @@ router.post('/validate-ids', async (req, res) => {
   }
 });
 
-// GET /api/contacts/:id/sent-emails - Kişiye gönderilen tüm emailleri listele - ORGANİZASYON BAZLI
+// GET /api/contacts/:id/sent-emails - Kişiye gönderilen tüm emailleri listele - KULLANICI BAZLI
 router.get('/:id/sent-emails', async (req, res) => {
   try {
     const { id } = req.params;
     const organizationId = getOrganizationId(req);
+    const userId = req.user.id;
     const isSuperAdmin = req.user.role === 'super_admin';
     
-    // Önce kişinin organizasyona ait olduğunu kontrol et
+    // Önce kişinin kullanıcıya ait olduğunu kontrol et
     let contactCheck;
     if (isSuperAdmin) {
       contactCheck = await pool.query('SELECT id FROM contacts WHERE id = $1', [id]);
     } else {
-      contactCheck = await pool.query('SELECT id FROM contacts WHERE id = $1 AND organization_id = $2', [id, organizationId]);
+      // Her kullanıcı sadece kendi kişilerini görebilir
+      contactCheck = await pool.query('SELECT id FROM contacts WHERE id = $1 AND organization_id = $2 AND user_id = $3', [id, organizationId, userId]);
     }
     if (contactCheck.rows.length === 0) {
       return res.status(404).json({
