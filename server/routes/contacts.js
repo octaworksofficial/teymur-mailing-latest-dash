@@ -694,6 +694,199 @@ router.post('/bulk-delete', async (req, res) => {
   }
 });
 
+// POST /api/contacts/bulk-import - Toplu içe aktarma
+router.post('/bulk-import', async (req, res) => {
+  try {
+    const { contacts } = req.body;
+    const userId = req.user.id;
+    const organizationId = req.user.organizationId;
+
+    if (!Array.isArray(contacts) || contacts.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Geçerli kişi listesi gönderilmedi',
+      });
+    }
+
+    // Limit kontrolü
+    const limitResult = await pool.query(
+      `SELECT 
+        o.max_contacts,
+        (SELECT COUNT(*) FROM contacts c 
+         WHERE c.user_id IN (SELECT id FROM users WHERE organization_id = o.id)
+        ) as current_contacts
+      FROM organizations o 
+      WHERE o.id = $1`,
+      [organizationId]
+    );
+
+    if (limitResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Organizasyon bulunamadı'
+      });
+    }
+
+    const { max_contacts, current_contacts } = limitResult.rows[0];
+    const remainingLimit = max_contacts - parseInt(current_contacts);
+
+    if (contacts.length > remainingLimit) {
+      return res.status(403).json({
+        success: false,
+        message: `Kişi limiti aşılıyor. Mevcut: ${current_contacts}/${max_contacts}, Eklenmeye çalışılan: ${contacts.length}, Kalan limit: ${remainingLimit}`,
+        code: 'CONTACT_LIMIT_EXCEEDED',
+        limit: max_contacts,
+        current: parseInt(current_contacts),
+        remaining: remainingLimit,
+        requested: contacts.length
+      });
+    }
+
+    const results = {
+      imported: 0,
+      duplicates: 0,
+      errors: 0,
+      details: {
+        duplicateEmails: [],
+        errorDetails: []
+      }
+    };
+
+    // Her bir kişiyi işle
+    for (let i = 0; i < contacts.length; i++) {
+      const contact = contacts[i];
+      const rowNumber = i + 2; // Excel satır numarası (başlık + 1)
+
+      try {
+        // Email kontrolü
+        if (!contact.email) {
+          results.errors++;
+          results.details.errorDetails.push({
+            row: rowNumber,
+            email: 'N/A',
+            error: 'Email adresi zorunludur'
+          });
+          continue;
+        }
+
+        const email = contact.email.trim().toLowerCase();
+
+        // Email formatı kontrolü
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+          results.errors++;
+          results.details.errorDetails.push({
+            row: rowNumber,
+            email: email,
+            error: 'Geçersiz email formatı'
+          });
+          continue;
+        }
+
+        // Duplicate kontrolü - aynı organizasyondaki kişilerde
+        const existingCheck = await pool.query(
+          'SELECT id FROM contacts WHERE email = $1 AND organization_id = $2',
+          [email, organizationId]
+        );
+
+        if (existingCheck.rows.length > 0) {
+          results.duplicates++;
+          results.details.duplicateEmails.push(email);
+          continue;
+        }
+
+        // importance_level validation
+        let validatedImportanceLevel = null;
+        if (contact.importance_level !== undefined && contact.importance_level !== null && contact.importance_level !== '') {
+          const level = parseInt(contact.importance_level);
+          if (!isNaN(level) && level >= 1 && level <= 10) {
+            validatedImportanceLevel = level;
+          }
+        }
+
+        // Tags'i array'e çevir
+        let tags = [];
+        if (contact.tags) {
+          if (typeof contact.tags === 'string') {
+            tags = contact.tags.split(',').map(t => t.trim()).filter(Boolean);
+          } else if (Array.isArray(contact.tags)) {
+            tags = contact.tags;
+          }
+        }
+
+        // Custom fields
+        let customFields = {};
+        if (contact.custom_fields && typeof contact.custom_fields === 'object') {
+          customFields = contact.custom_fields;
+        }
+
+        // Kişiyi ekle
+        await pool.query(
+          `INSERT INTO contacts (
+            email, salutation, first_name, last_name, phone, mobile_phone, 
+            company, company_title, position, status, subscription_status, 
+            source, tags, custom_fields, customer_representative, country, 
+            state, district, address_1, address_2, importance_level, notes,
+            user_id, organization_id
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)`,
+          [
+            email,
+            contact.salutation || '',
+            contact.first_name || '',
+            contact.last_name || '',
+            contact.phone || '',
+            contact.mobile_phone || '',
+            contact.company || '',
+            contact.company_title || '',
+            contact.position || '',
+            contact.status || 'active',
+            contact.subscription_status || 'subscribed',
+            contact.source || 'excel-import',
+            tags,
+            JSON.stringify(customFields),
+            contact.customer_representative || '',
+            contact.country || '',
+            contact.state || '',
+            contact.district || '',
+            contact.address_1 || '',
+            contact.address_2 || '',
+            validatedImportanceLevel,
+            contact.notes || '',
+            userId,
+            organizationId
+          ]
+        );
+
+        results.imported++;
+      } catch (error) {
+        results.errors++;
+        results.details.errorDetails.push({
+          row: rowNumber,
+          email: contact.email || 'N/A',
+          error: error.message
+        });
+      }
+    }
+
+    // Sadece ilk 10 duplicate ve hata detayını döndür (çok fazla olmasın)
+    results.details.duplicateEmails = results.details.duplicateEmails.slice(0, 10);
+    results.details.errorDetails = results.details.errorDetails.slice(0, 10);
+
+    res.json({
+      success: true,
+      message: `İçe aktarma tamamlandı: ${results.imported} başarılı, ${results.duplicates} tekrar eden, ${results.errors} hatalı`,
+      data: results
+    });
+  } catch (error) {
+    console.error('Toplu içe aktarma hatası:', error);
+    res.status(500).json({
+      success: false,
+      message: 'İçe aktarma sırasında hata oluştu',
+      error: error.message
+    });
+  }
+});
+
 // GET /api/contacts/stats/summary - İstatistikler - ORGANİZASYON BAZLI
 router.get('/stats/summary', async (req, res) => {
   try {

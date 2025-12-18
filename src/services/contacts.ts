@@ -343,13 +343,37 @@ export async function exportContactsToExcel(params: ContactListParams) {
 }
 
 /**
- * Excel'den kişileri içe aktar
+ * Toplu kişi içe aktarma API'si
+ */
+export async function bulkImportContacts(contacts: Partial<Contact>[]): Promise<{
+  success: boolean;
+  message: string;
+  data: {
+    imported: number;
+    duplicates: number;
+    errors: number;
+    details: {
+      duplicateEmails: string[];
+      errorDetails: Array<{ row: number; email: string; error: string }>;
+    };
+  };
+}> {
+  return request(`${API_BASE_URL}/contacts/bulk-import`, {
+    method: 'POST',
+    data: { contacts },
+  });
+}
+
+/**
+ * Excel'den kişileri içe aktar (Bulk API kullanır)
  */
 export async function importContactsFromExcel(file: File): Promise<{
   success: boolean;
   imported: number;
+  duplicates: number;
   failed: number;
   errors: Array<{ row: number; email: string; error: string }>;
+  duplicateEmails: string[];
   preview: Contact[];
 }> {
   return new Promise((resolve, reject) => {
@@ -363,108 +387,97 @@ export async function importContactsFromExcel(file: File): Promise<{
         const worksheet = workbook.Sheets[sheetName];
         const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
-        const errors: Array<{ row: number; email: string; error: string }> = [];
+        if (jsonData.length === 0) {
+          reject(new Error('Excel dosyası boş veya okunamadı'));
+          return;
+        }
+
+        // Kişi verilerini hazırla
+        const contacts: Partial<Contact>[] = [];
         const preview: Contact[] = [];
-        let imported = 0;
-        let failed = 0;
 
         for (let i = 0; i < jsonData.length; i++) {
           const row: any = jsonData[i];
-          const rowNumber = i + 2; // Excel'de satır numarası (başlık + 1)
 
-          try {
-            // Email kontrolü
-            if (!row.email) {
-              throw new Error('Email adresi zorunludur');
+          // Özel alanları oluştur
+          const customFields: Record<string, any> = {};
+          let customFieldIndex = 1;
+          while (row[`custom_field_${customFieldIndex}_name`]) {
+            const fieldName = row[`custom_field_${customFieldIndex}_name`];
+            const fieldValue = row[`custom_field_${customFieldIndex}_value`];
+            if (fieldName && fieldValue) {
+              customFields[fieldName] = fieldValue;
             }
+            customFieldIndex++;
+          }
 
-            // Email formatı kontrolü
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(row.email)) {
-              throw new Error('Geçersiz email formatı');
-            }
+          // Etiketleri işle
+          const tags = row.tags
+            ? String(row.tags).split(',').map((tag: string) => tag.trim()).filter(Boolean)
+            : [];
 
-            // Özel alanları oluştur
-            const customFields: Record<string, any> = {};
-            let customFieldIndex = 1;
-            while (row[`custom_field_${customFieldIndex}_name`]) {
-              const fieldName = row[`custom_field_${customFieldIndex}_name`];
-              const fieldValue = row[`custom_field_${customFieldIndex}_value`];
-              if (fieldName && fieldValue) {
-                customFields[fieldName] = fieldValue;
-              }
-              customFieldIndex++;
-            }
+          const contactData: Partial<Contact> = {
+            email: row.email ? String(row.email).trim().toLowerCase() : '',
+            salutation: row.salutation || '',
+            first_name: row.first_name || '',
+            last_name: row.last_name || '',
+            phone: row.phone ? String(row.phone) : '',
+            mobile_phone: row.mobile_phone ? String(row.mobile_phone) : '',
+            company: row.company || '',
+            company_title: row.company_title || '',
+            position: row.position || '',
+            customer_representative: row.customer_representative || '',
+            country: row.country || '',
+            state: row.state || '',
+            district: row.district || '',
+            address_1: row.address_1 || '',
+            address_2: row.address_2 || '',
+            importance_level: row.importance_level ? parseInt(row.importance_level) : undefined,
+            notes: row.notes || '',
+            source: row.source || 'excel-import',
+            status: row.status || 'active',
+            subscription_status: row.subscription_status || 'subscribed',
+            tags,
+            custom_fields: Object.keys(customFields).length > 0 ? customFields : undefined,
+          };
 
-            // Etiketleri işle
-            const tags = row.tags
-              ? row.tags.split(',').map((tag: string) => tag.trim()).filter(Boolean)
-              : [];
+          contacts.push(contactData);
 
-            const contactData: Partial<Contact> = {
-              email: row.email.trim().toLowerCase(),
-              salutation: row.salutation || '',
-              first_name: row.first_name || '',
-              last_name: row.last_name || '',
-              phone: row.phone || '',
-              mobile_phone: row.mobile_phone || '',
-              company: row.company || '',
-              company_title: row.company_title || '',
-              position: row.position || '',
-              customer_representative: row.customer_representative || '',
-              country: row.country || '',
-              state: row.state || '',
-              district: row.district || '',
-              address_1: row.address_1 || '',
-              address_2: row.address_2 || '',
-              importance_level: row.importance_level ? parseInt(row.importance_level) : undefined,
-              notes: row.notes || '',
-              source: row.source || 'import',
-              status: row.status || 'active',
-              subscription_status: row.subscription_status || 'subscribed',
-              tags,
-              custom_fields: Object.keys(customFields).length > 0 ? customFields : undefined,
-            };
-
-            // Önizleme için ilk 5 kaydı sakla
-            if (preview.length < 5) {
-              preview.push(contactData as Contact);
-            }
-
-            // API'ye gönder
-            const response = await createContact(contactData) as any;
-            if (response.success === false) {
-              throw new Error(response.message || response.error || 'Kayıt başarısız');
-            }
-            imported++;
-          } catch (error: any) {
-            failed++;
-            // Hata mesajını çıkar
-            let errorMsg = 'Bilinmeyen hata';
-            if (error.info?.errorMessage) {
-              errorMsg = error.info.errorMessage;
-            } else if (error.response?.data?.message) {
-              errorMsg = error.response.data.message;
-            } else if (error.message) {
-              errorMsg = error.message;
-            }
-            errors.push({
-              row: rowNumber,
-              email: row.email || 'N/A',
-              error: errorMsg,
-            });
+          // Önizleme için ilk 5 kaydı sakla
+          if (preview.length < 5) {
+            preview.push(contactData as Contact);
           }
         }
 
-        resolve({
-          success: true,
-          imported,
-          failed,
-          errors,
-          preview,
-        });
+        // Bulk API'ye gönder
+        const response = await bulkImportContacts(contacts);
+
+        if (response.success) {
+          resolve({
+            success: true,
+            imported: response.data.imported,
+            duplicates: response.data.duplicates,
+            failed: response.data.errors,
+            errors: response.data.details.errorDetails,
+            duplicateEmails: response.data.details.duplicateEmails,
+            preview,
+          });
+        } else {
+          reject(new Error((response as any).message || 'İçe aktarma başarısız'));
+        }
       } catch (error: any) {
-        reject(new Error(`Excel okuma hatası: ${error.message}`));
+        // API hata mesajını çıkar
+        let errorMsg = 'İçe aktarma hatası';
+        if (error.info?.errorMessage) {
+          errorMsg = error.info.errorMessage;
+        } else if (error.response?.data?.message) {
+          errorMsg = error.response.data.message;
+        } else if (error.data?.message) {
+          errorMsg = error.data.message;
+        } else if (error.message) {
+          errorMsg = error.message;
+        }
+        reject(new Error(errorMsg));
       }
     };
 

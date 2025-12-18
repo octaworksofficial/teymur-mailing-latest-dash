@@ -112,11 +112,13 @@ const Contacts: React.FC = () => {
   const [importModalVisible, setImportModalVisible] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importLoading, setImportLoading] = useState(false);
-  const [importPreview, setImportPreview] = useState<Contact[]>([]);
+  const [_importPreview, setImportPreview] = useState<Contact[]>([]);
   const [importResult, setImportResult] = useState<{
     imported: number;
+    duplicates: number;
     failed: number;
     errors: Array<{ row: number; email: string; error: string }>;
+    duplicateEmails: string[];
   } | null>(null);
 
   const columns: ProColumns<Contact>[] = [
@@ -625,18 +627,17 @@ const Contacts: React.FC = () => {
       const result = await importContactsFromExcel(importFile);
       setImportResult({
         imported: result.imported,
+        duplicates: result.duplicates,
         failed: result.failed,
         errors: result.errors,
+        duplicateEmails: result.duplicateEmails,
       });
       setImportPreview(result.preview);
 
+      // Sadece sonuç bildirimi - message.success/warning kaldırıldı
+      // Sonuç modal içinde detaylı gösterilecek
       if (result.imported > 0) {
-        message.success(`${result.imported} kişi başarıyla içe aktarıldı`);
         actionRef.current?.reload();
-      }
-
-      if (result.failed > 0) {
-        message.warning(`${result.failed} kişi içe aktarılamadı`);
       }
     } catch (error: any) {
       message.error(error.message || 'İçe aktarma başarısız oldu');
@@ -1204,89 +1205,136 @@ const Contacts: React.FC = () => {
 
           {importResult && (
             <>
+              {/* Özet Bilgiler */}
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-around',
+                  padding: '20px 0',
+                  background: '#fafafa',
+                  borderRadius: 8,
+                  marginBottom: 16,
+                }}
+              >
+                <div style={{ textAlign: 'center' }}>
+                  <div
+                    style={{
+                      fontSize: 32,
+                      fontWeight: 'bold',
+                      color: '#52c41a',
+                    }}
+                  >
+                    {importResult.imported}
+                  </div>
+                  <div style={{ color: '#666' }}>Başarılı</div>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div
+                    style={{
+                      fontSize: 32,
+                      fontWeight: 'bold',
+                      color: '#faad14',
+                    }}
+                  >
+                    {importResult.duplicates}
+                  </div>
+                  <div style={{ color: '#666' }}>Tekrar Eden</div>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div
+                    style={{
+                      fontSize: 32,
+                      fontWeight: 'bold',
+                      color: '#ff4d4f',
+                    }}
+                  >
+                    {importResult.failed}
+                  </div>
+                  <div style={{ color: '#666' }}>Hatalı</div>
+                </div>
+              </div>
+
+              {/* Sonuç Mesajı */}
               <Alert
-                message="İçe Aktarma Tamamlandı"
+                message={
+                  importResult.imported > 0 &&
+                  importResult.duplicates === 0 &&
+                  importResult.failed === 0
+                    ? 'Tüm kişiler başarıyla içe aktarıldı!'
+                    : 'İçe aktarma tamamlandı'
+                }
                 description={
                   <div>
-                    <p>
-                      <strong>Başarılı:</strong> {importResult.imported} kişi
-                    </p>
+                    {importResult.imported > 0 && (
+                      <p>
+                        <strong>{importResult.imported}</strong> kişi başarıyla
+                        eklendi.
+                      </p>
+                    )}
+                    {importResult.duplicates > 0 && (
+                      <p style={{ color: '#faad14' }}>
+                        <strong>{importResult.duplicates}</strong> kişi zaten
+                        kayıtlı olduğu için atlandı.
+                      </p>
+                    )}
                     {importResult.failed > 0 && (
                       <p style={{ color: '#ff4d4f' }}>
-                        <strong>Başarısız:</strong> {importResult.failed} kişi
+                        <strong>{importResult.failed}</strong> kişi hata
+                        nedeniyle eklenemedi.
                       </p>
                     )}
                   </div>
                 }
-                type={importResult.failed > 0 ? 'warning' : 'success'}
+                type={
+                  importResult.failed > 0
+                    ? 'error'
+                    : importResult.duplicates > 0
+                      ? 'warning'
+                      : 'success'
+                }
                 showIcon
               />
 
-              {importPreview.length > 0 && (
-                <div>
-                  <h4>İlk 5 Kayıt Önizlemesi:</h4>
-                  <Table
-                    dataSource={importPreview}
-                    size="small"
-                    pagination={false}
-                    scroll={{ x: 600 }}
-                    columns={[
-                      {
-                        title: 'Email',
-                        dataIndex: 'email',
-                        key: 'email',
-                        width: 200,
-                      },
-                      {
-                        title: 'Ad',
-                        dataIndex: 'first_name',
-                        key: 'first_name',
-                        width: 100,
-                      },
-                      {
-                        title: 'Soyad',
-                        dataIndex: 'last_name',
-                        key: 'last_name',
-                        width: 100,
-                      },
-                      {
-                        title: 'Şirket',
-                        dataIndex: 'company',
-                        key: 'company',
-                        width: 150,
-                      },
-                      {
-                        title: 'Etiketler',
-                        dataIndex: 'tags',
-                        key: 'tags',
-                        render: (tags: string[]) => (
-                          <Space size={[0, 4]} wrap>
-                            {tags?.map((tag) => (
-                              <Tag
-                                key={tag}
-                                color="blue"
-                                style={{ fontSize: 11 }}
-                              >
-                                {tag}
-                              </Tag>
-                            ))}
-                          </Space>
-                        ),
-                      },
-                    ]}
-                  />
+              {/* Tekrar Eden Email Adresleri */}
+              {importResult.duplicateEmails.length > 0 && (
+                <div style={{ marginTop: 16 }}>
+                  <h4 style={{ color: '#faad14', marginBottom: 8 }}>
+                    Tekrar Eden Email Adresleri (ilk 10):
+                  </h4>
+                  <div
+                    style={{
+                      background: '#fffbe6',
+                      border: '1px solid #ffe58f',
+                      borderRadius: 4,
+                      padding: '8px 12px',
+                      maxHeight: 100,
+                      overflowY: 'auto',
+                    }}
+                  >
+                    {importResult.duplicateEmails.map((email) => (
+                      <Tag
+                        key={`dup-${email}`}
+                        color="orange"
+                        style={{ margin: 2 }}
+                      >
+                        {email}
+                      </Tag>
+                    ))}
+                  </div>
                 </div>
               )}
 
+              {/* Hata Detayları */}
               {importResult.errors.length > 0 && (
-                <div>
-                  <h4 style={{ color: '#ff4d4f' }}>
-                    Hatalar ({importResult.errors.length}):
+                <div style={{ marginTop: 16 }}>
+                  <h4 style={{ color: '#ff4d4f', marginBottom: 8 }}>
+                    Hata Detayları (ilk 10):
                   </h4>
                   <Table
                     dataSource={importResult.errors}
                     size="small"
-                    pagination={{ pageSize: 5 }}
+                    pagination={false}
+                    rowKey={(record) => `error-${record.row}-${record.email}`}
                     columns={[
                       {
                         title: 'Satır',
@@ -1300,7 +1348,14 @@ const Contacts: React.FC = () => {
                         key: 'email',
                         width: 200,
                       },
-                      { title: 'Hata', dataIndex: 'error', key: 'error' },
+                      {
+                        title: 'Hata',
+                        dataIndex: 'error',
+                        key: 'error',
+                        render: (text: string) => (
+                          <span style={{ color: '#ff4d4f' }}>{text}</span>
+                        ),
+                      },
                     ]}
                   />
                 </div>
