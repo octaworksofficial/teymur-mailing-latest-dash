@@ -20,6 +20,7 @@ import {
   Dropdown,
   Input,
   message,
+  Modal,
   Segmented,
   Space,
   Tag,
@@ -28,6 +29,7 @@ import {
 import './index.less';
 
 const { Text } = Typography;
+const { confirm } = Modal;
 
 interface EmailEditorProps {
   value?: string;
@@ -37,6 +39,21 @@ interface EmailEditorProps {
   showVariables?: boolean;
   readOnly?: boolean;
 }
+
+// Karmaşık HTML kontrolü (table, inline style, background vb.)
+const isComplexHtml = (html: string): boolean => {
+  if (!html) return false;
+  const complexPatterns = [
+    /<table/i,
+    /<td/i,
+    /<tr/i,
+    /background[-:]?color/i,
+    /background\s*:/i,
+    /style\s*=\s*["'][^"']*(?:background|border|padding|margin)[^"']*/i,
+    /<div[^>]+style/i,
+  ];
+  return complexPatterns.some(pattern => pattern.test(html));
+};
 
 // Email değişkenleri - kişi bilgileri için
 const EMAIL_VARIABLES = [
@@ -68,6 +85,55 @@ const EmailEditor: React.FC<EmailEditorProps> = ({
 }) => {
   const quillRef = useRef<ReactQuill>(null);
   const [editorMode, setEditorMode] = useState<'visual' | 'html' | 'preview'>('visual');
+  const previousModeRef = useRef<'visual' | 'html' | 'preview'>('visual');
+  const hasComplexHtmlRef = useRef<boolean>(false);
+
+  // Karmaşık HTML geldiğinde otomatik HTML moduna geç
+  useEffect(() => {
+    if (value && isComplexHtml(value) && editorMode === 'visual') {
+      hasComplexHtmlRef.current = true;
+      setEditorMode('html');
+      previousModeRef.current = 'html';
+    }
+  }, [value]);
+
+  // Mod değişikliği handler - HTML'den Görsel'e geçerken uyarı
+  const handleModeChange = useCallback((newMode: string) => {
+    const mode = newMode as 'visual' | 'html' | 'preview';
+    
+    // HTML modundan Görsel moda geçerken ve karmaşık HTML varsa uyarı göster
+    if (previousModeRef.current === 'html' && mode === 'visual' && hasComplexHtmlRef.current) {
+      confirm({
+        title: 'Uyarı: HTML Formatı Kaybolabilir',
+        content: (
+          <div>
+            <p>Görsel editöre geçtiğinizde, HTML kodundaki bazı özellikler kaybolabilir:</p>
+            <ul style={{ paddingLeft: 20, marginTop: 8 }}>
+              <li>Arkaplan renkleri</li>
+              <li>Tablo yapıları</li>
+              <li>Özel stil ayarları</li>
+              <li>Kutu/border tasarımları</li>
+            </ul>
+            <p style={{ marginTop: 12, fontWeight: 500 }}>
+              Devam etmek istediğinizden emin misiniz?
+            </p>
+          </div>
+        ),
+        okText: 'Evet, Devam Et',
+        cancelText: 'İptal',
+        okType: 'danger',
+        onOk() {
+          hasComplexHtmlRef.current = false;
+          previousModeRef.current = mode;
+          setEditorMode(mode);
+        },
+      });
+      return;
+    }
+    
+    previousModeRef.current = mode;
+    setEditorMode(mode);
+  }, []);
 
   /**
    * Outlook/Word HTML'ini temizler
@@ -607,7 +673,7 @@ const EmailEditor: React.FC<EmailEditorProps> = ({
             <Segmented
               size="small"
               value={editorMode}
-              onChange={(val) => setEditorMode(val as 'visual' | 'html' | 'preview')}
+              onChange={handleModeChange}
               options={[
                 { label: 'Görsel', value: 'visual' },
                 { label: <><CodeOutlined /> HTML</>, value: 'html' },
@@ -646,7 +712,12 @@ const EmailEditor: React.FC<EmailEditorProps> = ({
       {editorMode === 'html' && (
         <Input.TextArea
           value={value}
-          onChange={(e) => onChange?.(e.target.value)}
+          onChange={(e) => {
+            const newValue = e.target.value;
+            // HTML değiştiğinde karmaşıklık kontrolü yap
+            hasComplexHtmlRef.current = isComplexHtml(newValue);
+            onChange?.(newValue);
+          }}
           placeholder="HTML kodunu buraya yazın veya yapıştırın..."
           style={{
             height: typeof height === 'number' ? height + 42 : height,
