@@ -1,7 +1,9 @@
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import {
+  CodeOutlined,
+  EyeOutlined,
   HolderOutlined,
   HomeOutlined,
   LinkOutlined,
@@ -16,7 +18,9 @@ import {
   Card,
   Divider,
   Dropdown,
+  Input,
   message,
+  Segmented,
   Space,
   Tag,
   Typography,
@@ -63,6 +67,7 @@ const EmailEditor: React.FC<EmailEditorProps> = ({
   readOnly = false,
 }) => {
   const quillRef = useRef<ReactQuill>(null);
+  const [editorMode, setEditorMode] = useState<'visual' | 'html' | 'preview'>('visual');
 
   /**
    * Outlook/Word HTML'ini temizler
@@ -583,44 +588,90 @@ const EmailEditor: React.FC<EmailEditorProps> = ({
     <div className="email-editor-container">
       {showVariables && !readOnly && (
         <div className="email-editor-toolbar-extra">
-          <Space>
-            <Dropdown
-              menu={{ items: variableMenuItems }}
-              trigger={['click']}
-              placement="bottomLeft"
-            >
-              <Button size="small" icon={<UserOutlined />}>
-                Değişken Ekle
-              </Button>
-            </Dropdown>
-            <Divider type="vertical" />
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              💡 Değişkenleri sürükleyip editöre bırakabilirsiniz
-            </Text>
+          <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+            <Space>
+              <Dropdown
+                menu={{ items: variableMenuItems }}
+                trigger={['click']}
+                placement="bottomLeft"
+              >
+                <Button size="small" icon={<UserOutlined />}>
+                  Değişken Ekle
+                </Button>
+              </Dropdown>
+              <Divider type="vertical" />
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                💡 Değişkenleri sürükleyip editöre bırakabilirsiniz
+              </Text>
+            </Space>
+            <Segmented
+              size="small"
+              value={editorMode}
+              onChange={(val) => setEditorMode(val as 'visual' | 'html' | 'preview')}
+              options={[
+                { label: 'Görsel', value: 'visual' },
+                { label: <><CodeOutlined /> HTML</>, value: 'html' },
+                { label: <><EyeOutlined /> Önizleme</>, value: 'preview' },
+              ]}
+            />
           </Space>
         </div>
       )}
 
-      <div
-        onDrop={handleDrop}
-        onDragOver={handleDragOver}
-        className="email-editor-drop-zone"
-      >
-        <ReactQuill
-          ref={quillRef}
-          theme="snow"
+      {/* Görsel Editör (Quill) */}
+      {editorMode === 'visual' && (
+        <div
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          className="email-editor-drop-zone"
+        >
+          <ReactQuill
+            ref={quillRef}
+            theme="snow"
+            value={value}
+            onChange={handleChange}
+            modules={modules}
+            formats={formats}
+            placeholder={placeholder}
+            readOnly={readOnly}
+            style={{
+              height: typeof height === 'number' ? `${height}px` : height,
+            }}
+            className="email-editor-quill"
+          />
+        </div>
+      )}
+
+      {/* HTML Kod Editörü */}
+      {editorMode === 'html' && (
+        <Input.TextArea
           value={value}
-          onChange={handleChange}
-          modules={modules}
-          formats={formats}
-          placeholder={placeholder}
-          readOnly={readOnly}
+          onChange={(e) => onChange?.(e.target.value)}
+          placeholder="HTML kodunu buraya yazın veya yapıştırın..."
           style={{
-            height: typeof height === 'number' ? `${height}px` : height,
+            height: typeof height === 'number' ? height + 42 : height,
+            fontFamily: 'monospace',
+            fontSize: 13,
           }}
-          className="email-editor-quill"
+          readOnly={readOnly}
         />
-      </div>
+      )}
+
+      {/* Canlı Önizleme (iframe ile izole) */}
+      {editorMode === 'preview' && (
+        <iframe
+          title="Email Önizleme"
+          srcDoc={value || '<p style="color:#999;text-align:center;padding:40px;">Önizleme için içerik girin...</p>'}
+          style={{
+            width: '100%',
+            height: typeof height === 'number' ? height + 42 : height,
+            border: '1px solid #d9d9d9',
+            borderRadius: 4,
+            background: '#fff',
+          }}
+          sandbox="allow-same-origin"
+        />
+      )}
 
       {showVariables && !readOnly && (
         <Card size="small" className="email-editor-variables-panel">
