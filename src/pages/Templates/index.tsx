@@ -1193,18 +1193,18 @@ const Templates: React.FC = () => {
                 </p>
               )}
             </div>
-            <div
+            {/* iframe ile izole önizleme - CSS çakışmalarını önler */}
+            <iframe
+              title="Email Önizleme"
+              srcDoc={currentRow.body_html}
               style={{
+                width: '100%',
+                height: 500,
                 border: '1px solid #d9d9d9',
                 borderRadius: 4,
-                padding: 16,
                 background: '#fff',
-                minHeight: 400,
-                maxHeight: 600,
-                overflow: 'auto',
               }}
-              // biome-ignore lint/security/noDangerouslySetInnerHtml: Template content needs to be rendered as HTML
-              dangerouslySetInnerHTML={{ __html: currentRow.body_html }}
+              sandbox="allow-same-origin"
             />
           </div>
         )}
