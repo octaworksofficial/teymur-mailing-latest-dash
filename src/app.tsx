@@ -121,7 +121,7 @@ export const layout: RunTimeLayoutConfig = ({
       },
     ],
     links:
-      initialState?.currentUser?.role !== 'super_admin'
+      initialState?.currentUser?.role === 'super_admin'
         ? [
             <Link key="scheduler-logs" to="/scheduler-logs">
               <LinkOutlined />
