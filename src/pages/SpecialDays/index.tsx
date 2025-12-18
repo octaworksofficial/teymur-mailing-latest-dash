@@ -14,6 +14,7 @@ import {
   ProTable,
 } from '@ant-design/pro-components';
 import { Button, Modal, message, Popconfirm, Select, Space, Tag } from 'antd';
+import dayjs from 'dayjs';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   copyYear,
@@ -24,6 +25,38 @@ import {
   type SpecialDay,
   updateSpecialDay,
 } from '@/services/specialDays';
+
+// Tarih formatını YYYY-MM-DD'ye çevir
+const formatDateToISO = (dateValue: any): string => {
+  if (!dateValue) return '';
+
+  // Zaten dayjs objesi ise
+  if (dayjs.isDayjs(dateValue)) {
+    return dateValue.format('YYYY-MM-DD');
+  }
+
+  // String ise
+  if (typeof dateValue === 'string') {
+    // DD.MM.YYYY formatı
+    if (dateValue.includes('.')) {
+      const parts = dateValue.split('.');
+      if (parts.length === 3) {
+        return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+      }
+    }
+    // Zaten YYYY-MM-DD formatında
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+      return dateValue;
+    }
+    // Dayjs ile parse etmeyi dene
+    const parsed = dayjs(dateValue);
+    if (parsed.isValid()) {
+      return parsed.format('YYYY-MM-DD');
+    }
+  }
+
+  return '';
+};
 
 // Özel gün tipleri
 const SPECIAL_DAY_TYPES = [
@@ -169,9 +202,7 @@ const SpecialDays: React.FC = () => {
         (d) => d.value === values.day_type,
       );
       // Tarihi YYYY-MM-DD formatına çevir
-      const formattedDate = values.actual_date?.format
-        ? values.actual_date.format('YYYY-MM-DD')
-        : values.actual_date;
+      const formattedDate = formatDateToISO(values.actual_date);
 
       const response = await createSpecialDay({
         year: values.year,
@@ -203,9 +234,7 @@ const SpecialDays: React.FC = () => {
     if (!currentRecord) return false;
     try {
       // Tarihi YYYY-MM-DD formatına çevir
-      const formattedDate = values.actual_date?.format
-        ? values.actual_date.format('YYYY-MM-DD')
-        : values.actual_date;
+      const formattedDate = formatDateToISO(values.actual_date);
 
       const response = await updateSpecialDay(currentRecord.id, {
         actual_date: formattedDate,

@@ -24,19 +24,26 @@ router.get('/', authMiddleware, async (req, res) => {
     );
     
     if (result.rows.length === 0) {
-      // Eğer kayıt yoksa, organizasyon için yeni bir kayıt oluştur
+      // Eğer kayıt yoksa, organizasyon adını al
+      const orgResult = await pool.query(
+        'SELECT name FROM organizations WHERE id = $1',
+        [organizationId]
+      );
+      const orgName = orgResult.rows[0]?.name || 'Şirket Adı';
+      
+      // Organizasyon için yeni bir kayıt oluştur
       const createResult = await pool.query(`
         INSERT INTO company_info (organization_id, company_name, country)
-        VALUES ($1, 'Şirket Adı', 'Türkiye')
+        VALUES ($1, $2, 'Türkiye')
         RETURNING *
-      `, [organizationId]);
+      `, [organizationId, orgName]);
       return res.json({ success: true, data: createResult.rows[0] });
     }
 
     res.json({ success: true, data: result.rows[0] });
   } catch (error) {
     console.error('Get company info error:', error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: 'Kurumsal bilgiler alınamadı: ' + error.message });
   }
 });
 
