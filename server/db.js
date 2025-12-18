@@ -13,9 +13,13 @@ const dbConfig = process.env.DATABASE_URL ? {
   ssl: process.env.NODE_ENV === 'production' ? {
     rejectUnauthorized: false
   } : false,
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 10000,
+  max: 10,
+  min: 2,
+  idleTimeoutMillis: 10000,
+  connectionTimeoutMillis: 5000,
+  allowExitOnIdle: false,
+  keepAlive: true,
+  keepAliveInitialDelayMillis: 10000,
 } : {
   // Local development - ayrı ayrı parametreler
   host: process.env.DB_HOST || 'localhost',
@@ -23,9 +27,12 @@ const dbConfig = process.env.DATABASE_URL ? {
   database: process.env.DB_NAME || 'teymur_mailing',
   user: process.env.DB_USER || 'postgres',
   password: process.env.DB_PASSWORD || '',
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 10000,
+  max: 10,
+  min: 2,
+  idleTimeoutMillis: 10000,
+  connectionTimeoutMillis: 5000,
+  keepAlive: true,
+  keepAliveInitialDelayMillis: 10000,
 };
 
 console.log('🗄️ Using database config:', {
@@ -97,6 +104,15 @@ process.on('SIGTERM', async () => {
   await pool.end();
   console.log('✅ Database pool closed');
 });
+
+// Keep-alive ping - her 30 saniyede bir
+setInterval(async () => {
+  try {
+    await pool.query('SELECT 1');
+  } catch (err) {
+    console.warn('Keep-alive ping failed:', err.message);
+  }
+}, 30000);
 
 // Test connection on startup
 testConnection();
