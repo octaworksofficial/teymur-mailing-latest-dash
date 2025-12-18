@@ -27,7 +27,7 @@ import {
   ProFormTextArea,
   ProTable,
 } from '@ant-design/pro-components';
-import { useModel } from '@umijs/max';
+import { request, useModel } from '@umijs/max';
 import {
   Alert,
   Button,
@@ -40,7 +40,7 @@ import {
   Typography,
 } from 'antd';
 import axios from 'axios';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import AttachmentUploader from '@/components/AttachmentUploader';
 import EmailEditor from '@/components/EmailEditor';
 import {
@@ -65,11 +65,29 @@ const Templates: React.FC = () => {
   const [previewModalOpen, setPreviewModalOpen] = useState<boolean>(false);
   const [currentRow, setCurrentRow] = useState<EmailTemplate>();
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [senderEmails, setSenderEmails] = useState<string[]>([]);
   const actionRef = useRef<ActionType>(null);
 
   // AI Generate States
   const [aiGenerating, setAiGenerating] = useState<boolean>(false);
   const [createForm] = Form.useForm();
+
+  // Sender email listesini yükle
+  useEffect(() => {
+    const loadSenderEmails = async () => {
+      try {
+        const response = await request('/api/users/sender-emails', {
+          method: 'GET',
+        });
+        if (response.success && response.data) {
+          setSenderEmails(response.data);
+        }
+      } catch (error) {
+        console.error('Sender emails yüklenemedi:', error);
+      }
+    };
+    loadSenderEmails();
+  }, []);
 
   // AI ile şablon oluştur
   const handleAiGenerate = async (values: {
@@ -893,11 +911,24 @@ const Templates: React.FC = () => {
           label="Gönderen Adı"
           placeholder="Örn: Email Otomasyon Platformu"
         />
-        <ProFormText
-          name="from_email"
-          label="Gönderen Email"
-          placeholder="Örn: noreply@platform.com"
-        />
+        {senderEmails.length > 0 ? (
+          <ProFormSelect
+            name="from_email"
+            label="Gönderen Email"
+            placeholder="Gönderen email seçin"
+            options={senderEmails.map((email) => ({
+              label: email,
+              value: email,
+            }))}
+            rules={[{ required: true, message: 'Gönderen email seçin' }]}
+          />
+        ) : (
+          <ProFormText
+            name="from_email"
+            label="Gönderen Email"
+            placeholder="Örn: noreply@platform.com"
+          />
+        )}
         <ProFormText
           name="cc_emails"
           label="CC (Karbon Kopya)"
@@ -1046,11 +1077,24 @@ const Templates: React.FC = () => {
           label="Gönderen Adı"
           placeholder="Örn: Email Otomasyon Platformu"
         />
-        <ProFormText
-          name="from_email"
-          label="Gönderen Email"
-          placeholder="Örn: noreply@platform.com"
-        />
+        {senderEmails.length > 0 ? (
+          <ProFormSelect
+            name="from_email"
+            label="Gönderen Email"
+            placeholder="Gönderen email seçin"
+            options={senderEmails.map((email) => ({
+              label: email,
+              value: email,
+            }))}
+            rules={[{ required: true, message: 'Gönderen email seçin' }]}
+          />
+        ) : (
+          <ProFormText
+            name="from_email"
+            label="Gönderen Email"
+            placeholder="Örn: noreply@platform.com"
+          />
+        )}
         <ProFormText
           name="cc_emails"
           label="CC (Karbon Kopya)"
