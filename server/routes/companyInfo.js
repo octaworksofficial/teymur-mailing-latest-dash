@@ -13,7 +13,7 @@ router.get('/', authMiddleware, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Organizasyon bulunamadı' });
     }
     
-    // Super admin ise tüm bilgileri göster veya boş döndür
+    // Super admin ise boş döndür
     if (req.user.role === 'super_admin') {
       return res.json({ success: true, data: null, message: 'Super admin için kurumsal bilgi yok' });
     }
@@ -24,23 +24,26 @@ router.get('/', authMiddleware, async (req, res) => {
     );
     
     if (result.rows.length === 0) {
-      // Eğer kayıt yoksa, organizasyon adını al
+      // Kayıt yoksa boş data döndür - kullanıcı kaydet dediğinde oluşturulacak
+      // Organizasyon adını varsayılan olarak gönder
       const orgResult = await pool.query(
         'SELECT name FROM organizations WHERE id = $1',
         [organizationId]
       );
-      const orgName = orgResult.rows[0]?.name || 'Şirket Adı';
+      const orgName = orgResult.rows[0]?.name || '';
       
-      // Organizasyon için yeni bir kayıt oluştur
-      const createResult = await pool.query(`
-        INSERT INTO company_info (organization_id, company_name, country)
-        VALUES ($1, $2, 'Türkiye')
-        RETURNING *
-      `, [organizationId, orgName]);
-      return res.json({ success: true, data: createResult.rows[0] });
+      return res.json({ 
+        success: true, 
+        data: {
+          company_name: orgName,
+          country: 'Türkiye',
+          // Diğer alanlar boş
+        },
+        isNew: true // Frontend'e yeni kayıt olduğunu bildir
+      });
     }
 
-    res.json({ success: true, data: result.rows[0] });
+    res.json({ success: true, data: result.rows[0], isNew: false });
   } catch (error) {
     console.error('Get company info error:', error);
     res.status(500).json({ success: false, message: 'Kurumsal bilgiler alınamadı: ' + error.message });
@@ -205,27 +208,87 @@ router.put('/', authMiddleware, async (req, res) => {
       organizationId, // $44 - organization_id filter
     ];
 
-    const result = await pool.query(query, values);
-
-    if (result.rows.length === 0) {
-      // Kayıt yoksa oluştur (UPSERT mantığı)
-      const insertResult = await pool.query(`
-        INSERT INTO company_info (organization_id, company_name, country)
-        VALUES ($1, COALESCE($2, 'Şirket Adı'), COALESCE($3, 'Türkiye'))
-        RETURNING *
-      `, [organizationId, company_name, country]);
+    // Önce kayıt var mı kontrol et
+    const existingRecord = await pool.query(
+      'SELECT id FROM company_info WHERE organization_id = $1',
+      [organizationId]
+    );
+    
+    if (existingRecord.rows.length === 0) {
+      // Kayıt yoksa INSERT yap
+      const insertQuery = `
+        INSERT INTO company_info (
+          organization_id, company_name, company_slogan, company_description, mission, vision,
+          logo_url, favicon_url, cover_image_url, address_line1, address_line2, city, state_province,
+          postal_code, country, phone_primary, phone_secondary, phone_fax, whatsapp_number,
+          email_general, email_support, email_sales, website_url, facebook_url, twitter_url,
+          instagram_url, linkedin_url, youtube_url, business_hours, gallery_photos, products,
+          team_members, certifications, awards, stats, tax_number, trade_registry_number, legal_name,
+          seo_keywords, meta_description, is_active, default_currency, default_language, timezone
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19,
+          $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36,
+          $37, $38, $39, $40, $41, $42, $43, $44
+        ) RETURNING *
+      `;
       
-      // Şimdi güncelle
-      if (insertResult.rows.length > 0) {
-        const updateResult = await pool.query(query, values);
-        return res.json({
-          success: true,
-          data: updateResult.rows[0],
-          message: 'Kurumsal bilgiler başarıyla oluşturuldu ve güncellendi',
-        });
-      }
-      return res.status(404).json({ success: false, message: 'Kurumsal bilgi kaydı bulunamadı' });
+      const insertValues = [
+        organizationId,
+        company_name || 'Şirket Adı',
+        company_slogan,
+        company_description,
+        mission,
+        vision,
+        logo_url,
+        favicon_url,
+        cover_image_url,
+        address_line1,
+        address_line2,
+        city,
+        state_province,
+        postal_code,
+        country || 'Türkiye',
+        phone_primary,
+        phone_secondary,
+        phone_fax,
+        whatsapp_number,
+        email_general,
+        email_support,
+        email_sales,
+        website_url,
+        facebook_url,
+        twitter_url,
+        instagram_url,
+        linkedin_url,
+        youtube_url,
+        business_hours,
+        gallery_photos ? JSON.stringify(gallery_photos) : null,
+        products ? JSON.stringify(products) : null,
+        team_members ? JSON.stringify(team_members) : null,
+        certifications ? JSON.stringify(certifications) : null,
+        awards ? JSON.stringify(awards) : null,
+        stats ? JSON.stringify(stats) : null,
+        tax_number,
+        trade_registry_number,
+        legal_name,
+        seo_keywords,
+        meta_description,
+        is_active !== undefined ? is_active : true,
+        default_currency || 'TRY',
+        default_language || 'tr',
+        timezone || 'Europe/Istanbul',
+      ];
+      
+      const insertResult = await pool.query(insertQuery, insertValues);
+      return res.json({
+        success: true,
+        data: insertResult.rows[0],
+        message: 'Kurumsal bilgiler başarıyla oluşturuldu',
+      });
     }
+    
+    // Kayıt varsa UPDATE yap
+    const result = await pool.query(query, values);
 
     res.json({
       success: true,
