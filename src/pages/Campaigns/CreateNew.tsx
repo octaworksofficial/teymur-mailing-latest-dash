@@ -310,15 +310,20 @@ const CampaignCreateNew: React.FC = () => {
       }
 
       if (responseData) {
+        // If plain text is selected and only body_text is returned, set body_html to body_text
+        let bodyHtmlValue =
+          responseData.body_html ||
+          responseData.html_body ||
+          responseData.content ||
+          '';
+        if (!bodyHtmlValue && responseData.body_text) {
+          bodyHtmlValue = responseData.body_text;
+        }
         createTemplateForm.setFieldsValue({
           name: responseData.name || responseData.template_name || '',
           description: responseData.description || '',
           subject: responseData.subject || '',
-          body_html:
-            responseData.body_html ||
-            responseData.html_body ||
-            responseData.content ||
-            '',
+          body_html: bodyHtmlValue,
           category: responseData.category || params.email_type || 'other',
           preheader: responseData.preheader || '',
         });

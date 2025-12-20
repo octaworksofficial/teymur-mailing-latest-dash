@@ -125,13 +125,18 @@ const Templates: React.FC = () => {
 
       // AI yanıtını form alanlarına doldur
       if (aiResponse) {
+        // If plain text is selected and only body_text is returned, set body_html to body_text
+        let bodyHtmlValue = aiResponse.body_html || aiResponse.body || '';
+        if (!bodyHtmlValue && aiResponse.body_text) {
+          bodyHtmlValue = aiResponse.body_text;
+        }
         createForm.setFieldsValue({
           name: aiResponse.name || '',
           description: aiResponse.description || '',
           category: aiResponse.category || 'other',
           subject: aiResponse.subject || '',
           preheader: aiResponse.preheader || '',
-          body_html: aiResponse.body_html || aiResponse.body || '',
+          body_html: bodyHtmlValue,
           body_text: aiResponse.body_text || '',
           from_name: aiResponse.from_name || '',
           from_email: aiResponse.from_email || '',
